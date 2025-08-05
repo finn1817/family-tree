@@ -511,7 +511,7 @@
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Family Member</button>
-                        <button class="btn btn-danger admin-only" onclick="removeAllFamilyMembers()" style="display: none; background: #dc3545;">🗑️ Remove All Members</button>
+                        <button class="btn btn-danger admin-only" onclick="removeAllFamilyMembers()" style="display: none; background: #dc3545; font-weight: bold;" id="deleteAllBtn">🗑️ DELETE ALL MEMBERS</button>
                     </div>
                 </div>
                 <div id="familyGrid" class="family-grid"></div>
@@ -595,9 +595,9 @@
                             <li><strong>Column C:</strong> Birth Month (e.g., "January", "February")</li>
                             <li><strong>Column D:</strong> Birth Day (1-31)</li>
                             <li><strong>Column E:</strong> Birth Year (e.g., 1990)</li>
-                            <li><strong>Column G:</strong> Branch/Relationship info</li>
+                            <li><strong>Column G:</strong> Will be ignored during import</li>
                         </ul>
-                        <p><em>Note: Column F is ignored (as in your sister's format)</em></p>
+                        <p><em>Note: Family branches will be empty after import - organize into families later using the Family Branches tab</em></p>
                     </div>
                 </div>
             </div>
@@ -1570,7 +1570,20 @@
 
         // Remove all family members (admin only)
         window.removeAllFamilyMembers = async function() {
-            if (!currentUser.isAdmin) return;
+            console.log('removeAllFamilyMembers called');
+            console.log('Current user:', currentUser);
+            console.log('Is admin:', currentUser?.isAdmin);
+            console.log('Family members count:', familyMembers.length);
+            
+            if (!currentUser || !currentUser.isAdmin) {
+                alert('Only admin users can delete all family members');
+                return;
+            }
+            
+            if (familyMembers.length === 0) {
+                alert('No family members to delete');
+                return;
+            }
             
             const confirmMessage = `⚠️ DANGER: This will permanently delete ALL ${familyMembers.length} family members from the database!\n\nThis action cannot be undone. Are you absolutely sure?`;
             if (!confirm(confirmMessage)) return;
@@ -1583,16 +1596,21 @@
             
             try {
                 let deleted = 0;
+                console.log('Starting deletion process...');
+                
                 for (const member of familyMembers) {
+                    console.log('Deleting member:', member.firstName, member.lastName, 'ID:', member.id);
                     await deleteDoc(doc(db, 'family_members', member.id));
                     deleted++;
                 }
                 
+                console.log('Deletion completed. Refreshing data...');
                 await loadFamilyMembers();
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
                 alert(`Successfully deleted ${deleted} family members. Database is now clean for proper import.`);
             } catch (error) {
+                console.error('Error deleting family members:', error);
                 alert('Error deleting family members: ' + error.message);
             }
         };
