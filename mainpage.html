@@ -247,6 +247,41 @@
             justify-content: center;
             align-items: center;
         }
+
+        /* Branch View Modal Specific Styles */
+        #branchViewModal .modal-content {
+            max-height: 95vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #branchMembersGrid {
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 1rem;
+        }
+
+        #branchMembersGrid .family-card {
+            border-left: 4px solid #28a745;
+            transition: all 0.3s ease;
+        }
+
+        #branchMembersGrid .family-card:hover {
+            border-left-color: #20c997;
+            transform: translateX(5px);
+        }
+
+        #branchSearchInput {
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        #branchSearchInput:focus {
+            outline: none;
+            border-color: #28a745;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        }
         
         .modal-content {
             background: white;
@@ -913,6 +948,38 @@
         </div>
     </div>
 
+    <!-- Branch View Modal -->
+    <div id="branchViewModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; width: 1200px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="branchViewTitle">Branch Members</h2>
+                <button class="btn" onclick="closeModal('branchViewModal')" style="background: #6c757d; color: white;">✕ Close</button>
+            </div>
+            
+            <div id="branchStats" style="margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin: 0; color: white;" id="branchStatsName">Branch Name</h3>
+                        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;" id="branchStatsCount">0 family members</p>
+                    </div>
+                    <div style="font-size: 3rem; opacity: 0.7;">🌿</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <input type="text" id="branchSearchInput" placeholder="Search branch members..." style="width: 100%; padding: 0.75rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+            </div>
+
+            <div id="branchMembersGrid" class="family-grid" style="max-height: 70vh; overflow-y: auto;"></div>
+            
+            <div id="noBranchMembers" style="display: none; text-align: center; padding: 2rem; color: #6c757d;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">👥</div>
+                <h3>No family members in this branch yet</h3>
+                <p>Add family members and assign them to this branch to see them here.</p>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         // Import Firebase using the correct v9+ modular syntax
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
@@ -1075,15 +1142,24 @@
         // Display branches
         function displayBranches() {
             const grid = document.getElementById('branchesGrid');
-            grid.innerHTML = familyBranches.map(branch => `
-                <div class="family-card">
-                    <h3>${branch.name}</h3>
-                    <p>${branch.description || 'No description'}</p>
-                    <div style="margin-top: 1rem;">
-                        <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')">Delete</button>
+            grid.innerHTML = familyBranches.map(branch => {
+                const membersInBranch = familyMembers.filter(member => member.familyBranch === branch.name);
+                return `
+                    <div class="family-card">
+                        <h3>${branch.name}</h3>
+                        <p>${branch.description || 'No description'}</p>
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
+                            <small><strong>Members:</strong> ${membersInBranch.length} people</small>
+                        </div>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                            <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745;">
+                                👁️ View Branch
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')">Delete</button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Display users (admin only)
@@ -1830,6 +1906,73 @@
             // Show the modal
             document.getElementById('editMemberModal').classList.add('active');
         };
+
+        window.viewBranchMembers = function(branchName) {
+            const branchMembers = familyMembers.filter(member => member.familyBranch === branchName);
+            
+            // Update modal title and stats
+            document.getElementById('branchViewTitle').textContent = `${branchName} - Family Members`;
+            document.getElementById('branchStatsName').textContent = branchName;
+            document.getElementById('branchStatsCount').textContent = `${branchMembers.length} family member${branchMembers.length !== 1 ? 's' : ''}`;
+            
+            // Clear search input
+            document.getElementById('branchSearchInput').value = '';
+            
+            // Display members or no members message
+            if (branchMembers.length === 0) {
+                document.getElementById('branchMembersGrid').style.display = 'none';
+                document.getElementById('noBranchMembers').style.display = 'block';
+            } else {
+                document.getElementById('branchMembersGrid').style.display = 'grid';
+                document.getElementById('noBranchMembers').style.display = 'none';
+                displayBranchMembers(branchMembers);
+            }
+            
+            // Show the modal
+            document.getElementById('branchViewModal').classList.add('active');
+            
+            // Set up search functionality for this branch
+            const searchInput = document.getElementById('branchSearchInput');
+            searchInput.oninput = function() {
+                const searchTerm = this.value.toLowerCase();
+                const filteredMembers = branchMembers.filter(member => 
+                    member.firstName.toLowerCase().includes(searchTerm) ||
+                    member.lastName.toLowerCase().includes(searchTerm) ||
+                    (member.relationship && member.relationship.toLowerCase().includes(searchTerm))
+                );
+                displayBranchMembers(filteredMembers);
+            };
+        };
+
+        function displayBranchMembers(members) {
+            const grid = document.getElementById('branchMembersGrid');
+            grid.innerHTML = members.map(member => `
+                <div class="family-card" style="border-left: 4px solid #28a745;">
+                    <div style="display: flex; justify-content: between; align-items: start;">
+                        <div style="flex: 1;">
+                            <h3 style="margin-bottom: 0.5rem; color: #28a745;">${member.firstName} ${member.lastName}</h3>
+                            <div class="family-info" style="font-size: 0.9rem;">
+                                <div><strong>🎂 Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear}</div>
+                                ${member.relationship ? `<div><strong>👪 Relationship:</strong> ${member.relationship}</div>` : ''}
+                                ${member.mobilePhone ? `<div><strong>📱 Mobile:</strong> ${member.mobilePhone}</div>` : ''}
+                                ${member.homePhone ? `<div><strong>🏠 Home:</strong> ${member.homePhone}</div>` : ''}
+                                ${member.workPhone ? `<div><strong>💼 Work:</strong> ${member.workPhone}</div>` : ''}
+                                ${member.address ? `<div><strong>📍 Address:</strong> ${member.address}${member.city ? `, ${member.city}` : ''}${member.state ? `, ${member.state}` : ''}</div>` : ''}
+                                ${member.anniversaryDate ? `<div><strong>💒 Anniversary:</strong> ${member.anniversaryDate}</div>` : ''}
+                                ${member.notes ? `<div style="margin-top: 0.5rem;"><strong>📝 Notes:</strong> ${member.notes}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="margin-left: 1rem;">
+                            <div style="font-size: 2rem; opacity: 0.6;">👤</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="openEditMemberModal('${member.id}')" style="font-size: 0.85rem;">✏️ Edit</button>
+                        <button class="btn btn-danger" onclick="deleteFamilyMember('${member.id}')" style="font-size: 0.85rem;">🗑️ Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
 
         window.closeModal = function(modalId) {
             document.getElementById(modalId).classList.remove('active');
