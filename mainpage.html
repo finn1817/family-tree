@@ -509,7 +509,10 @@
                             <option value="">All Branches</option>
                         </select>
                     </div>
-                    <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Family Member</button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Family Member</button>
+                        <button class="btn btn-danger admin-only" onclick="removeAllFamilyMembers()" style="display: none; background: #dc3545;">🗑️ Remove All Members</button>
+                    </div>
                 </div>
                 <div id="familyGrid" class="family-grid"></div>
             </div>
@@ -572,7 +575,7 @@
                                         <th>Month</th>
                                         <th>Day</th>
                                         <th>Year</th>
-                                        <th>Branch/Relationship</th>
+                                        <th>Column G (Ignored)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="previewBody">
@@ -1304,7 +1307,7 @@
                 const month = row[2] || '';
                 const day = row[3] || '';
                 const year = row[4] || '';
-                const branchRelation = row[6] || ''; // Column G (skip F)
+                const columnG = row[6] || ''; // Column G (shows what's there but won't be imported)
                 
                 tr.innerHTML = `
                     <td>${firstName}</td>
@@ -1312,7 +1315,7 @@
                     <td>${month}</td>
                     <td>${day}</td>
                     <td>${year}</td>
-                    <td>${branchRelation}</td>
+                    <td style="opacity: 0.5; font-style: italic;">${columnG}<br><small>(ignored)</small></td>
                 `;
                 previewBody.appendChild(tr);
             });
@@ -1363,8 +1366,9 @@
                         const month = row[2]?.toString().trim() || '';
                         const day = parseInt(row[3]) || 1;
                         const year = parseInt(row[4]) || new Date().getFullYear();
-                        const branchRelation = row[6]?.toString().trim() || ''; // Column G
-
+                        // Note: Column G in your data appears to be birthday dates, not family branches
+                        // We'll leave familyBranch empty for now and you can organize families later
+                        
                         // Only import if we have at least first and last name
                         if (firstName && lastName) {
                             const memberData = {
@@ -1373,7 +1377,7 @@
                                 birthMonth: month,
                                 birthDay: day,
                                 birthYear: year,
-                                familyBranch: branchRelation,
+                                familyBranch: '', // Leave empty - you'll organize into families later
                                 relationship: '', // Can be updated later
                                 relatedTo: '',
                                 mobilePhone: '',
@@ -1561,6 +1565,35 @@
                 } catch (error) {
                     alert('Error deleting message: ' + error.message);
                 }
+            }
+        };
+
+        // Remove all family members (admin only)
+        window.removeAllFamilyMembers = async function() {
+            if (!currentUser.isAdmin) return;
+            
+            const confirmMessage = `⚠️ DANGER: This will permanently delete ALL ${familyMembers.length} family members from the database!\n\nThis action cannot be undone. Are you absolutely sure?`;
+            if (!confirm(confirmMessage)) return;
+            
+            const doubleConfirm = prompt('Type "DELETE ALL" to confirm this dangerous action:');
+            if (doubleConfirm !== 'DELETE ALL') {
+                alert('Action cancelled - text did not match exactly.');
+                return;
+            }
+            
+            try {
+                let deleted = 0;
+                for (const member of familyMembers) {
+                    await deleteDoc(doc(db, 'family_members', member.id));
+                    deleted++;
+                }
+                
+                await loadFamilyMembers();
+                displayFamilyMembers();
+                displayUpcomingBirthdays();
+                alert(`Successfully deleted ${deleted} family members. Database is now clean for proper import.`);
+            } catch (error) {
+                alert('Error deleting family members: ' + error.message);
             }
         };
 
