@@ -161,37 +161,8 @@
             console.log(message);
         }
 
-        // Create default user on first load
-        async function createDefaultUser() {
-            try {
-                debugLog('Checking for default user...');
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('username', '==', 'dfinn12'));
-                const querySnapshot = await getDocs(q);
-                
-                if (querySnapshot.empty) {
-                    debugLog('Creating default user...');
-                    const docRef = await addDoc(usersRef, {
-                        username: 'dfinn12',
-                        password: 'p@ssw0rd',
-                        isAdmin: 0,
-                        createdAt: new Date()
-                    });
-                    debugLog(`Default user created with ID: ${docRef.id}`);
-                    document.getElementById('success').textContent = 'Default user created! You can now login with dfinn12 / p@ssw0rd';
-                } else {
-                    debugLog('Default user already exists');
-                    document.getElementById('success').textContent = 'System ready! Login with dfinn12 / p@ssw0rd';
-                }
-            } catch (error) {
-                debugLog(`Error creating default user: ${error.message}`);
-                console.error('Error creating default user:', error);
-            }
-        }
-
         // Initialize default user when page loads
         debugLog('Initializing Firebase...');
-        createDefaultUser();
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
