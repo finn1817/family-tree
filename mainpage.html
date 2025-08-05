@@ -581,6 +581,7 @@
                         </div>
                         <button class="btn btn-success" onclick="confirmImport()" id="importBtn" style="margin-top: 1rem;">Import All Data</button>
                         <button class="btn btn-primary" onclick="clearFile()" style="margin-top: 1rem; margin-left: 0.5rem;">Choose Different File</button>
+                        <button class="btn" onclick="testDatabase()" style="margin-top: 1rem; margin-left: 0.5rem; background: #ffc107; color: #000;">Test Database</button>
                     </div>
                     
                     <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 10px; text-align: left;">
@@ -1320,11 +1321,28 @@
         }
 
         async function confirmImport() {
-            if (!currentUser.isAdmin) return;
-            if (!selectedFileData) return;
+            console.log('confirmImport called');
+            
+            if (!currentUser.isAdmin) {
+                alert('Only admin users can import data');
+                return;
+            }
+            
+            if (!selectedFileData) {
+                alert('No file data selected');
+                return;
+            }
+
+            console.log('Selected file data length:', selectedFileData.length);
 
             const confirmMessage = `Are you sure you want to import ${selectedFileData.length} records? This will add all valid entries to the database.`;
             if (!confirm(confirmMessage)) return;
+
+            // Show loading message
+            const importBtn = document.getElementById('importBtn');
+            const originalText = importBtn.textContent;
+            importBtn.textContent = 'Importing...';
+            importBtn.disabled = true;
 
             try {
                 let imported = 0;
@@ -1335,36 +1353,56 @@
                                 selectedFileData[0][0].toLowerCase().includes('name')) ? 1 : 0;
                 
                 const dataRows = selectedFileData.slice(startRow);
+                console.log('Processing', dataRows.length, 'rows');
                 
                 for (const row of dataRows) {
-                    // Map columns: A, B, C, D, E, skip F, G
-                    const firstName = row[0]?.toString().trim() || '';
-                    const lastName = row[1]?.toString().trim() || '';
-                    const month = row[2]?.toString().trim() || '';
-                    const day = parseInt(row[3]) || 1;
-                    const year = parseInt(row[4]) || new Date().getFullYear();
-                    const branchRelation = row[6]?.toString().trim() || ''; // Column G
+                    try {
+                        // Map columns: A, B, C, D, E, skip F, G
+                        const firstName = row[0]?.toString().trim() || '';
+                        const lastName = row[1]?.toString().trim() || '';
+                        const month = row[2]?.toString().trim() || '';
+                        const day = parseInt(row[3]) || 1;
+                        const year = parseInt(row[4]) || new Date().getFullYear();
+                        const branchRelation = row[6]?.toString().trim() || ''; // Column G
 
-                    // Only import if we have at least first and last name
-                    if (firstName && lastName) {
-                        const memberData = {
-                            firstName: firstName,
-                            lastName: lastName,
-                            birthMonth: month,
-                            birthDay: day,
-                            birthYear: year,
-                            familyBranch: branchRelation,
-                            relationship: '', // Can be updated later
-                            createdAt: new Date(),
-                            createdBy: currentUser.username
-                        };
+                        // Only import if we have at least first and last name
+                        if (firstName && lastName) {
+                            const memberData = {
+                                firstName: firstName,
+                                lastName: lastName,
+                                birthMonth: month,
+                                birthDay: day,
+                                birthYear: year,
+                                familyBranch: branchRelation,
+                                relationship: '', // Can be updated later
+                                relatedTo: '',
+                                mobilePhone: '',
+                                homePhone: '',
+                                workPhone: '',
+                                address: '',
+                                city: '',
+                                state: '',
+                                zipCode: '',
+                                anniversaryDate: '',
+                                notes: '',
+                                createdAt: new Date(),
+                                createdBy: currentUser.username
+                            };
 
-                        await addDoc(collection(db, 'family_members'), memberData);
-                        imported++;
-                    } else {
+                            console.log('Adding member:', firstName, lastName);
+                            await addDoc(collection(db, 'family_members'), memberData);
+                            imported++;
+                        } else {
+                            console.log('Skipping row - missing name:', firstName, lastName);
+                            skipped++;
+                        }
+                    } catch (rowError) {
+                        console.error('Error processing row:', row, rowError);
                         skipped++;
                     }
                 }
+
+                console.log('Import completed. Imported:', imported, 'Skipped:', skipped);
 
                 // Clear the file selection
                 clearFile();
@@ -1377,9 +1415,17 @@
                 alert(`Import completed!\nImported: ${imported} family members\nSkipped: ${skipped} incomplete records`);
                 
             } catch (error) {
+                console.error('Import error:', error);
                 alert('Error importing data: ' + error.message);
+            } finally {
+                // Restore button
+                importBtn.textContent = originalText;
+                importBtn.disabled = false;
             }
         }
+
+        // Make sure the function is globally accessible
+        window.confirmImport = confirmImport;
 
         function clearFile() {
             selectedFileData = null;
@@ -1387,6 +1433,40 @@
             document.getElementById('fileInfo').style.display = 'none';
             document.getElementById('previewContainer').style.display = 'none';
         }
+
+        // Make sure functions are globally accessible
+        window.handleFileSelect = handleFileSelect;
+        window.clearFile = clearFile;
+        
+        // Test function to verify database connectivity
+        window.testDatabase = async function() {
+            try {
+                console.log('Testing database connection...');
+                const testData = {
+                    firstName: 'Test',
+                    lastName: 'User',
+                    birthMonth: 'January',
+                    birthDay: 1,
+                    birthYear: 2000,
+                    familyBranch: 'Test Branch',
+                    relationship: 'Test',
+                    createdAt: new Date(),
+                    createdBy: currentUser.username
+                };
+                
+                const docRef = await addDoc(collection(db, 'family_members'), testData);
+                console.log('Test document written with ID: ', docRef.id);
+                alert('Database test successful! Document ID: ' + docRef.id);
+                
+                // Clean up test data
+                await deleteDoc(doc(db, 'family_members', docRef.id));
+                console.log('Test document deleted');
+                
+            } catch (error) {
+                console.error('Database test failed:', error);
+                alert('Database test failed: ' + error.message);
+            }
+        };
 
         // Legacy bulk import function (keeping for backward compatibility)
         async function bulkImport() {
