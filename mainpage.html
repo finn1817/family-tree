@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Tree - Dashboard</title>
+    <!-- SheetJS library for Excel file processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -352,6 +354,82 @@
             margin: 1rem 0;
         }
         
+        .file-upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1rem 0;
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #4a5fd8;
+            background: #f8f9ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #4a5fd8;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-upload-btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            margin: 1rem;
+        }
+        
+        .file-upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .file-info {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #e8f4fd;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .preview-table th,
+        .preview-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .preview-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .preview-table tr:hover {
+            background: #f8f9ff;
+        }
+        
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -466,9 +544,57 @@
             <div id="import" class="section">
                 <div class="bulk-import">
                     <h3>📋 Bulk Import Family Data</h3>
-                    <p>Paste your Excel data below (copy from Excel and paste here):</p>
-                    <textarea class="import-area" id="importData" placeholder="Paste Excel data here...&#10;Format: FirstName	LastName	Month	Day	Year	Branch	Relationship"></textarea>
-                    <button class="btn btn-success" onclick="bulkImport()">Import Data</button>
+                    <p>Upload your Excel file (.xlsx, .xls) to automatically import family member data:</p>
+                    
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <div class="file-upload-content">
+                            <h4>📎 Drop Excel file here or click to browse</h4>
+                            <p>Supported formats: .xlsx, .xls</p>
+                            <label for="excelFile" class="file-upload-btn">Choose Excel File</label>
+                            <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+                        </div>
+                    </div>
+                    
+                    <div id="fileInfo" class="file-info">
+                        <p><strong>File:</strong> <span id="fileName"></span></p>
+                        <p><strong>Size:</strong> <span id="fileSize"></span></p>
+                        <p><strong>Rows found:</strong> <span id="rowCount"></span></p>
+                    </div>
+                    
+                    <div id="previewContainer" style="display: none;">
+                        <h4>Preview Data (First 5 rows):</h4>
+                        <div style="overflow-x: auto;">
+                            <table id="previewTable" class="preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>First Name</th>
+                                        <th>Last Name</th>
+                                        <th>Month</th>
+                                        <th>Day</th>
+                                        <th>Year</th>
+                                        <th>Branch/Relationship</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-success" onclick="confirmImport()" id="importBtn" style="margin-top: 1rem;">Import All Data</button>
+                        <button class="btn btn-primary" onclick="clearFile()" style="margin-top: 1rem; margin-left: 0.5rem;">Choose Different File</button>
+                    </div>
+                    
+                    <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 10px; text-align: left;">
+                        <h4>📝 Excel File Format Requirements:</h4>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li><strong>Column A:</strong> First Name</li>
+                            <li><strong>Column B:</strong> Last Name</li>
+                            <li><strong>Column C:</strong> Birth Month (e.g., "January", "February")</li>
+                            <li><strong>Column D:</strong> Birth Day (1-31)</li>
+                            <li><strong>Column E:</strong> Birth Year (e.g., 1990)</li>
+                            <li><strong>Column G:</strong> Branch/Relationship info</li>
+                        </ul>
+                        <p><em>Note: Column F is ignored (as in your sister's format)</em></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1085,6 +1211,184 @@
         }
 
         // Bulk import
+        let selectedFileData = null;
+
+        // File upload handling
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processExcelFile(file);
+            }
+        }
+
+        // Drag and drop handling
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+
+        fileUploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processExcelFile(files[0]);
+            }
+        });
+
+        function processExcelFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Get the first worksheet
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert to JSON (array of arrays)
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    // Filter out empty rows
+                    const filteredData = jsonData.filter(row => 
+                        row.length > 0 && row.some(cell => cell && cell.toString().trim())
+                    );
+                    
+                    if (filteredData.length === 0) {
+                        alert('No data found in the Excel file');
+                        return;
+                    }
+                    
+                    selectedFileData = filteredData;
+                    displayFileInfo(file, filteredData.length);
+                    displayPreview(filteredData);
+                    
+                } catch (error) {
+                    alert('Error reading Excel file: ' + error.message);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+
+        function displayFileInfo(file, rowCount) {
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+            document.getElementById('rowCount').textContent = rowCount;
+            document.getElementById('fileInfo').style.display = 'block';
+        }
+
+        function displayPreview(data) {
+            const previewBody = document.getElementById('previewBody');
+            previewBody.innerHTML = '';
+            
+            // Show first 5 rows (skip header if it exists)
+            const startRow = (data[0] && typeof data[0][0] === 'string' && data[0][0].toLowerCase().includes('name')) ? 1 : 0;
+            const previewRows = data.slice(startRow, startRow + 5);
+            
+            previewRows.forEach(row => {
+                const tr = document.createElement('tr');
+                
+                // Map columns: A, B, C, D, E, skip F, G
+                const firstName = row[0] || '';
+                const lastName = row[1] || '';
+                const month = row[2] || '';
+                const day = row[3] || '';
+                const year = row[4] || '';
+                const branchRelation = row[6] || ''; // Column G (skip F)
+                
+                tr.innerHTML = `
+                    <td>${firstName}</td>
+                    <td>${lastName}</td>
+                    <td>${month}</td>
+                    <td>${day}</td>
+                    <td>${year}</td>
+                    <td>${branchRelation}</td>
+                `;
+                previewBody.appendChild(tr);
+            });
+            
+            document.getElementById('previewContainer').style.display = 'block';
+        }
+
+        async function confirmImport() {
+            if (!currentUser.isAdmin) return;
+            if (!selectedFileData) return;
+
+            const confirmMessage = `Are you sure you want to import ${selectedFileData.length} records? This will add all valid entries to the database.`;
+            if (!confirm(confirmMessage)) return;
+
+            try {
+                let imported = 0;
+                let skipped = 0;
+                
+                // Skip header row if it exists
+                const startRow = (selectedFileData[0] && typeof selectedFileData[0][0] === 'string' && 
+                                selectedFileData[0][0].toLowerCase().includes('name')) ? 1 : 0;
+                
+                const dataRows = selectedFileData.slice(startRow);
+                
+                for (const row of dataRows) {
+                    // Map columns: A, B, C, D, E, skip F, G
+                    const firstName = row[0]?.toString().trim() || '';
+                    const lastName = row[1]?.toString().trim() || '';
+                    const month = row[2]?.toString().trim() || '';
+                    const day = parseInt(row[3]) || 1;
+                    const year = parseInt(row[4]) || new Date().getFullYear();
+                    const branchRelation = row[6]?.toString().trim() || ''; // Column G
+
+                    // Only import if we have at least first and last name
+                    if (firstName && lastName) {
+                        const memberData = {
+                            firstName: firstName,
+                            lastName: lastName,
+                            birthMonth: month,
+                            birthDay: day,
+                            birthYear: year,
+                            familyBranch: branchRelation,
+                            relationship: '', // Can be updated later
+                            createdAt: new Date(),
+                            createdBy: currentUser.username
+                        };
+
+                        await addDoc(collection(db, 'family_members'), memberData);
+                        imported++;
+                    } else {
+                        skipped++;
+                    }
+                }
+
+                // Clear the file selection
+                clearFile();
+                
+                // Refresh the display
+                await loadFamilyMembers();
+                displayFamilyMembers();
+                displayUpcomingBirthdays();
+                
+                alert(`Import completed!\nImported: ${imported} family members\nSkipped: ${skipped} incomplete records`);
+                
+            } catch (error) {
+                alert('Error importing data: ' + error.message);
+            }
+        }
+
+        function clearFile() {
+            selectedFileData = null;
+            document.getElementById('excelFile').value = '';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('previewContainer').style.display = 'none';
+        }
+
+        // Legacy bulk import function (keeping for backward compatibility)
         async function bulkImport() {
             if (!currentUser.isAdmin) return;
 
