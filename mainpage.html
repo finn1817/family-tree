@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .admin-badge {
+            background: #e74c3c;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 15px 15px 0 0;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            background: #f8f9ff;
+        }
+        
+        .tab.active {
+            background: #667eea;
+            color: white;
+            border-bottom-color: #4a5fd8;
+        }
+        
+        .tab-content {
+            background: white;
+            border-radius: 0 0 15px 15px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-height: 600px;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .upcoming-birthdays {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        
+        .birthday-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .birthday-item:last-child {
+            border-bottom: none;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .search-controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .search-input {
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            min-width: 250px;
+        }
+        
+        .filter-select {
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .family-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .family-card {
+            background: white;
+            border: 1px solid #e0e6ed;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        
+        .family-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .family-card h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .family-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .family-info div {
+            padding: 0.25rem 0;
+        }
+        
+        .family-info strong {
+            color: #333;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+        }
+        
+        .message-board {
+            background: #f8f9ff;
+            border: 1px solid #e0e6ed;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .message {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .message-author {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .message-date {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .bulk-import {
+            background: #f8f9ff;
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .import-area {
+            width: 100%;
+            min-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 1rem;
+            font-family: monospace;
+            margin: 1rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-controls {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: auto;
+            }
+            
+            .family-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌳 Family Tree Dashboard</h1>
+        <div class="user-info">
+            <span id="username"></span>
+            <span id="adminBadge" class="admin-badge" style="display: none;">ADMIN</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="upcoming-birthdays">
+            <h2>🎂 Upcoming Birthdays</h2>
+            <div id="upcomingBirthdays"></div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('family')">👨‍👩‍👧‍👦 Family Members</div>
+            <div class="tab" onclick="switchTab('branches')">🌿 Family Branches</div>
+            <div class="tab" onclick="switchTab('messages')">💬 Message Board</div>
+            <div class="tab admin-only" onclick="switchTab('users')" style="display: none;">👥 Manage Users</div>
+            <div class="tab admin-only" onclick="switchTab('import')" style="display: none;">📋 Bulk Import</div>
+        </div>
+
+        <div class="tab-content">
+            <!-- Family Members Section -->
+            <div id="family" class="section active">
+                <div class="controls">
+                    <div class="search-controls">
+                        <input type="text" class="search-input" placeholder="Search family members..." id="searchInput">
+                        <select class="filter-select" id="monthFilter">
+                            <option value="">All Months</option>
+                            <option value="January">January</option>
+                            <option value="February">February</option>
+                            <option value="March">March</option>
+                            <option value="April">April</option>
+                            <option value="May">May</option>
+                            <option value="June">June</option>
+                            <option value="July">July</option>
+                            <option value="August">August</option>
+                            <option value="September">September</option>
+                            <option value="October">October</option>
+                            <option value="November">November</option>
+                            <option value="December">December</option>
+                        </select>
+                        <select class="filter-select" id="branchFilter">
+                            <option value="">All Branches</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Family Member</button>
+                </div>
+                <div id="familyGrid" class="family-grid"></div>
+            </div>
+
+            <!-- Family Branches Section -->
+            <div id="branches" class="section">
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="openAddBranchModal()">+ Add Family Branch</button>
+                </div>
+                <div id="branchesGrid" class="family-grid"></div>
+            </div>
+
+            <!-- Message Board Section -->
+            <div id="messages" class="section">
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="openAddMessageModal()">+ Post Message</button>
+                </div>
+                <div class="message-board">
+                    <div id="messagesContainer"></div>
+                </div>
+            </div>
+
+            <!-- Users Management Section (Admin Only) -->
+            <div id="users" class="section">
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="openAddUserModal()">+ Add New User</button>
+                </div>
+                <div id="usersGrid" class="family-grid"></div>
+            </div>
+
+            <!-- Bulk Import Section (Admin Only) -->
+            <div id="import" class="section">
+                <div class="bulk-import">
+                    <h3>📋 Bulk Import Family Data</h3>
+                    <p>Paste your Excel data below (copy from Excel and paste here):</p>
+                    <textarea class="import-area" id="importData" placeholder="Paste Excel data here...&#10;Format: FirstName	LastName	Month	Day	Year	Branch	Relationship"></textarea>
+                    <button class="btn btn-success" onclick="bulkImport()">Import Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="addMemberModal" class="modal">
+        <div class="modal-content">
+            <h2>Add Family Member</h2>
+            <form id="addMemberForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="firstName">First Name *</label>
+                        <input type="text" id="firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name *</label>
+                        <input type="text" id="lastName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="birthMonth">Birth Month *</label>
+                        <select id="birthMonth" required>
+                            <option value="">Select Month</option>
+                            <option value="January">January</option>
+                            <option value="February">February</option>
+                            <option value="March">March</option>
+                            <option value="April">April</option>
+                            <option value="May">May</option>
+                            <option value="June">June</option>
+                            <option value="July">July</option>
+                            <option value="August">August</option>
+                            <option value="September">September</option>
+                            <option value="October">October</option>
+                            <option value="November">November</option>
+                            <option value="December">December</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="birthDay">Birth Day *</label>
+                        <input type="number" id="birthDay" min="1" max="31" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="birthYear">Birth Year *</label>
+                        <input type="number" id="birthYear" min="1900" max="2030" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="familyBranch">Family Branch</label>
+                        <select id="familyBranch">
+                            <option value="">Select Branch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="relationship">Relationship</label>
+                        <select id="relationship">
+                            <option value="">Select Relationship</option>
+                            <option value="spouse">Spouse</option>
+                            <option value="parent">Parent</option>
+                            <option value="child">Child</option>
+                            <option value="sibling">Sibling</option>
+                            <option value="grandparent">Grandparent</option>
+                            <option value="grandchild">Grandchild</option>
+                            <option value="aunt_uncle">Aunt/Uncle</option>
+                            <option value="niece_nephew">Niece/Nephew</option>
+                            <option value="cousin">Cousin</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="relatedTo">Related To</label>
+                        <select id="relatedTo">
+                            <option value="">Select Person</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="mobilePhone">Mobile Phone</label>
+                        <input type="tel" id="mobilePhone">
+                    </div>
+                    <div class="form-group">
+                        <label for="homePhone">Home Phone</label>
+                        <input type="tel" id="homePhone">
+                    </div>
+                    <div class="form-group">
+                        <label for="workPhone">Work Phone</label>
+                        <input type="tel" id="workPhone">
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Street Address</label>
+                        <input type="text" id="address">
+                    </div>
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city">
+                    </div>
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" id="state">
+                    </div>
+                    <div class="form-group">
+                        <label for="zipCode">Zip Code</label>
+                        <input type="text" id="zipCode">
+                    </div>
+                    <div class="form-group">
+                        <label for="anniversaryDate">Anniversary Date</label>
+                        <input type="date" id="anniversaryDate">
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" placeholder="Occupation, fun facts, etc."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeModal('addMemberModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Branch Modal -->
+    <div id="addBranchModal" class="modal">
+        <div class="modal-content">
+            <h2>Add Family Branch</h2>
+            <form id="addBranchForm">
+                <div class="form-group">
+                    <label for="branchName">Branch Name *</label>
+                    <input type="text" id="branchName" required placeholder="e.g., Smith Family, Johnson Branch">
+                </div>
+                <div class="form-group">
+                    <label for="branchDescription">Description</label>
+                    <textarea id="branchDescription" placeholder="Description of this family branch"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeModal('addBranchModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Branch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add User Modal (Admin Only) -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content">
+            <h2>Add New User</h2>
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label for="newUsername">Username * (min 5 characters)</label>
+                    <input type="text" id="newUsername" required minlength="5">
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Password * (min 5 characters)</label>
+                    <input type="password" id="newPassword" required minlength="5">
+                </div>
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email">
+                </div>
+                <div class="form-group">
+                    <label for="userPhone">Phone</label>
+                    <input type="tel" id="userPhone">
+                </div>
+                <div class="form-group">
+                    <label for="isAdmin">Admin Status</label>
+                    <select id="isAdmin">
+                        <option value="0">Regular User</option>
+                        <option value="1">Administrator</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeModal('addUserModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Message Modal -->
+    <div id="addMessageModal" class="modal">
+        <div class="modal-content">
+            <h2>Post Message</h2>
+            <form id="addMessageForm">
+                <div class="form-group">
+                    <label for="messageTitle">Title</label>
+                    <input type="text" id="messageTitle" placeholder="Message title (optional)">
+                </div>
+                <div class="form-group">
+                    <label for="messageContent">Message *</label>
+                    <textarea id="messageContent" required placeholder="Write your message here..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeModal('addMessageModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Post Message</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
+            authDomain: "family-tree-6f16b.firebaseapp.com",
+            projectId: "family-tree-6f16b",
+            storageBucket: "family-tree-6f16b.firebasestorage.app",
+            messagingSenderId: "801170939057",
+            appId: "1:801170939057:web:87d35d8156789631f69690"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global variables
+        let currentUser = null;
+        let familyMembers = [];
+        let familyBranches = [];
+        let users = [];
+        let messages = [];
+
+        // Initialize the app
+        async function init() {
+            // Check if user is logged in
+            const userData = localStorage.getItem('currentUser');
+            if (!userData) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            currentUser = JSON.parse(userData);
+            document.getElementById('username').textContent = currentUser.username;
+            
+            if (currentUser.isAdmin) {
+                document.getElementById('adminBadge').style.display = 'inline-block';
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+            }
+
+            await loadData();
+            setupEventListeners();
+        }
+
+        // Load all data
+        async function loadData() {
+            await Promise.all([
+                loadFamilyMembers(),
+                loadFamilyBranches(),
+                loadUsers(),
+                loadMessages()
+            ]);
+            
+            displayFamilyMembers();
+            displayBranches();
+            displayUsers();
+            displayMessages();
+            displayUpcomingBirthdays();
+            populateDropdowns();
+        }
+
+        // Load family members
+        async function loadFamilyMembers() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'family_members'));
+                familyMembers = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            } catch (error) {
+                console.error('Error loading family members:', error);
+            }
+        }
+
+        // Load family branches
+        async function loadFamilyBranches() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'family_branches'));
+                familyBranches = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            } catch (error) {
+                console.error('Error loading family branches:', error);
+            }
+        }
+
+        // Load users (admin only)
+        async function loadUsers() {
+            if (!currentUser.isAdmin) return;
+            
+            try {
+                const querySnapshot = await getDocs(collection(db, 'users'));
+                users = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load messages
+        async function loadMessages() {
+            try {
+                const q = query(collection(db, 'messages'), orderBy('createdAt', 'desc'), limit(20));
+                const querySnapshot = await getDocs(q);
+                messages = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Display family members
+        function displayFamilyMembers() {
+            const grid = document.getElementById('familyGrid');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const monthFilter = document.getElementById('monthFilter').value;
+            const branchFilter = document.getElementById('branchFilter').value;
+
+            let filtered = familyMembers.filter(member => {
+                const matchesSearch = !searchTerm || 
+                    member.firstName.toLowerCase().includes(searchTerm) ||
+                    member.lastName.toLowerCase().includes(searchTerm);
+                const matchesMonth = !monthFilter || member.birthMonth === monthFilter;
+                const matchesBranch = !branchFilter || member.familyBranch === branchFilter;
+                
+                return matchesSearch && matchesMonth && matchesBranch;
+            });
+
+            grid.innerHTML = filtered.map(member => `
+                <div class="family-card">
+                    <h3>${member.firstName} ${member.lastName}</h3>
+                    <div class="family-info">
+                        <div><strong>Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear}</div>
+                        <div><strong>Branch:</strong> ${member.familyBranch || 'None'}</div>
+                        <div><strong>Relationship:</strong> ${member.relationship || 'Not specified'}</div>
+                        <div><strong>Mobile:</strong> ${member.mobilePhone || 'N/A'}</div>
+                        <div><strong>Home:</strong> ${member.homePhone || 'N/A'}</div>
+                        <div><strong>Work:</strong> ${member.workPhone || 'N/A'}</div>
+                        <div><strong>Address:</strong> ${member.address || 'N/A'}</div>
+                        <div><strong>City:</strong> ${member.city || 'N/A'}</div>
+                        <div><strong>State:</strong> ${member.state || 'N/A'}</div>
+                        <div><strong>Zip:</strong> ${member.zipCode || 'N/A'}</div>
+                        <div><strong>Anniversary:</strong> ${member.anniversaryDate || 'N/A'}</div>
+                        <div class="full-width"><strong>Notes:</strong> ${member.notes || 'None'}</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-danger" onclick="deleteFamilyMember('${member.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display branches
+        function displayBranches() {
+            const grid = document.getElementById('branchesGrid');
+            grid.innerHTML = familyBranches.map(branch => `
+                <div class="family-card">
+                    <h3>${branch.name}</h3>
+                    <p>${branch.description || 'No description'}</p>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display users (admin only)
+        function displayUsers() {
+            if (!currentUser.isAdmin) return;
+            
+            const grid = document.getElementById('usersGrid');
+            grid.innerHTML = users.map(user => `
+                <div class="family-card">
+                    <h3>${user.fullName || user.username}</h3>
+                    <div class="family-info">
+                        <div><strong>Username:</strong> ${user.username}</div>
+                        <div><strong>Email:</strong> ${user.email || 'N/A'}</div>
+                        <div><strong>Phone:</strong> ${user.phone || 'N/A'}</div>
+                        <div><strong>Admin:</strong> ${user.isAdmin ? 'Yes' : 'No'}</div>
+                        <div><strong>Created:</strong> ${user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-danger" onclick="deleteUser('${user.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display messages
+        function displayMessages() {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = messages.map(message => `
+                <div class="message">
+                    <div class="message-header">
+                        <span class="message-author">${message.author}</span>
+                        <span class="message-date">${new Date(message.createdAt.seconds * 1000).toLocaleDateString()}</span>
+                    </div>
+                    ${message.title ? `<h4>${message.title}</h4>` : ''}
+                    <p>${message.content}</p>
+                    ${currentUser.isAdmin ? `<button class="btn btn-danger" onclick="deleteMessage('${message.id}')">Delete</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // Display upcoming birthdays
+        function displayUpcomingBirthdays() {
+            const container = document.getElementById('upcomingBirthdays');
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            
+            // Calculate upcoming birthdays
+            const upcoming = familyMembers.map(member => {
+                const monthIndex = new Date(Date.parse(member.birthMonth + " 1, 2000")).getMonth();
+                let birthdayThisYear = new Date(currentYear, monthIndex, member.birthDay);
+                
+                if (birthdayThisYear < today) {
+                    birthdayThisYear = new Date(currentYear + 1, monthIndex, member.birthDay);
+                }
+                
+                return {
+                    ...member,
+                    nextBirthday: birthdayThisYear,
+                    daysUntil: Math.ceil((birthdayThisYear - today) / (1000 * 60 * 60 * 24))
+                };
+            }).sort((a, b) => a.nextBirthday - b.nextBirthday).slice(0, 5);
+
+            container.innerHTML = upcoming.map(member => `
+                <div class="birthday-item">
+                    <span>${member.firstName} ${member.lastName}</span>
+                    <span>${member.birthMonth} ${member.birthDay} (${member.daysUntil} days)</span>
+                </div>
+            `).join('');
+        }
+
+        // Populate dropdowns
+        function populateDropdowns() {
+            // Family branch dropdown
+            const branchSelects = [
+                document.getElementById('familyBranch'),
+                document.getElementById('branchFilter')
+            ];
+            
+            branchSelects.forEach(select => {
+                if (select) {
+                    const currentOptions = Array.from(select.options).map(opt => opt.value);
+                    familyBranches.forEach(branch => {
+                        if (!currentOptions.includes(branch.name)) {
+                            const option = document.createElement('option');
+                            option.value = branch.name;
+                            option.textContent = branch.name;
+                            select.appendChild(option);
+                        }
+                    });
+                }
+            });
+
+            // Related to dropdown
+            const relatedSelect = document.getElementById('relatedTo');
+            if (relatedSelect) {
+                relatedSelect.innerHTML = '<option value="">Select Person</option>';
+                familyMembers.forEach(member => {
+                    const option = document.createElement('option');
+                    option.value = member.id;
+                    option.textContent = `${member.firstName} ${member.lastName}`;
+                    relatedSelect.appendChild(option);
+                });
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search and filter
+            document.getElementById('searchInput').addEventListener('input', displayFamilyMembers);
+            document.getElementById('monthFilter').addEventListener('change', displayFamilyMembers);
+            document.getElementById('branchFilter').addEventListener('change', displayFamilyMembers);
+
+            // Add member form
+            document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await addFamilyMember();
+            });
+
+            // Add branch form
+            document.getElementById('addBranchForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await addFamilyBranch();
+            });
+
+            // Add user form
+            document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await addUser();
+            });
+
+            // Add message form
+            document.getElementById('addMessageForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await addMessage();
+            });
+        }
+
+        // Add family member
+        async function addFamilyMember() {
+            try {
+                const memberData = {
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    birthMonth: document.getElementById('birthMonth').value,
+                    birthDay: parseInt(document.getElementById('birthDay').value),
+                    birthYear: parseInt(document.getElementById('birthYear').value),
+                    familyBranch: document.getElementById('familyBranch').value,
+                    relationship: document.getElementById('relationship').value,
+                    relatedTo: document.getElementById('relatedTo').value,
+                    mobilePhone: document.getElementById('mobilePhone').value,
+                    homePhone: document.getElementById('homePhone').value,
+                    workPhone: document.getElementById('workPhone').value,
+                    address: document.getElementById('address').value,
+                    city: document.getElementById('city').value,
+                    state: document.getElementById('state').value,
+                    zipCode: document.getElementById('zipCode').value,
+                    anniversaryDate: document.getElementById('anniversaryDate').value,
+                    notes: document.getElementById('notes').value,
+                    createdAt: new Date(),
+                    createdBy: currentUser.username
+                };
+
+                await addDoc(collection(db, 'family_members'), memberData);
+                closeModal('addMemberModal');
+                document.getElementById('addMemberForm').reset();
+                await loadFamilyMembers();
+                displayFamilyMembers();
+                displayUpcomingBirthdays();
+                populateDropdowns();
+                alert('Family member added successfully!');
+            } catch (error) {
+                alert('Error adding family member: ' + error.message);
+            }
+        }
+
+        // Add family branch
+        async function addFamilyBranch() {
+            try {
+                const branchData = {
+                    name: document.getElementById('branchName').value,
+                    description: document.getElementById('branchDescription').value,
+                    createdAt: new Date(),
+                    createdBy: currentUser.username
+                };
+
+                await addDoc(collection(db, 'family_branches'), branchData);
+                closeModal('addBranchModal');
+                document.getElementById('addBranchForm').reset();
+                await loadFamilyBranches();
+                displayBranches();
+                populateDropdowns();
+                alert('Family branch added successfully!');
+            } catch (error) {
+                alert('Error adding family branch: ' + error.message);
+            }
+        }
+
+        // Add user (admin only)
+        async function addUser() {
+            if (!currentUser.isAdmin) return;
+
+            try {
+                const userData = {
+                    username: document.getElementById('newUsername').value,
+                    password: document.getElementById('newPassword').value,
+                    fullName: document.getElementById('fullName').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('userPhone').value,
+                    isAdmin: parseInt(document.getElementById('isAdmin').value),
+                    createdAt: new Date(),
+                    createdBy: currentUser.username
+                };
+
+                await addDoc(collection(db, 'users'), userData);
+                closeModal('addUserModal');
+                document.getElementById('addUserForm').reset();
+                await loadUsers();
+                displayUsers();
+                alert('User added successfully!');
+            } catch (error) {
+                alert('Error adding user: ' + error.message);
+            }
+        }
+
+        // Add message
+        async function addMessage() {
+            try {
+                const messageData = {
+                    title: document.getElementById('messageTitle').value,
+                    content: document.getElementById('messageContent').value,
+                    author: currentUser.username,
+                    createdAt: new Date()
+                };
+
+                await addDoc(collection(db, 'messages'), messageData);
+                closeModal('addMessageModal');
+                document.getElementById('addMessageForm').reset();
+                await loadMessages();
+                displayMessages();
+                alert('Message posted successfully!');
+            } catch (error) {
+                alert('Error posting message: ' + error.message);
+            }
+        }
+
+        // Bulk import
+        async function bulkImport() {
+            if (!currentUser.isAdmin) return;
+
+            const data = document.getElementById('importData').value;
+            if (!data.trim()) {
+                alert('Please paste data to import');
+                return;
+            }
+
+            try {
+                const lines = data.split('\n').filter(line => line.trim());
+                let imported = 0;
+
+                for (const line of lines) {
+                    const fields = line.split('\t');
+                    if (fields.length >= 5) {
+                        const memberData = {
+                            firstName: fields[0]?.trim() || '',
+                            lastName: fields[1]?.trim() || '',
+                            birthMonth: fields[2]?.trim() || '',
+                            birthDay: parseInt(fields[3]?.trim()) || 1,
+                            birthYear: parseInt(fields[4]?.trim()) || new Date().getFullYear(),
+                            familyBranch: fields[5]?.trim() || '',
+                            relationship: fields[6]?.trim() || '',
+                            createdAt: new Date(),
+                            createdBy: currentUser.username
+                        };
+
+                        if (memberData.firstName && memberData.lastName) {
+                            await addDoc(collection(db, 'family_members'), memberData);
+                            imported++;
+                        }
+                    }
+                }
+
+                document.getElementById('importData').value = '';
+                await loadFamilyMembers();
+                displayFamilyMembers();
+                displayUpcomingBirthdays();
+                alert(`Successfully imported ${imported} family members!`);
+            } catch (error) {
+                alert('Error importing data: ' + error.message);
+            }
+        }
+
+        // Delete functions
+        window.deleteFamilyMember = async function(id) {
+            if (confirm('Are you sure you want to delete this family member?')) {
+                try {
+                    await deleteDoc(doc(db, 'family_members', id));
+                    await loadFamilyMembers();
+                    displayFamilyMembers();
+                    displayUpcomingBirthdays();
+                    alert('Family member deleted successfully!');
+                } catch (error) {
+                    alert('Error deleting family member: ' + error.message);
+                }
+            }
+        };
+
+        window.deleteBranch = async function(id) {
+            if (confirm('Are you sure you want to delete this branch?')) {
+                try {
+                    await deleteDoc(doc(db, 'family_branches', id));
+                    await loadFamilyBranches();
+                    displayBranches();
+                    populateDropdowns();
+                    alert('Branch deleted successfully!');
+                } catch (error) {
+                    alert('Error deleting branch: ' + error.message);
+                }
+            }
+        };
+
+        window.deleteUser = async function(id) {
+            if (!currentUser.isAdmin) return;
+            
+            if (confirm('Are you sure you want to delete this user?')) {
+                try {
+                    await deleteDoc(doc(db, 'users', id));
+                    await loadUsers();
+                    displayUsers();
+                    alert('User deleted successfully!');
+                } catch (error) {
+                    alert('Error deleting user: ' + error.message);
+                }
+            }
+        };
+
+        window.deleteMessage = async function(id) {
+            if (!currentUser.isAdmin) return;
+            
+            if (confirm('Are you sure you want to delete this message?')) {
+                try {
+                    await deleteDoc(doc(db, 'messages', id));
+                    await loadMessages();
+                    displayMessages();
+                    alert('Message deleted successfully!');
+                } catch (error) {
+                    alert('Error deleting message: ' + error.message);
+                }
+            }
+        };
+
+        // Modal functions
+        window.openAddMemberModal = function() {
+            document.getElementById('addMemberModal').classList.add('active');
+        };
+
+        window.openAddBranchModal = function() {
+            document.getElementById('addBranchModal').classList.add('active');
+        };
+
+        window.openAddUserModal = function() {
+            if (!currentUser.isAdmin) return;
+            document.getElementById('addUserModal').classList.add('active');
+        };
+
+        window.openAddMessageModal = function() {
+            document.getElementById('addMessageModal').classList.add('active');
+        };
+
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        };
+
+        // Tab switching
+        window.switchTab = function(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update content sections
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+        };
+
+        // Logout function
+        window.logout = function() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        };
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
