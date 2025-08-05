@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .error {
+            color: #e74c3c;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🌳</div>
+        <h1>Family Tree</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" required minlength="5">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required minlength="5">
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+            <div class="loading" id="loading">Logging in...</div>
+            <div class="error" id="error"></div>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
+            authDomain: "family-tree-6f16b.firebaseapp.com",
+            projectId: "family-tree-6f16b",
+            storageBucket: "family-tree-6f16b.firebasestorage.app",
+            messagingSenderId: "801170939057",
+            appId: "1:801170939057:web:87d35d8156789631f69690"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Create default user on first load
+        async function createDefaultUser() {
+            try {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('username', '==', 'dfinn12'));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    await addDoc(usersRef, {
+                        username: 'dfinn12',
+                        password: 'p@ssw0rd',
+                        isAdmin: 0,
+                        createdAt: new Date()
+                    });
+                    console.log('Default user created');
+                }
+            } catch (error) {
+                console.error('Error creating default user:', error);
+            }
+        }
+
+        // Initialize default user
+        createDefaultUser();
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            const loadingDiv = document.getElementById('loading');
+            
+            errorDiv.textContent = '';
+            loadingDiv.style.display = 'block';
+            
+            try {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('username', '==', username), where('password', '==', password));
+                const querySnapshot = await getDocs(q);
+                
+                if (!querySnapshot.empty) {
+                    const userData = querySnapshot.docs[0].data();
+                    localStorage.setItem('currentUser', JSON.stringify({
+                        username: userData.username,
+                        isAdmin: userData.isAdmin
+                    }));
+                    window.location.href = 'mainpage.html';
+                } else {
+                    errorDiv.textContent = 'Invalid username or password';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Login error: ' + error.message;
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
