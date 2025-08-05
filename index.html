@@ -90,10 +90,28 @@
             text-align: center;
         }
         
+        .success {
+            color: #27ae60;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
         .loading {
             display: none;
             margin-top: 1rem;
             color: #667eea;
+        }
+        
+        .debug {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -113,12 +131,15 @@
             <button type="submit" class="login-btn">Login</button>
             <div class="loading" id="loading">Logging in...</div>
             <div class="error" id="error"></div>
+            <div class="success" id="success"></div>
         </form>
+        <div class="debug" id="debug"></div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        // Import Firebase using the correct v9+ modular syntax
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
@@ -132,28 +153,44 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        function debugLog(message) {
+            const debugDiv = document.getElementById('debug');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+            console.log(message);
+        }
+
         // Create default user on first load
         async function createDefaultUser() {
             try {
+                debugLog('Checking for default user...');
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef, where('username', '==', 'dfinn12'));
                 const querySnapshot = await getDocs(q);
                 
                 if (querySnapshot.empty) {
-                    await addDoc(usersRef, {
+                    debugLog('Creating default user...');
+                    const docRef = await addDoc(usersRef, {
                         username: 'dfinn12',
                         password: 'p@ssw0rd',
                         isAdmin: 0,
                         createdAt: new Date()
                     });
-                    console.log('Default user created');
+                    debugLog(`Default user created with ID: ${docRef.id}`);
+                    document.getElementById('success').textContent = 'Default user created! You can now login with dfinn12 / p@ssw0rd';
+                } else {
+                    debugLog('Default user already exists');
+                    document.getElementById('success').textContent = 'System ready! Login with dfinn12 / p@ssw0rd';
                 }
             } catch (error) {
+                debugLog(`Error creating default user: ${error.message}`);
                 console.error('Error creating default user:', error);
             }
         }
 
-        // Initialize default user
+        // Initialize default user when page loads
+        debugLog('Initializing Firebase...');
         createDefaultUser();
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -162,27 +199,41 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
             const loadingDiv = document.getElementById('loading');
             
             errorDiv.textContent = '';
+            successDiv.textContent = '';
             loadingDiv.style.display = 'block';
+            
+            debugLog(`Attempting login for user: ${username}`);
             
             try {
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef, where('username', '==', username), where('password', '==', password));
                 const querySnapshot = await getDocs(q);
                 
+                debugLog(`Query completed. Found ${querySnapshot.size} matching users`);
+                
                 if (!querySnapshot.empty) {
                     const userData = querySnapshot.docs[0].data();
+                    debugLog(`Login successful. User isAdmin: ${userData.isAdmin}`);
+                    
                     localStorage.setItem('currentUser', JSON.stringify({
                         username: userData.username,
                         isAdmin: userData.isAdmin
                     }));
-                    window.location.href = 'mainpage.html';
+                    
+                    successDiv.textContent = 'Login successful! Redirecting...';
+                    setTimeout(() => {
+                        window.location.href = 'mainpage.html';
+                    }, 1000);
                 } else {
+                    debugLog('Login failed: Invalid credentials');
                     errorDiv.textContent = 'Invalid username or password';
                 }
             } catch (error) {
+                debugLog(`Login error: ${error.message}`);
                 errorDiv.textContent = 'Login error: ' + error.message;
             } finally {
                 loadingDiv.style.display = 'none';
