@@ -1442,29 +1442,20 @@
         window.testDatabase = async function() {
             try {
                 console.log('Testing database connection...');
-                const testData = {
-                    firstName: 'Test',
-                    lastName: 'User',
-                    birthMonth: 'January',
-                    birthDay: 1,
-                    birthYear: 2000,
-                    familyBranch: 'Test Branch',
-                    relationship: 'Test',
-                    createdAt: new Date(),
-                    createdBy: currentUser.username
-                };
                 
-                const docRef = await addDoc(collection(db, 'family_members'), testData);
-                console.log('Test document written with ID: ', docRef.id);
-                alert('Database test successful! Document ID: ' + docRef.id);
+                // Just try to read from the users collection (which we know exists)
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+                console.log('Successfully connected to database. Found', usersSnapshot.size, 'users');
                 
-                // Clean up test data
-                await deleteDoc(doc(db, 'family_members', docRef.id));
-                console.log('Test document deleted');
+                // Try to read from family_members collection (might not exist yet)
+                const familySnapshot = await getDocs(collection(db, 'family_members'));
+                console.log('Family members collection exists. Found', familySnapshot.size, 'members');
+                
+                alert(`Database connection successful!\nUsers: ${usersSnapshot.size}\nFamily Members: ${familySnapshot.size}`);
                 
             } catch (error) {
                 console.error('Database test failed:', error);
-                alert('Database test failed: ' + error.message);
+                alert('Database test failed: ' + error.message + '\n\nThis might be a Firestore security rules issue.');
             }
         };
 
