@@ -282,6 +282,30 @@
             background: white;
             box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
         }
+
+        /* Management Modal Styles */
+        .manage-tab-content {
+            min-height: 300px;
+        }
+
+        #manageBranchModal .tab {
+            padding: 0.75rem 1rem;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            margin-right: 0.25rem;
+            font-size: 0.9rem;
+        }
+
+        #manageBranchModal .tab.active {
+            background: white;
+            border-bottom: 2px solid #007bff;
+        }
+
+        #moveCandidates input[type="checkbox"] {
+            transform: scale(1.2);
+        }
         
         .modal-content {
             background: white;
@@ -873,11 +897,41 @@
             <form id="addBranchForm">
                 <div class="form-group">
                     <label for="branchName">Branch Name *</label>
-                    <input type="text" id="branchName" required placeholder="e.g., Smith Family, Johnson Branch">
+                    <input type="text" id="branchName" required placeholder="e.g., Finn - Danny's Nuclear Family">
                 </div>
                 <div class="form-group">
                     <label for="branchDescription">Description</label>
                     <textarea id="branchDescription" placeholder="Description of this family branch"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="generationLevel">Generation Level *</label>
+                    <select id="generationLevel" required>
+                        <option value="">Select Generation</option>
+                        <option value="1">👴👵 Grandparents (Generation 1)</option>
+                        <option value="2">👨👩 Parents (Generation 2)</option>
+                        <option value="3">🧑👧 Children (Generation 3)</option>
+                        <option value="4">👶 Grandchildren (Generation 4)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="branchType">Branch Type *</label>
+                    <select id="branchType" required>
+                        <option value="">Select Type</option>
+                        <option value="nuclear_family">🏠 Nuclear Family (Parents + Children)</option>
+                        <option value="extended_family">🏘️ Extended Family (Multiple Generations)</option>
+                        <option value="cousin_branch">👥 Cousin Branch (Same Generation)</option>
+                        <option value="grandparent_branch">👴 Grandparent Branch</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="parentBranch">Parent Branch (Optional)</label>
+                    <select id="parentBranch">
+                        <option value="">No Parent Branch</option>
+                    </select>
+                </div>
+                <div id="smartSuggestions" style="margin-top: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 8px; display: none;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #1976d2;">💡 Smart Suggestions:</h4>
+                    <div id="suggestionsList"></div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn" onclick="closeModal('addBranchModal')">Cancel</button>
@@ -976,6 +1030,61 @@
                 <div style="font-size: 4rem; margin-bottom: 1rem;">👥</div>
                 <h3>No family members in this branch yet</h3>
                 <p>Add family members and assign them to this branch to see them here.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Branch Modal -->
+    <div id="manageBranchModal" class="modal">
+        <div class="modal-content" style="max-width: 80%; width: 900px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="manageBranchTitle">Manage Branch</h2>
+                <button class="btn" onclick="closeModal('manageBranchModal')" style="background: #6c757d; color: white;">✕ Close</button>
+            </div>
+            
+            <div class="tabs" style="margin-bottom: 1rem;">
+                <div class="tab active" onclick="switchManageTab('moveMembers')">🔄 Move Members</div>
+                <div class="tab" onclick="switchManageTab('shareMembers')">👥 Share Members</div>
+                <div class="tab" onclick="switchManageTab('suggestions')">💡 Smart Suggestions</div>
+            </div>
+
+            <!-- Move Members Tab -->
+            <div id="moveMembers" class="manage-tab-content active">
+                <h4>Move Members to This Branch</h4>
+                <p>Select family members from other branches to move to this branch:</p>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="sourceBranch">From Branch:</label>
+                    <select id="sourceBranch" onchange="loadMoveCandidates()" style="margin-left: 0.5rem; padding: 0.5rem;">
+                        <option value="">Select source branch</option>
+                    </select>
+                </div>
+                
+                <div id="moveCandidates" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+                    <p style="text-align: center; color: #666;">Select a source branch to see members</p>
+                </div>
+                
+                <button id="moveSelectedBtn" class="btn btn-primary" onclick="moveSelectedMembers()" style="margin-top: 1rem; display: none;">
+                    Move Selected Members
+                </button>
+            </div>
+
+            <!-- Share Members Tab -->
+            <div id="shareMembers" class="manage-tab-content" style="display: none;">
+                <h4>Share Members with Other Branches</h4>
+                <p>Add members from this branch to appear in other branches (like parents appearing in children's families):</p>
+                
+                <div id="shareableMembersList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Will be populated with current branch members -->
+                </div>
+            </div>
+
+            <!-- Smart Suggestions Tab -->
+            <div id="suggestions" class="manage-tab-content" style="display: none;">
+                <h4>Smart Organization Suggestions</h4>
+                <div id="branchSuggestions">
+                    <!-- Will be populated with AI suggestions -->
+                </div>
             </div>
         </div>
     </div>
@@ -1142,24 +1251,97 @@
         // Display branches
         function displayBranches() {
             const grid = document.getElementById('branchesGrid');
-            grid.innerHTML = familyBranches.map(branch => {
+            
+            // Sort branches by generation level, then by name
+            const sortedBranches = [...familyBranches].sort((a, b) => {
+                const genA = a.generationLevel || 999;
+                const genB = b.generationLevel || 999;
+                if (genA !== genB) return genA - genB;
+                return a.name.localeCompare(b.name);
+            });
+            
+            grid.innerHTML = sortedBranches.map(branch => {
                 const membersInBranch = familyMembers.filter(member => member.familyBranch === branch.name);
+                const sharedMembersCount = branch.sharedMembers ? branch.sharedMembers.length : 0;
+                
+                // Generation and type icons
+                const generationIcons = {
+                    1: '👴👵',
+                    2: '👨👩', 
+                    3: '🧑👧',
+                    4: '👶'
+                };
+                
+                const typeIcons = {
+                    'nuclear_family': '🏠',
+                    'extended_family': '🏘️',
+                    'cousin_branch': '👥',
+                    'grandparent_branch': '👴'
+                };
+                
+                const genIcon = generationIcons[branch.generationLevel] || '🌿';
+                const typeIcon = typeIcons[branch.branchType] || '📁';
+                
                 return `
-                    <div class="family-card">
-                        <h3>${branch.name}</h3>
-                        <p>${branch.description || 'No description'}</p>
-                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
-                            <small><strong>Members:</strong> ${membersInBranch.length} people</small>
+                    <div class="family-card" style="border-left: 4px solid ${getBranchColor(branch.generationLevel)};">
+                        <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
+                            <h3 style="margin: 0; color: ${getBranchColor(branch.generationLevel)};">${genIcon} ${branch.name}</h3>
+                            <div style="font-size: 1.5rem; opacity: 0.7;">${typeIcon}</div>
                         </div>
-                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                            <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745;">
+                        
+                        <div style="margin-bottom: 0.5rem;">
+                            <small style="color: #666;">
+                                <strong>Generation ${branch.generationLevel || 'Unknown'}</strong> • 
+                                <strong>${formatBranchType(branch.branchType)}</strong>
+                            </small>
+                        </div>
+                        
+                        <p style="margin: 0.5rem 0; color: #555;">${branch.description || 'No description'}</p>
+                        
+                        ${branch.parentBranch ? `<div style="margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; background: #fff3cd; border-radius: 4px; font-size: 0.85rem;">
+                            <strong>Parent:</strong> ${branch.parentBranch}
+                        </div>` : ''}
+                        
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
+                            <small>
+                                <strong>Direct Members:</strong> ${membersInBranch.length} people
+                                ${sharedMembersCount > 0 ? `<br><strong>Shared Members:</strong> ${sharedMembersCount} people` : ''}
+                            </small>
+                        </div>
+                        
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745; font-size: 0.85rem;">
                                 👁️ View Branch
                             </button>
-                            <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')">Delete</button>
+                            <button class="btn" onclick="openManageBranchModal('${branch.id}')" style="background: #17a2b8; color: white; font-size: 0.85rem;">
+                                ⚙️ Manage
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')" style="font-size: 0.85rem;">Delete</button>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        // Helper functions for branch display
+        function getBranchColor(generationLevel) {
+            const colors = {
+                1: '#8e24aa', // Purple for grandparents
+                2: '#1976d2', // Blue for parents  
+                3: '#388e3c', // Green for children
+                4: '#f57c00'  // Orange for grandchildren
+            };
+            return colors[generationLevel] || '#666';
+        }
+
+        function formatBranchType(branchType) {
+            const types = {
+                'nuclear_family': 'Nuclear Family',
+                'extended_family': 'Extended Family', 
+                'cousin_branch': 'Cousin Branch',
+                'grandparent_branch': 'Grandparent Branch'
+            };
+            return types[branchType] || 'Family Branch';
         }
 
         // Display users (admin only)
@@ -1241,15 +1423,28 @@
             
             branchSelects.forEach(select => {
                 if (select) {
-                    const currentOptions = Array.from(select.options).map(opt => opt.value);
-                    familyBranches.forEach(branch => {
-                        if (!currentOptions.includes(branch.name)) {
-                            const option = document.createElement('option');
-                            option.value = branch.name;
-                            option.textContent = branch.name;
-                            select.appendChild(option);
-                        }
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">Select Branch</option>';
+                    
+                    // Sort branches by generation for better organization
+                    const sortedBranches = [...familyBranches].sort((a, b) => {
+                        const genA = a.generationLevel || 999;
+                        const genB = b.generationLevel || 999;
+                        if (genA !== genB) return genA - genB;
+                        return a.name.localeCompare(b.name);
                     });
+                    
+                    sortedBranches.forEach(branch => {
+                        const option = document.createElement('option');
+                        option.value = branch.name;
+                        option.textContent = `${branch.name} (Gen ${branch.generationLevel || '?'})`;
+                        select.appendChild(option);
+                    });
+                    
+                    // Restore previous selection if it still exists
+                    if (currentValue && [...select.options].some(opt => opt.value === currentValue)) {
+                        select.value = currentValue;
+                    }
                 }
             });
 
@@ -1261,13 +1456,27 @@
             
             relatedSelects.forEach(relatedSelect => {
                 if (relatedSelect) {
+                    const currentValue = relatedSelect.value;
                     relatedSelect.innerHTML = '<option value="">Select Person</option>';
-                    familyMembers.forEach(member => {
+                    
+                    // Sort family members by last name, then first name
+                    const sortedMembers = [...familyMembers].sort((a, b) => {
+                        const lastNameComp = a.lastName.localeCompare(b.lastName);
+                        if (lastNameComp !== 0) return lastNameComp;
+                        return a.firstName.localeCompare(b.firstName);
+                    });
+                    
+                    sortedMembers.forEach(member => {
                         const option = document.createElement('option');
                         option.value = member.id;
                         option.textContent = `${member.firstName} ${member.lastName}`;
                         relatedSelect.appendChild(option);
                     });
+                    
+                    // Restore previous selection if it still exists
+                    if (currentValue && [...relatedSelect.options].some(opt => opt.value === currentValue)) {
+                        relatedSelect.value = currentValue;
+                    }
                 }
             });
         }
@@ -1393,6 +1602,10 @@
                 const branchData = {
                     name: document.getElementById('branchName').value,
                     description: document.getElementById('branchDescription').value,
+                    generationLevel: parseInt(document.getElementById('generationLevel').value),
+                    branchType: document.getElementById('branchType').value,
+                    parentBranch: document.getElementById('parentBranch').value || null,
+                    sharedMembers: [], // Array to store member IDs who appear in multiple branches
                     createdAt: new Date(),
                     createdBy: currentUser.username
                 };
@@ -1403,6 +1616,7 @@
                 await loadFamilyBranches();
                 displayBranches();
                 populateDropdowns();
+                generateSmartSuggestions(); // Generate suggestions after adding
                 alert('Family branch added successfully!');
             } catch (error) {
                 alert('Error adding family branch: ' + error.message);
@@ -1864,8 +2078,354 @@
         };
 
         window.openAddBranchModal = function() {
+            populateParentBranchDropdown();
+            generateSmartSuggestions();
             document.getElementById('addBranchModal').classList.add('active');
         };
+
+        // Populate parent branch dropdown
+        function populateParentBranchDropdown() {
+            const parentBranchSelect = document.getElementById('parentBranch');
+            parentBranchSelect.innerHTML = '<option value="">No Parent Branch</option>';
+            
+            familyBranches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch.name;
+                option.textContent = `${branch.name} (Gen ${branch.generationLevel || '?'})`;
+                parentBranchSelect.appendChild(option);
+            });
+        }
+
+        // Generate smart suggestions for branch creation
+        function generateSmartSuggestions() {
+            const suggestionsDiv = document.getElementById('smartSuggestions');
+            const suggestionsList = document.getElementById('suggestionsList');
+            
+            if (!familyMembers.length) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            const suggestions = [];
+            
+            // Analyze last names for family grouping suggestions
+            const lastNameGroups = {};
+            familyMembers.forEach(member => {
+                if (!member.familyBranch || member.familyBranch.trim() === '') {
+                    const lastName = member.lastName;
+                    if (!lastNameGroups[lastName]) lastNameGroups[lastName] = [];
+                    lastNameGroups[lastName].push(member);
+                }
+            });
+
+            // Suggest nuclear families for groups with same last name
+            Object.entries(lastNameGroups).forEach(([lastName, members]) => {
+                if (members.length >= 2) {
+                    const ages = members.map(m => new Date().getFullYear() - m.birthYear);
+                    const hasAdults = ages.some(age => age >= 18);
+                    const hasChildren = ages.some(age => age < 18);
+                    
+                    if (hasAdults && hasChildren) {
+                        suggestions.push({
+                            type: 'nuclear_family',
+                            text: `Create "${lastName} Nuclear Family" for ${members.length} members`,
+                            action: () => suggestBranchName(`${lastName} Nuclear Family`, 'nuclear_family', 2)
+                        });
+                    } else if (hasAdults) {
+                        suggestions.push({
+                            type: 'cousin_branch', 
+                            text: `Create "${lastName} Cousin Branch" for ${members.length} members`,
+                            action: () => suggestBranchName(`${lastName} Cousin Branch`, 'cousin_branch', 3)
+                        });
+                    }
+                }
+            });
+
+            // Show suggestions
+            if (suggestions.length > 0) {
+                suggestionsList.innerHTML = suggestions.map(suggestion => 
+                    `<div style="margin-bottom: 0.5rem;">
+                        <button class="btn" onclick="(${suggestion.action})()" style="background: #e3f2fd; color: #1976d2; border: 1px solid #90caf9; font-size: 0.85rem;">
+                            ${suggestion.text}
+                        </button>
+                    </div>`
+                ).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        // Suggest branch name and type
+        function suggestBranchName(name, type, generation) {
+            document.getElementById('branchName').value = name;
+            document.getElementById('branchType').value = type;
+            document.getElementById('generationLevel').value = generation;
+        }
+
+        // Open branch management modal
+        window.openManageBranchModal = function(branchId) {
+            const branch = familyBranches.find(b => b.id === branchId);
+            if (!branch) return;
+
+            document.getElementById('manageBranchTitle').textContent = `Manage: ${branch.name}`;
+            window.currentManagingBranch = branch;
+            
+            populateManageBranchData(branch);
+            document.getElementById('manageBranchModal').classList.add('active');
+        };
+
+        // Populate management modal data
+        function populateManageBranchData(branch) {
+            // Populate source branch dropdown for moving
+            const sourceBranchSelect = document.getElementById('sourceBranch');
+            sourceBranchSelect.innerHTML = '<option value="">Select source branch</option>';
+            
+            familyBranches.forEach(b => {
+                if (b.id !== branch.id) {
+                    const option = document.createElement('option');
+                    option.value = b.name;
+                    option.textContent = `${b.name} (${familyMembers.filter(m => m.familyBranch === b.name).length} members)`;
+                    sourceBranchSelect.appendChild(option);
+                }
+            });
+
+            // Populate shareable members
+            const shareableMembers = familyMembers.filter(m => m.familyBranch === branch.name);
+            const shareableDiv = document.getElementById('shareableMembersList');
+            
+            if (shareableMembers.length > 0) {
+                shareableDiv.innerHTML = shareableMembers.map(member => `
+                    <div style="margin-bottom: 0.5rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${member.firstName} ${member.lastName}</strong>
+                                <small style="color: #666; margin-left: 0.5rem;">${member.birthYear || ''}</small>
+                            </div>
+                            <button class="btn btn-primary" onclick="openShareMemberModal('${member.id}')" style="font-size: 0.8rem;">
+                                Share with Other Branches
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                shareableDiv.innerHTML = '<p style="text-align: center; color: #666;">No members in this branch yet</p>';
+            }
+
+            // Generate branch-specific suggestions
+            generateBranchSuggestions(branch);
+        }
+
+        // Load candidates for moving
+        window.loadMoveCandidates = function() {
+            const sourceBranchName = document.getElementById('sourceBranch').value;
+            const candidatesDiv = document.getElementById('moveCandidates');
+            const moveBtn = document.getElementById('moveSelectedBtn');
+
+            if (!sourceBranchName) {
+                candidatesDiv.innerHTML = '<p style="text-align: center; color: #666;">Select a source branch to see members</p>';
+                moveBtn.style.display = 'none';
+                return;
+            }
+
+            const candidates = familyMembers.filter(m => m.familyBranch === sourceBranchName);
+            
+            if (candidates.length === 0) {
+                candidatesDiv.innerHTML = '<p style="text-align: center; color: #666;">No members in selected branch</p>';
+                moveBtn.style.display = 'none';
+                return;
+            }
+
+            candidatesDiv.innerHTML = candidates.map(member => `
+                <div style="margin-bottom: 0.5rem; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateMoveButton()">
+                        <div>
+                            <strong>${member.firstName} ${member.lastName}</strong>
+                            <small style="color: #666; margin-left: 0.5rem;">
+                                Born ${member.birthMonth || ''} ${member.birthDay || ''}, ${member.birthYear || ''}
+                            </small>
+                            ${member.relationship ? `<br><small style="color: #666;">Relationship: ${member.relationship}</small>` : ''}
+                        </div>
+                    </label>
+                </div>
+            `).join('');
+
+            moveBtn.style.display = 'block';
+        };
+
+        // Update move button state
+        window.updateMoveButton = function() {
+            const checkboxes = document.querySelectorAll('#moveCandidates input[type="checkbox"]:checked');
+            const moveBtn = document.getElementById('moveSelectedBtn');
+            moveBtn.textContent = `Move Selected Members (${checkboxes.length})`;
+            moveBtn.disabled = checkboxes.length === 0;
+        };
+
+        // Move selected members
+        window.moveSelectedMembers = async function() {
+            const checkboxes = document.querySelectorAll('#moveCandidates input[type="checkbox"]:checked');
+            const memberIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (memberIds.length === 0) return;
+
+            const targetBranch = window.currentManagingBranch;
+            if (!targetBranch) return;
+
+            try {
+                for (const memberId of memberIds) {
+                    await updateDoc(doc(db, 'family_members', memberId), {
+                        familyBranch: targetBranch.name,
+                        updatedAt: new Date(),
+                        updatedBy: currentUser.username
+                    });
+                }
+
+                alert(`Successfully moved ${memberIds.length} members to ${targetBranch.name}`);
+                
+                // Refresh data
+                await loadFamilyMembers();
+                displayFamilyMembers();
+                displayBranches();
+                populateDropdowns();
+                
+                // Refresh management modal
+                populateManageBranchData(targetBranch);
+                
+            } catch (error) {
+                alert('Error moving members: ' + error.message);
+            }
+        };
+
+        // Generate branch-specific suggestions
+        function generateBranchSuggestions(branch) {
+            const suggestionsDiv = document.getElementById('branchSuggestions');
+            const suggestions = [];
+
+            const branchMembers = familyMembers.filter(m => m.familyBranch === branch.name);
+            const unassignedMembers = familyMembers.filter(m => !m.familyBranch || m.familyBranch.trim() === '');
+
+            // Suggest adding unassigned family members with same last name
+            if (branchMembers.length > 0) {
+                const branchLastNames = [...new Set(branchMembers.map(m => m.lastName))];
+                
+                branchLastNames.forEach(lastName => {
+                    const matchingUnassigned = unassignedMembers.filter(m => m.lastName === lastName);
+                    if (matchingUnassigned.length > 0) {
+                        suggestions.push({
+                            text: `Add ${matchingUnassigned.length} unassigned ${lastName} members to this branch`,
+                            action: `moveUnassignedByLastName('${lastName}', '${branch.name}')`
+                        });
+                    }
+                });
+            }
+
+            // Suggest creating child branches
+            if (branch.branchType === 'extended_family' && branchMembers.length > 6) {
+                suggestions.push({
+                    text: `This branch has ${branchMembers.length} members. Consider splitting into nuclear families`,
+                    action: `suggestSplitBranch('${branch.id}')`
+                });
+            }
+
+            if (suggestions.length > 0) {
+                suggestionsDiv.innerHTML = suggestions.map(s => 
+                    `<div style="margin-bottom: 0.5rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px;">
+                        <p style="margin: 0 0 0.5rem 0;">${s.text}</p>
+                        <button class="btn btn-primary" onclick="${s.action}" style="font-size: 0.85rem;">Apply Suggestion</button>
+                    </div>`
+                ).join('');
+            } else {
+                suggestionsDiv.innerHTML = '<p style="text-align: center; color: #666;">No suggestions for this branch right now</p>';
+            }
+        }
+
+        // Tab switching for management modal
+        window.switchManageTab = function(tabName) {
+            document.querySelectorAll('.manage-tab-content').forEach(tab => tab.style.display = 'none');
+            document.querySelectorAll('#manageBranchModal .tab').forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabName).style.display = 'block';
+            event.target.classList.add('active');
+        };
+
+        // Helper functions for smart suggestions
+        window.moveUnassignedByLastName = async function(lastName, targetBranchName) {
+            const unassignedMembers = familyMembers.filter(m => 
+                (!m.familyBranch || m.familyBranch.trim() === '') && m.lastName === lastName
+            );
+
+            if (unassignedMembers.length === 0) {
+                alert('No unassigned members found with that last name');
+                return;
+            }
+
+            const confirmMessage = `Move ${unassignedMembers.length} unassigned ${lastName} members to ${targetBranchName}?`;
+            if (!confirm(confirmMessage)) return;
+
+            try {
+                for (const member of unassignedMembers) {
+                    await updateDoc(doc(db, 'family_members', member.id), {
+                        familyBranch: targetBranchName,
+                        updatedAt: new Date(),
+                        updatedBy: currentUser.username
+                    });
+                }
+
+                alert(`Successfully moved ${unassignedMembers.length} ${lastName} members to ${targetBranchName}`);
+                
+                // Refresh data
+                await loadFamilyMembers();
+                displayFamilyMembers();
+                displayBranches();
+                
+                // Refresh management modal if open
+                if (window.currentManagingBranch) {
+                    populateManageBranchData(window.currentManagingBranch);
+                }
+                
+            } catch (error) {
+                alert('Error moving members: ' + error.message);
+            }
+        };
+
+        window.suggestSplitBranch = function(branchId) {
+            const branch = familyBranches.find(b => b.id === branchId);
+            if (!branch) return;
+
+            const branchMembers = familyMembers.filter(m => m.familyBranch === branch.name);
+            const lastNameGroups = {};
+            
+            branchMembers.forEach(member => {
+                if (!lastNameGroups[member.lastName]) lastNameGroups[member.lastName] = [];
+                lastNameGroups[member.lastName].push(member);
+            });
+
+            let suggestions = Object.entries(lastNameGroups)
+                .filter(([lastName, members]) => members.length >= 2)
+                .map(([lastName, members]) => `• ${lastName} family (${members.length} members)`)
+                .join('\n');
+
+            if (suggestions) {
+                alert(`Consider creating separate nuclear family branches:\n\n${suggestions}\n\nUse the "Move Members" tab to organize them.`);
+            } else {
+                alert('No clear family groupings found for splitting this branch.');
+            }
+        };
+
+        // Add smart suggestions to existing functions
+        function enhanceLoadData() {
+            const originalLoadData = window.loadData;
+            window.loadData = async function() {
+                await originalLoadData();
+                generateSmartSuggestions();
+            };
+        }
+
+        // Initialize smart suggestions
+        if (typeof window.loadData !== 'undefined') {
+            enhanceLoadData();
+        }
 
         window.openAddUserModal = function() {
             if (!currentUser.isAdmin) return;
