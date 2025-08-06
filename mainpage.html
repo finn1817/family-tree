@@ -567,6 +567,12 @@
                         <select class="filter-select" id="branchFilter">
                             <option value="">All Branches</option>
                         </select>
+                        <select class="filter-select" id="sortOrder">
+                            <option value="name">Sort by Name</option>
+                            <option value="age-oldest">Sort by Age (Oldest First)</option>
+                            <option value="age-youngest">Sort by Age (Youngest First)</option>
+                            <option value="birthday">Sort by Upcoming Birthday</option>
+                        </select>
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Family Member</button>
@@ -1212,6 +1218,7 @@
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
             const monthFilter = document.getElementById('monthFilter').value;
             const branchFilter = document.getElementById('branchFilter').value;
+            const sortOrder = document.getElementById('sortOrder') ? document.getElementById('sortOrder').value : 'name';
 
             let filtered = familyMembers.filter(member => {
                 const matchesSearch = !searchTerm || 
@@ -1223,11 +1230,34 @@
                 return matchesSearch && matchesMonth && matchesBranch;
             });
 
-            grid.innerHTML = filtered.map(member => `
+            // Sort based on selected order
+            filtered.sort((a, b) => {
+                if (sortOrder === 'age-oldest') {
+                    // Sort by age (oldest first)
+                    return getAge(a) - getAge(b);
+                } else if (sortOrder === 'age-youngest') {
+                    // Sort by age (youngest first)
+                    return getAge(b) - getAge(a);
+                } else if (sortOrder === 'birthday') {
+                    // Sort by upcoming birthday
+                    return getNextBirthday(a) - getNextBirthday(b);
+                } else {
+                    // Default: sort by name
+                    return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+                }
+            });
+
+            grid.innerHTML = filtered.map(member => {
+                const age = getAge(member);
+                const nextBirthday = getNextBirthday(member);
+                const daysUntilBirthday = Math.ceil((nextBirthday - new Date()) / (1000 * 60 * 60 * 24));
+                
+                return `
                 <div class="family-card">
                     <h3>${member.firstName} ${member.lastName}</h3>
                     <div class="family-info">
-                        <div><strong>Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear}</div>
+                        <div><strong>Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear} <span style="color: #666;">(Age: ${age})</span></div>
+                        <div><strong>Next Birthday:</strong> <span style="color: ${daysUntilBirthday <= 30 ? '#e74c3c' : '#666'};">${daysUntilBirthday} days</span></div>
                         <div><strong>Branch:</strong> ${member.familyBranch || 'None'}</div>
                         <div><strong>Relationship:</strong> ${member.relationship || 'Not specified'}</div>
                         <div><strong>Mobile:</strong> ${member.mobilePhone || 'N/A'}</div>
@@ -1245,13 +1275,22 @@
                         <button class="btn btn-danger" onclick="deleteFamilyMember('${member.id}')">Delete</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         // Display branches
         function displayBranches() {
             const grid = document.getElementById('branchesGrid');
             
+            // Group branches by generation and create hierarchy
+            const branchHierarchy = createBranchHierarchy();
+            
+            grid.innerHTML = renderBranchHierarchy(branchHierarchy);
+        }
+
+        // Create hierarchical structure of branches
+        function createBranchHierarchy() {
             // Sort branches by generation level, then by name
             const sortedBranches = [...familyBranches].sort((a, b) => {
                 const genA = a.generationLevel || 999;
@@ -1259,68 +1298,134 @@
                 if (genA !== genB) return genA - genB;
                 return a.name.localeCompare(b.name);
             });
+
+            // Group by generation
+            const generations = {};
+            sortedBranches.forEach(branch => {
+                const gen = branch.generationLevel || 'Unknown';
+                if (!generations[gen]) generations[gen] = [];
+                generations[gen].push(branch);
+            });
+
+            return generations;
+        }
+
+        // Render the hierarchical branch structure
+        function renderBranchHierarchy(generations) {
+            const generationNames = {
+                1: 'Grandparents Generation',
+                2: 'Parents Generation', 
+                3: 'Children Generation',
+                4: 'Grandchildren Generation'
+            };
+
+            let html = '';
             
-            grid.innerHTML = sortedBranches.map(branch => {
-                const membersInBranch = familyMembers.filter(member => member.familyBranch === branch.name);
-                const sharedMembersCount = branch.sharedMembers ? branch.sharedMembers.length : 0;
+            Object.keys(generations).sort((a, b) => a - b).forEach(genLevel => {
+                const branches = generations[genLevel];
+                const genName = generationNames[genLevel] || `Generation ${genLevel}`;
+                const genColor = getBranchColor(parseInt(genLevel));
                 
-                // Generation and type icons
-                const generationIcons = {
-                    1: '👴👵',
-                    2: '👨👩', 
-                    3: '🧑👧',
-                    4: '👶'
-                };
-                
-                const typeIcons = {
-                    'nuclear_family': '🏠',
-                    'extended_family': '🏘️',
-                    'cousin_branch': '👥',
-                    'grandparent_branch': '👴'
-                };
-                
-                const genIcon = generationIcons[branch.generationLevel] || '🌿';
-                const typeIcon = typeIcons[branch.branchType] || '📁';
-                
-                return `
-                    <div class="family-card" style="border-left: 4px solid ${getBranchColor(branch.generationLevel)};">
-                        <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
-                            <h3 style="margin: 0; color: ${getBranchColor(branch.generationLevel)};">${genIcon} ${branch.name}</h3>
-                            <div style="font-size: 1.5rem; opacity: 0.7;">${typeIcon}</div>
+                html += `
+                    <div style="margin-bottom: 2rem;">
+                        <div style="background: linear-gradient(135deg, ${genColor}, ${genColor}aa); color: white; padding: 1rem; border-radius: 10px 10px 0 0; position: relative; overflow: hidden;">
+                            <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 2rem;">${getGenerationIcon(genLevel)}</span>
+                                ${genName}
+                                <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-left: auto;">
+                                    ${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}
+                                </span>
+                            </h2>
+                            <div style="position: absolute; right: -20px; top: -20px; font-size: 6rem; opacity: 0.1; transform: rotate(15deg);">
+                                🌳
+                            </div>
                         </div>
-                        
-                        <div style="margin-bottom: 0.5rem;">
-                            <small style="color: #666;">
-                                <strong>Generation ${branch.generationLevel || 'Unknown'}</strong> • 
-                                <strong>${formatBranchType(branch.branchType)}</strong>
-                            </small>
-                        </div>
-                        
-                        <p style="margin: 0.5rem 0; color: #555;">${branch.description || 'No description'}</p>
-                        
-                        ${branch.parentBranch ? `<div style="margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; background: #fff3cd; border-radius: 4px; font-size: 0.85rem;">
-                            <strong>Parent:</strong> ${branch.parentBranch}
-                        </div>` : ''}
-                        
-                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 5px;">
-                            <small>
-                                <strong>Direct Members:</strong> ${membersInBranch.length} people
-                                ${sharedMembersCount > 0 ? `<br><strong>Shared Members:</strong> ${sharedMembersCount} people` : ''}
-                            </small>
-                        </div>
-                        
-                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745; font-size: 0.85rem;">
-                                👁️ View Branch
-                            </button>
-                            <button class="btn" onclick="openManageBranchModal('${branch.id}')" style="background: #17a2b8; color: white; font-size: 0.85rem;">
-                                ⚙️ Manage
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')" style="font-size: 0.85rem;">Delete</button>
+                        <div style="background: #f8f9fa; border: 2px solid ${genColor}; border-top: none; border-radius: 0 0 10px 10px; padding: 1rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem;">
+                                ${branches.map(branch => renderBranchCard(branch, genLevel)).join('')}
+                            </div>
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
+
+            return html || '<div style="text-align: center; padding: 2rem; color: #666;"><h3>No family branches yet</h3><p>Create your first family branch to get started!</p></div>';
+        }
+
+        // Render individual branch card
+        function renderBranchCard(branch, genLevel) {
+            const membersInBranch = familyMembers.filter(member => member.familyBranch === branch.name);
+            const sharedMembersCount = branch.sharedMembers ? branch.sharedMembers.length : 0;
+            const totalMembers = membersInBranch.length + sharedMembersCount;
+            
+            // Get average age for the branch
+            const avgAge = membersInBranch.length > 0 ? 
+                Math.round(membersInBranch.reduce((sum, member) => sum + getAge(member), 0) / membersInBranch.length) : 0;
+            
+            const typeIcon = getBranchTypeIcon(branch.branchType);
+            
+            return `
+                <div class="family-card" style="border-left: 4px solid ${getBranchColor(genLevel)}; margin: 0; position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                        <h3 style="margin: 0; color: ${getBranchColor(genLevel)}; font-size: 1.1rem;">
+                            ${typeIcon} ${branch.name}
+                        </h3>
+                        <div style="font-size: 1.2rem; opacity: 0.7;">${getGenerationIcon(genLevel)}</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 0.5rem;">
+                        <span style="background: ${getBranchColor(genLevel)}20; color: ${getBranchColor(genLevel)}; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">
+                            ${formatBranchType(branch.branchType)}
+                        </span>
+                    </div>
+                    
+                    <p style="margin: 0.5rem 0; color: #555; font-size: 0.9rem;">${branch.description || 'No description'}</p>
+                    
+                    ${branch.parentBranch ? `<div style="margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; background: #fff3cd; border-radius: 4px; font-size: 0.8rem;">
+                        <strong>↗️ Parent:</strong> ${branch.parentBranch}
+                    </div>` : ''}
+                    
+                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 5px; border-left: 3px solid ${getBranchColor(genLevel)};">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
+                            <div><strong>👥 Members:</strong> ${totalMembers}</div>
+                            <div><strong>📊 Avg Age:</strong> ${avgAge || 'N/A'}</div>
+                            <div><strong>🏠 Direct:</strong> ${membersInBranch.length}</div>
+                            <div><strong>🤝 Shared:</strong> ${sharedMembersCount}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745; font-size: 0.8rem; flex: 1;">
+                            👁️ View Branch
+                        </button>
+                        <button class="btn" onclick="openManageBranchModal('${branch.id}')" style="background: #17a2b8; color: white; font-size: 0.8rem; flex: 1;">
+                            ⚙️ Manage
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')" style="font-size: 0.8rem;">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Helper functions for hierarchical display
+        function getGenerationIcon(genLevel) {
+            const icons = {
+                1: '👴👵',
+                2: '👨👩', 
+                3: '🧑👧',
+                4: '👶👶'
+            };
+            return icons[genLevel] || '🌿';
+        }
+
+        function getBranchTypeIcon(branchType) {
+            const icons = {
+                'nuclear_family': '🏠',
+                'extended_family': '🏘️',
+                'cousin_branch': '👥',
+                'grandparent_branch': '👴'
+            };
+            return icons[branchType] || '📁';
         }
 
         // Helper functions for branch display
@@ -1342,6 +1447,46 @@
                 'grandparent_branch': 'Grandparent Branch'
             };
             return types[branchType] || 'Family Branch';
+        }
+
+        // Helper functions for age and birthday calculations
+        function getAge(member) {
+            if (!member.birthYear || !member.birthMonth || !member.birthDay) return 0;
+            
+            const today = new Date();
+            const birthDate = new Date(member.birthYear, getMonthIndex(member.birthMonth), member.birthDay);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            
+            return age;
+        }
+
+        function getNextBirthday(member) {
+            if (!member.birthMonth || !member.birthDay) return new Date();
+            
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const monthIndex = getMonthIndex(member.birthMonth);
+            let nextBirthday = new Date(currentYear, monthIndex, member.birthDay);
+            
+            if (nextBirthday < today) {
+                nextBirthday = new Date(currentYear + 1, monthIndex, member.birthDay);
+            }
+            
+            return nextBirthday;
+        }
+
+        function getMonthIndex(monthName) {
+            const months = {
+                'January': 0, 'February': 1, 'March': 2, 'April': 3,
+                'May': 4, 'June': 5, 'July': 6, 'August': 7,
+                'September': 8, 'October': 9, 'November': 10, 'December': 11
+            };
+            return months[monthName] || 0;
         }
 
         // Display users (admin only)
@@ -1487,6 +1632,7 @@
             document.getElementById('searchInput').addEventListener('input', displayFamilyMembers);
             document.getElementById('monthFilter').addEventListener('change', displayFamilyMembers);
             document.getElementById('branchFilter').addEventListener('change', displayFamilyMembers);
+            document.getElementById('sortOrder').addEventListener('change', displayFamilyMembers);
 
             // Add member form
             document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
@@ -2506,13 +2652,23 @@
 
         function displayBranchMembers(members) {
             const grid = document.getElementById('branchMembersGrid');
-            grid.innerHTML = members.map(member => `
+            
+            // Sort members by age (oldest first) for better family tree view
+            const sortedMembers = [...members].sort((a, b) => getAge(b) - getAge(a));
+            
+            grid.innerHTML = sortedMembers.map(member => {
+                const age = getAge(member);
+                const nextBirthday = getNextBirthday(member);
+                const daysUntilBirthday = Math.ceil((nextBirthday - new Date()) / (1000 * 60 * 60 * 24));
+                
+                return `
                 <div class="family-card" style="border-left: 4px solid #28a745;">
                     <div style="display: flex; justify-content: between; align-items: start;">
                         <div style="flex: 1;">
                             <h3 style="margin-bottom: 0.5rem; color: #28a745;">${member.firstName} ${member.lastName}</h3>
                             <div class="family-info" style="font-size: 0.9rem;">
-                                <div><strong>🎂 Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear}</div>
+                                <div><strong>🎂 Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear} <span style="color: #666;">(Age: ${age})</span></div>
+                                <div><strong>⏰ Next Birthday:</strong> <span style="color: ${daysUntilBirthday <= 30 ? '#e74c3c' : '#666'};">${daysUntilBirthday} days</span></div>
                                 ${member.relationship ? `<div><strong>👪 Relationship:</strong> ${member.relationship}</div>` : ''}
                                 ${member.mobilePhone ? `<div><strong>📱 Mobile:</strong> ${member.mobilePhone}</div>` : ''}
                                 ${member.homePhone ? `<div><strong>🏠 Home:</strong> ${member.homePhone}</div>` : ''}
@@ -2531,7 +2687,8 @@
                         <button class="btn btn-danger" onclick="deleteFamilyMember('${member.id}')" style="font-size: 0.85rem;">🗑️ Delete</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         window.closeModal = function(modalId) {
