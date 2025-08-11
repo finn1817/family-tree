@@ -772,7 +772,7 @@
                             <!-- Parents checkboxes will be populated by JavaScript -->
                         </div>
                         <small style="color: #666; margin-top: 0.5rem; display: block;">
-                            Selected: <span id="addParentsCount">0</span>/2 parents
+                            Selected: <span id="addParentsCount">0</span>/2 parents • Sorted by age (oldest first)
                         </small>
                     </div>
                     <div class="form-group full-width">
@@ -781,7 +781,7 @@
                             <!-- Children checkboxes will be populated by JavaScript -->
                         </div>
                         <small style="color: #666; margin-top: 0.5rem; display: block;">
-                            Selected: <span id="addChildrenCount">0</span>/15 children
+                            Selected: <span id="addChildrenCount">0</span>/15 children • Sorted by age (youngest first)
                         </small>
                     </div>
                     <div class="form-group">
@@ -2310,6 +2310,32 @@
             return types[branchType] || 'Family Branch';
         }
 
+        // Helper function to get potential parents (older than the member)
+        function getPotentialParents(currentMember) {
+            const currentAge = getAge(currentMember);
+            return familyMembers
+                .filter(fm => {
+                    if (fm.id === currentMember.id) return false;
+                    const parentAge = getAge(fm);
+                    // Parents should be at least 15 years older (reasonable minimum)
+                    return parentAge >= currentAge + 15;
+                })
+                .sort((a, b) => getAge(b) - getAge(a)); // Oldest first
+        }
+
+        // Helper function to get potential children (younger than the member)
+        function getPotentialChildren(currentMember) {
+            const currentAge = getAge(currentMember);
+            return familyMembers
+                .filter(fm => {
+                    if (fm.id === currentMember.id) return false;
+                    const childAge = getAge(fm);
+                    // Children should be at least 15 years younger (reasonable minimum)
+                    return childAge <= currentAge - 15;
+                })
+                .sort((a, b) => getAge(a) - getAge(b)); // Youngest first
+        }
+
         // Helper functions for age and birthday calculations
         function getAge(member) {
             if (!member.birthYear || !member.birthMonth || !member.birthDay) return 0;
@@ -2609,10 +2635,11 @@
                 }
             });
 
-            // Populate children checkboxes for add form
+            // Populate children checkboxes for add form (sorted youngest first)
             const addChildrenContainer = document.getElementById('addChildrenSelection');
             if (addChildrenContainer) {
-                addChildrenContainer.innerHTML = familyMembers.map(member => `
+                const sortedChildrenCandidates = [...familyMembers].sort((a, b) => getAge(a) - getAge(b));
+                addChildrenContainer.innerHTML = sortedChildrenCandidates.map(member => `
                     <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
                         <input type="checkbox" name="children" value="${member.id}" 
                                onchange="updateAddChildrenCount()" style="margin-right: 0.5rem;">
@@ -2622,10 +2649,11 @@
                 updateAddChildrenCount();
             }
 
-            // Populate parents checkboxes for add form
+            // Populate parents checkboxes for add form (sorted oldest first)
             const addParentsContainer = document.getElementById('addParentsSelection');
             if (addParentsContainer) {
-                addParentsContainer.innerHTML = familyMembers.map(member => `
+                const sortedParentCandidates = [...familyMembers].sort((a, b) => getAge(b) - getAge(a));
+                addParentsContainer.innerHTML = sortedParentCandidates.map(member => `
                     <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
                         <input type="checkbox" name="parents" value="${member.id}" 
                                onchange="updateAddParentsCount()" style="margin-right: 0.5rem;">
@@ -4056,6 +4084,10 @@
                 .filter(m => m.id !== memberId)
                 .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
 
+            // Get age-appropriate potential parents and children
+            const potentialParents = getPotentialParents(member);
+            const potentialChildren = getPotentialChildren(member);
+
             const modalContent = `
                 <div style="background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative;">
                     <button onclick="closeModal('generalModal')" style="position: absolute; top: 1rem; right: 1rem; background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">&times;</button>
@@ -4129,7 +4161,7 @@
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👫 Parents (Select up to 2)</label>
                             <div id="parentsSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
-                                ${familyMembers.filter(fm => fm.id !== member.id).map(parent => {
+                                ${potentialParents.length > 0 ? potentialParents.map(parent => {
                                     const isSelected = member.parents && member.parents.includes(parent.id);
                                     return `
                                     <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
@@ -4138,17 +4170,21 @@
                                         <span>${parent.firstName} ${parent.lastName} (Age: ${getAge(parent)})</span>
                                     </div>
                                     `;
-                                }).join('')}
+                                }).join('') : `
+                                    <div style="text-align: center; padding: 1rem; color: #666; font-style: italic;">
+                                        No potential parents found (need people at least 15 years older)
+                                    </div>
+                                `}
                             </div>
                             <small style="color: #666; margin-top: 0.5rem; display: block;">
-                                Selected: <span id="parentsCount">0</span>/2 parents
+                                Selected: <span id="parentsCount">0</span>/2 parents • Showing people 15+ years older, sorted by age (oldest first)
                             </small>
                         </div>
 
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👶 Children (Select up to 15)</label>
                             <div id="childrenSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
-                                ${familyMembers.filter(fm => fm.id !== member.id).map(child => {
+                                ${potentialChildren.length > 0 ? potentialChildren.map(child => {
                                     const isSelected = member.children && member.children.includes(child.id);
                                     return `
                                     <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
@@ -4157,7 +4193,16 @@
                                         <span>${child.firstName} ${child.lastName} (Age: ${getAge(child)})</span>
                                     </div>
                                     `;
-                                }).join('')}
+                                }).join('') : `
+                                    <div style="text-align: center; padding: 1rem; color: #666; font-style: italic;">
+                                        No potential children found (need people at least 15 years younger)
+                                    </div>
+                                `}
+                            </div>
+                            <small style="color: #666; margin-top: 0.5rem; display: block;">
+                                Selected: <span id="childrenCount">0</span>/15 children • Showing people 15+ years younger, sorted by age (youngest first)
+                            </small>
+                        </div>
                             </div>
                             <small style="color: #666; margin-top: 0.5rem; display: block;">
                                 Selected: <span id="childrenCount">0</span>/15 children
