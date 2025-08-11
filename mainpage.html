@@ -1199,11 +1199,13 @@
         // Load family members
         async function loadFamilyMembers() {
             try {
+                console.log('Loading family members...');
                 const querySnapshot = await getDocs(collection(db, 'family_members'));
                 familyMembers = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
+                console.log(`Loaded ${familyMembers.length} family members:`, familyMembers);
             } catch (error) {
                 console.error('Error loading family members:', error);
             }
@@ -1267,15 +1269,26 @@
         // Display family members
         function displayFamilyMembers() {
             const grid = document.getElementById('familyGrid');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const monthFilter = document.getElementById('monthFilter').value;
-            const branchFilter = document.getElementById('branchFilter').value;
-            const sortOrder = document.getElementById('sortOrder') ? document.getElementById('sortOrder').value : 'name';
+            if (!grid) {
+                console.error('familyGrid element not found');
+                return;
+            }
+            
+            // Get filter values with null checks
+            const searchInput = document.getElementById('searchInput');
+            const monthFilterEl = document.getElementById('monthFilter');
+            const branchFilterEl = document.getElementById('branchFilter');
+            const sortOrderEl = document.getElementById('sortOrder');
+            
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const monthFilter = monthFilterEl ? monthFilterEl.value : '';
+            const branchFilter = branchFilterEl ? branchFilterEl.value : '';
+            const sortOrder = sortOrderEl ? sortOrderEl.value : 'name';
 
             let filtered = familyMembers.filter(member => {
                 const matchesSearch = !searchTerm || 
-                    member.firstName.toLowerCase().includes(searchTerm) ||
-                    member.lastName.toLowerCase().includes(searchTerm);
+                    (member.firstName && member.firstName.toLowerCase().includes(searchTerm)) ||
+                    (member.lastName && member.lastName.toLowerCase().includes(searchTerm));
                 const matchesMonth = !monthFilter || member.birthMonth === monthFilter;
                 const matchesBranch = !branchFilter || member.familyBranch === branchFilter;
                 
@@ -1295,7 +1308,7 @@
                     return getNextBirthday(a) - getNextBirthday(b);
                 } else {
                     // Default: sort by name
-                    return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+                    return `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`);
                 }
             });
 
@@ -1306,9 +1319,9 @@
                 
                 return `
                 <div class="family-card">
-                    <h3>${member.firstName} ${member.lastName}</h3>
+                    <h3>${member.firstName || ''} ${member.lastName || ''}</h3>
                     <div class="family-info">
-                        <div><strong>Birthday:</strong> ${member.birthMonth} ${member.birthDay}, ${member.birthYear} <span style="color: #666;">(Age: ${age})</span></div>
+                        <div><strong>Birthday:</strong> ${member.birthMonth || 'N/A'} ${member.birthDay || 'N/A'}, ${member.birthYear || 'N/A'} <span style="color: #666;">(Age: ${age})</span></div>
                         <div><strong>Next Birthday:</strong> <span style="color: ${daysUntilBirthday <= 30 ? '#e74c3c' : '#666'};">${daysUntilBirthday} days</span></div>
                         <div><strong>Branch:</strong> ${member.familyBranch || 'None'}</div>
                         <div><strong>Relationship:</strong> ${member.relationship || 'Not specified'}</div>
@@ -1737,43 +1750,60 @@
         function displayUpcomingBirthdays() {
             const container = document.getElementById('upcomingBirthdays');
             
+            console.log('displayUpcomingBirthdays called');
+            console.log('Container found:', !!container);
+            console.log('Family members:', familyMembers.length);
+            
             if (!container) {
                 console.warn('Upcoming birthdays container not found');
                 return;
             }
             
             if (!familyMembers || familyMembers.length === 0) {
+                console.log('No family members found');
                 container.innerHTML = '<div class="birthday-item"><span>No family members added yet</span><span>Add some family members to see birthdays</span></div>';
                 return;
             }
             
+            console.log('Processing family members for birthdays...');
             const today = new Date();
             
             // Filter members with valid birth data and calculate upcoming birthdays
-            const upcoming = familyMembers
-                .filter(member => {
-                    // Check if member has valid birth data
-                    if (!member.birthMonth || !member.birthDay) {
-                        return false;
-                    }
-                    // Additional validation - check if day is valid for the month
-                    const monthIndex = getMonthIndex(member.birthMonth);
-                    const testDate = new Date(2024, monthIndex, member.birthDay); // Use leap year for testing
-                    return testDate.getMonth() === monthIndex && testDate.getDate() == member.birthDay;
-                })
-                .map(member => {
-                    const nextBirthday = getNextBirthday(member); // Use the existing helper function
-                    const daysUntil = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
-                    
-                    return {
-                        ...member,
-                        nextBirthday: nextBirthday,
-                        daysUntil: daysUntil
-                    };
-                })
-                .filter(member => member.daysUntil >= 0 && member.daysUntil < 9999) // Filter out any invalid dates
-                .sort((a, b) => a.nextBirthday - b.nextBirthday) // Sort by next birthday date
-                .slice(0, 5); // Show only the next 5 birthdays
+            const validMembers = familyMembers.filter(member => {
+                // Check if member has valid birth data
+                if (!member.birthMonth || !member.birthDay) {
+                    console.log(`Member ${member.firstName} ${member.lastName} missing birth data`);
+                    return false;
+                }
+                // Additional validation - check if day is valid for the month
+                const monthIndex = getMonthIndex(member.birthMonth);
+                const testDate = new Date(2024, monthIndex, member.birthDay); // Use leap year for testing
+                const isValid = testDate.getMonth() === monthIndex && testDate.getDate() == member.birthDay;
+                if (!isValid) {
+                    console.log(`Member ${member.firstName} ${member.lastName} has invalid date: ${member.birthMonth} ${member.birthDay}`);
+                }
+                return isValid;
+            });
+            
+            console.log(`Found ${validMembers.length} members with valid birth dates`);
+            
+            const upcoming = validMembers.map(member => {
+                const nextBirthday = getNextBirthday(member); // Use the existing helper function
+                const daysUntil = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
+                
+                console.log(`${member.firstName} ${member.lastName}: ${member.birthMonth} ${member.birthDay} - ${daysUntil} days`);
+                
+                return {
+                    ...member,
+                    nextBirthday: nextBirthday,
+                    daysUntil: daysUntil
+                };
+            })
+            .filter(member => member.daysUntil >= 0 && member.daysUntil < 9999) // Filter out any invalid dates
+            .sort((a, b) => a.nextBirthday - b.nextBirthday) // Sort by next birthday date
+            .slice(0, 5); // Show only the next 5 birthdays
+
+            console.log(`Final upcoming birthdays count: ${upcoming.length}`);
 
             if (upcoming.length === 0) {
                 container.innerHTML = '<div class="birthday-item"><span>No upcoming birthdays</span><span>Add birth dates to family members</span></div>';
@@ -1793,6 +1823,8 @@
                     </div>
                 `;
             }).join('');
+            
+            console.log('Birthday display updated');
         }
 
         // Populate dropdowns
@@ -1866,47 +1898,115 @@
 
         // Setup event listeners
         function setupEventListeners() {
+            console.log('Setting up event listeners...');
+            
             // Search and filter
-            document.getElementById('searchInput').addEventListener('input', displayFamilyMembers);
-            document.getElementById('monthFilter').addEventListener('change', displayFamilyMembers);
-            document.getElementById('branchFilter').addEventListener('change', displayFamilyMembers);
-            document.getElementById('sortOrder').addEventListener('change', displayFamilyMembers);
+            const searchInput = document.getElementById('searchInput');
+            const monthFilter = document.getElementById('monthFilter');
+            const branchFilter = document.getElementById('branchFilter');
+            const sortOrder = document.getElementById('sortOrder');
+            
+            if (searchInput) {
+                searchInput.addEventListener('input', displayFamilyMembers);
+                console.log('Search input listener added');
+            } else {
+                console.warn('searchInput element not found');
+            }
+            
+            if (monthFilter) {
+                monthFilter.addEventListener('change', displayFamilyMembers);
+                console.log('Month filter listener added');
+            } else {
+                console.warn('monthFilter element not found');
+            }
+            
+            if (branchFilter) {
+                branchFilter.addEventListener('change', displayFamilyMembers);
+                console.log('Branch filter listener added');
+            } else {
+                console.warn('branchFilter element not found');
+            }
+            
+            if (sortOrder) {
+                sortOrder.addEventListener('change', displayFamilyMembers);
+                console.log('Sort order listener added');
+            } else {
+                console.warn('sortOrder element not found');
+            }
 
             // Add member form
-            document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await addFamilyMember();
-            });
+            const addMemberForm = document.getElementById('addMemberForm');
+            if (addMemberForm) {
+                addMemberForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addFamilyMember();
+                });
+                console.log('Add member form listener added');
+            } else {
+                console.warn('addMemberForm not found');
+            }
 
             // Add branch form
-            document.getElementById('addBranchForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await addFamilyBranch();
-            });
+            const addBranchForm = document.getElementById('addBranchForm');
+            if (addBranchForm) {
+                addBranchForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addFamilyBranch();
+                });
+                console.log('Add branch form listener added');
+            } else {
+                console.warn('addBranchForm not found');
+            }
 
             // Create family unit form
-            document.getElementById('createFamilyUnitForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await createFamilyUnit();
-            });
+            const createFamilyUnitForm = document.getElementById('createFamilyUnitForm');
+            if (createFamilyUnitForm) {
+                createFamilyUnitForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await createFamilyUnit();
+                });
+                console.log('Create family unit form listener added');
+            } else {
+                console.warn('createFamilyUnitForm not found');
+            }
 
             // Add user form
-            document.getElementById('addUserForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await addUser();
-            });
+            const addUserForm = document.getElementById('addUserForm');
+            if (addUserForm) {
+                addUserForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addUser();
+                });
+                console.log('Add user form listener added');
+            } else {
+                console.warn('addUserForm not found');
+            }
 
             // Add message form
-            document.getElementById('addMessageForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await addMessage();
-            });
+            const addMessageForm = document.getElementById('addMessageForm');
+            if (addMessageForm) {
+                addMessageForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addMessage();
+                });
+                console.log('Add message form listener added');
+            } else {
+                console.warn('addMessageForm not found');
+            }
 
             // Edit member form
-            document.getElementById('editMemberForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await updateFamilyMember();
-            });
+            const editMemberForm = document.getElementById('editMemberForm');
+            if (editMemberForm) {
+                editMemberForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await updateFamilyMember();
+                });
+                console.log('Edit member form listener added');
+            } else {
+                console.warn('editMemberForm not found');
+            }
+            
+            console.log('Event listeners setup complete');
         }
 
         // Add family member
