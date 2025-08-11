@@ -4071,7 +4071,7 @@
             document.addEventListener('keydown', escKeyHandler);
         };
 
-        // Open edit member modal function
+        // Open edit member modal function - COMPLETELY REBUILT FOR FULL SCREEN
         window.openEditMemberModal = function(memberId) {
             const member = familyMembers.find(m => m.id === memberId);
             if (!member) {
@@ -4079,211 +4079,459 @@
                 return;
             }
 
-            // Hide any existing static modals
-            document.getElementById('editMemberModal').style.display = 'none';
-
-            // Get list of potential spouses (exclude self)
-            const potentialSpouses = familyMembers
-                .filter(m => m.id !== memberId)
-                .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+            // Close any existing modals
+            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
 
             // Get age-appropriate potential parents and children
             const potentialParents = getPotentialParents(member);
             const potentialChildren = getPotentialChildren(member);
+            const potentialSpouses = familyMembers.filter(m => m.id !== memberId);
 
-            const modalContent = `
-                <div style="background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative;">
-                    <button onclick="closeModal('dynamicEditModal')" style="position: absolute; top: 1rem; right: 1rem; background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">&times;</button>
-                    <h3 style="color: #667eea; margin-bottom: 1.5rem; padding-right: 2rem;">✏️ Edit Family Member</h3>
-                    <form id="dynamicEditMemberForm" onsubmit="updateFamilyMember(event, '${memberId}')">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">First Name *</label>
-                                <input type="text" name="firstName" value="${member.firstName || ''}" required 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Last Name *</label>
-                                <input type="text" name="lastName" value="${member.lastName || ''}" required 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                        </div>
+            // Create full-screen modal
+            const fullScreenModal = document.createElement('div');
+            fullScreenModal.id = 'fullScreenEditModal';
+            fullScreenModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem;
+                box-sizing: border-box;
+            `;
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Birth Month *</label>
-                                <select name="birthMonth" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                                    <option value="">Select Month</option>
-                                    <option value="January" ${member.birthMonth === 'January' ? 'selected' : ''}>January</option>
-                                    <option value="February" ${member.birthMonth === 'February' ? 'selected' : ''}>February</option>
-                                    <option value="March" ${member.birthMonth === 'March' ? 'selected' : ''}>March</option>
-                                    <option value="April" ${member.birthMonth === 'April' ? 'selected' : ''}>April</option>
-                                    <option value="May" ${member.birthMonth === 'May' ? 'selected' : ''}>May</option>
-                                    <option value="June" ${member.birthMonth === 'June' ? 'selected' : ''}>June</option>
-                                    <option value="July" ${member.birthMonth === 'July' ? 'selected' : ''}>July</option>
-                                    <option value="August" ${member.birthMonth === 'August' ? 'selected' : ''}>August</option>
-                                    <option value="September" ${member.birthMonth === 'September' ? 'selected' : ''}>September</option>
-                                    <option value="October" ${member.birthMonth === 'October' ? 'selected' : ''}>October</option>
-                                    <option value="November" ${member.birthMonth === 'November' ? 'selected' : ''}>November</option>
-                                    <option value="December" ${member.birthMonth === 'December' ? 'selected' : ''}>December</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Birth Day *</label>
-                                <input type="number" name="birthDay" min="1" max="31" value="${member.birthDay || ''}" required 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Birth Year *</label>
-                                <input type="number" name="birthYear" min="1900" max="2030" value="${member.birthYear || ''}" required 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                        </div>
+            fullScreenModal.innerHTML = `
+                <div style="
+                    background: white;
+                    width: 100%;
+                    max-width: 1200px;
+                    height: 90vh;
+                    border-radius: 20px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    position: relative;
+                ">
+                    <!-- Header -->
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 2rem;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    ">
+                        <h2 style="margin: 0; font-size: 1.8rem; font-weight: 600;">
+                            ✏️ Edit Family Member
+                        </h2>
+                        <button onclick="closeFullScreenModal()" style="
+                            background: rgba(255,255,255,0.2);
+                            border: none;
+                            color: white;
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 50%;
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: background 0.3s;
+                        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
+                           onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
+                    </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Family Group</label>
-                                <select name="familyBranch" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                                    <option value="">Select Group</option>
-                                    ${familyBranches.map(branch => 
-                                        `<option value="${branch.name}" ${member.familyBranch === branch.name ? 'selected' : ''}>${branch.name}</option>`
-                                    ).join('')}
-                                </select>
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">💍 Married To</label>
-                                <select name="marriedTo" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                                    <option value="">Select someone</option>
-                                    ${potentialSpouses.map(spouse => 
-                                        `<option value="${spouse.id}" ${member.marriedTo === spouse.id ? 'selected' : ''}>${spouse.firstName} ${spouse.lastName}</option>`
-                                    ).join('')}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👫 Parents (Select up to 2)</label>
-                            <div id="editParentsSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
-                                ${potentialParents.length > 0 ? potentialParents.map(parent => {
-                                    const isSelected = member.parents && member.parents.includes(parent.id);
-                                    return `
-                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
-                                        <input type="checkbox" name="editParents" value="${parent.id}" ${isSelected ? 'checked' : ''} 
-                                               onchange="updateParentsCount()" style="margin-right: 0.5rem;">
-                                        <span>${parent.firstName} ${parent.lastName} (Age: ${getAge(parent)})</span>
+                    <!-- Form Content -->
+                    <div style="
+                        flex: 1;
+                        overflow-y: auto;
+                        padding: 2rem;
+                        background: #f8f9fa;
+                    ">
+                        <form id="fullScreenEditForm" onsubmit="submitFullScreenEdit(event, '${memberId}')" style="
+                            max-width: 1000px;
+                            margin: 0 auto;
+                        ">
+                            <!-- Basic Information -->
+                            <div style="
+                                background: white;
+                                border-radius: 15px;
+                                padding: 2rem;
+                                margin-bottom: 2rem;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            ">
+                                <h3 style="color: #667eea; margin-bottom: 1.5rem; font-size: 1.3rem;">👤 Basic Information</h3>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">First Name *</label>
+                                        <input type="text" name="firstName" value="${member.firstName || ''}" required style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                            transition: border-color 0.3s;
+                                        " onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e6ed'">
                                     </div>
-                                    `;
-                                }).join('') : `
-                                    <div style="text-align: center; padding: 1rem; color: #666; font-style: italic;">
-                                        No potential parents found (need people at least 15 years older)
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Last Name *</label>
+                                        <input type="text" name="lastName" value="${member.lastName || ''}" required style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                            transition: border-color 0.3s;
+                                        " onfocus="this.style.borderColor='#667eea'" onblur="this.style.borderColor='#e0e6ed'">
                                     </div>
-                                `}
-                            </div>
-                            <small style="color: #666; margin-top: 0.5rem; display: block;">
-                                Selected: <span id="editParentsCount">0</span>/2 parents • Showing people 15+ years older, sorted by age (oldest first)
-                            </small>
-                        </div>
+                                </div>
 
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👶 Children (Select up to 15)</label>
-                            <div id="editChildrenSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
-                                ${potentialChildren.length > 0 ? potentialChildren.map(child => {
-                                    const isSelected = member.children && member.children.includes(child.id);
-                                    return `
-                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
-                                        <input type="checkbox" name="editChildren" value="${child.id}" ${isSelected ? 'checked' : ''} 
-                                               onchange="updateChildrenCount()" style="margin-right: 0.5rem;">
-                                        <span>${child.firstName} ${child.lastName} (Age: ${getAge(child)})</span>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Birth Month *</label>
+                                        <select name="birthMonth" required style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                            background: white;
+                                        ">
+                                            <option value="">Select Month</option>
+                                            ${['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => 
+                                                `<option value="${month}" ${member.birthMonth === month ? 'selected' : ''}>${month}</option>`
+                                            ).join('')}
+                                        </select>
                                     </div>
-                                    `;
-                                }).join('') : `
-                                    <div style="text-align: center; padding: 1rem; color: #666; font-style: italic;">
-                                        No potential children found (need people at least 15 years younger)
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Birth Day *</label>
+                                        <input type="number" name="birthDay" min="1" max="31" value="${member.birthDay || ''}" required style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
                                     </div>
-                                `}
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Birth Year *</label>
+                                        <input type="number" name="birthYear" min="1900" max="2030" value="${member.birthYear || ''}" required style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                </div>
                             </div>
-                            <small style="color: #666; margin-top: 0.5rem; display: block;">
-                                Selected: <span id="editChildrenCount">0</span>/15 children • Showing people 15+ years younger, sorted by age (youngest first)
-                            </small>
-                        </div>
-                            </div>
-                            <small style="color: #666; margin-top: 0.5rem; display: block;">
-                                Selected: <span id="childrenCount">0</span>/15 children
-                            </small>
-                        </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Mobile Phone</label>
-                                <input type="tel" name="mobilePhone" value="${member.mobilePhone || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Home Phone</label>
-                                <input type="tel" name="homePhone" value="${member.homePhone || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Work Phone</label>
-                                <input type="tel" name="workPhone" value="${member.workPhone || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                        </div>
+                            <!-- Family Relationships -->
+                            <div style="
+                                background: white;
+                                border-radius: 15px;
+                                padding: 2rem;
+                                margin-bottom: 2rem;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            ">
+                                <h3 style="color: #667eea; margin-bottom: 1.5rem; font-size: 1.3rem;">👨‍👩‍👧‍👦 Family Relationships</h3>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Family Group</label>
+                                        <select name="familyBranch" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                            background: white;
+                                        ">
+                                            <option value="">Select Group</option>
+                                            ${familyBranches.map(branch => 
+                                                `<option value="${branch.name}" ${member.familyBranch === branch.name ? 'selected' : ''}>${branch.name}</option>`
+                                            ).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">💍 Married To</label>
+                                        <select name="marriedTo" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                            background: white;
+                                        ">
+                                            <option value="">Select someone</option>
+                                            ${potentialSpouses.map(spouse => 
+                                                `<option value="${spouse.id}" ${member.marriedTo === spouse.id ? 'selected' : ''}>${spouse.firstName} ${spouse.lastName}</option>`
+                                            ).join('')}
+                                        </select>
+                                    </div>
+                                </div>
 
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Email</label>
-                            <input type="email" name="email" value="${member.email || ''}" 
-                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                        </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                    <!-- Parents -->
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">👫 Parents (Select up to 2)</label>
+                                        <div style="
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            max-height: 200px;
+                                            overflow-y: auto;
+                                            background: #f8f9fa;
+                                        ">
+                                            ${potentialParents.length > 0 ? potentialParents.map(parent => {
+                                                const isSelected = member.parents && member.parents.includes(parent.id);
+                                                return `
+                                                <div style="
+                                                    display: flex;
+                                                    align-items: center;
+                                                    padding: 0.75rem;
+                                                    border-bottom: 1px solid #e0e6ed;
+                                                    background: white;
+                                                    margin: 0.25rem;
+                                                    border-radius: 6px;
+                                                ">
+                                                    <input type="checkbox" name="editParents" value="${parent.id}" ${isSelected ? 'checked' : ''} 
+                                                           onchange="updateFullScreenParentsCount()" style="margin-right: 0.75rem; transform: scale(1.2);">
+                                                    <span style="font-size: 0.95rem;">${parent.firstName} ${parent.lastName} (Age: ${getAge(parent)})</span>
+                                                </div>
+                                                `;
+                                            }).join('') : `
+                                                <div style="text-align: center; padding: 2rem; color: #666; font-style: italic;">
+                                                    No potential parents found<br><small>(need people at least 15 years older)</small>
+                                                </div>
+                                            `}
+                                        </div>
+                                        <small style="color: #666; margin-top: 0.5rem; display: block;">
+                                            Selected: <span id="fullScreenParentsCount">0</span>/2 parents
+                                        </small>
+                                    </div>
 
-                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Street Address</label>
-                                <input type="text" name="address" value="${member.address || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                                    <!-- Children -->
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">👶 Children (Select up to 15)</label>
+                                        <div style="
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            max-height: 200px;
+                                            overflow-y: auto;
+                                            background: #f8f9fa;
+                                        ">
+                                            ${potentialChildren.length > 0 ? potentialChildren.map(child => {
+                                                const isSelected = member.children && member.children.includes(child.id);
+                                                return `
+                                                <div style="
+                                                    display: flex;
+                                                    align-items: center;
+                                                    padding: 0.75rem;
+                                                    border-bottom: 1px solid #e0e6ed;
+                                                    background: white;
+                                                    margin: 0.25rem;
+                                                    border-radius: 6px;
+                                                ">
+                                                    <input type="checkbox" name="editChildren" value="${child.id}" ${isSelected ? 'checked' : ''} 
+                                                           onchange="updateFullScreenChildrenCount()" style="margin-right: 0.75rem; transform: scale(1.2);">
+                                                    <span style="font-size: 0.95rem;">${child.firstName} ${child.lastName} (Age: ${getAge(child)})</span>
+                                                </div>
+                                                `;
+                                            }).join('') : `
+                                                <div style="text-align: center; padding: 2rem; color: #666; font-style: italic;">
+                                                    No potential children found<br><small>(need people at least 15 years younger)</small>
+                                                </div>
+                                            `}
+                                        </div>
+                                        <small style="color: #666; margin-top: 0.5rem; display: block;">
+                                            Selected: <span id="fullScreenChildrenCount">0</span>/15 children
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">City</label>
-                                <input type="text" name="city" value="${member.city || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">State</label>
-                                <input type="text" name="state" value="${member.state || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                            <div>
-                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Zip Code</label>
-                                <input type="text" name="zipCode" value="${member.zipCode || ''}" 
-                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                            </div>
-                        </div>
 
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Anniversary Date</label>
-                            <input type="date" name="anniversaryDate" value="${member.anniversaryDate || ''}" 
-                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
-                        </div>
+                            <!-- Contact Information -->
+                            <div style="
+                                background: white;
+                                border-radius: 15px;
+                                padding: 2rem;
+                                margin-bottom: 2rem;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            ">
+                                <h3 style="color: #667eea; margin-bottom: 1.5rem; font-size: 1.3rem;">📞 Contact Information</h3>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Mobile Phone</label>
+                                        <input type="tel" name="mobilePhone" value="${member.mobilePhone || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Home Phone</label>
+                                        <input type="tel" name="homePhone" value="${member.homePhone || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Work Phone</label>
+                                        <input type="tel" name="workPhone" value="${member.workPhone || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Email</label>
+                                        <input type="email" name="email" value="${member.email || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Street Address</label>
+                                        <input type="text" name="streetAddress" value="${member.streetAddress || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div style="margin-bottom: 1.5rem;">
-                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Notes</label>
-                            <textarea name="notes" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; resize: vertical;">${member.notes || ''}</textarea>
-                        </div>
+                            <!-- Additional Information -->
+                            <div style="
+                                background: white;
+                                border-radius: 15px;
+                                padding: 2rem;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            ">
+                                <h3 style="color: #667eea; margin-bottom: 1.5rem; font-size: 1.3rem;">📝 Additional Information</h3>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">City</label>
+                                        <input type="text" name="city" value="${member.city || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">State</label>
+                                        <input type="text" name="state" value="${member.state || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Zip Code</label>
+                                        <input type="text" name="zipCode" value="${member.zipCode || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Anniversary Date</label>
+                                        <input type="date" name="anniversaryDate" value="${member.anniversaryDate || ''}" style="
+                                            width: 100%;
+                                            padding: 0.75rem;
+                                            border: 2px solid #e0e6ed;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                        ">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Notes</label>
+                                    <textarea name="notes" rows="4" style="
+                                        width: 100%;
+                                        padding: 0.75rem;
+                                        border: 2px solid #e0e6ed;
+                                        border-radius: 8px;
+                                        font-size: 1rem;
+                                        resize: vertical;
+                                        font-family: inherit;
+                                    ">${member.notes || ''}</textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
 
-                        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                            <button type="button" onclick="closeModal('dynamicEditModal')" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
-                            <button type="submit" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">💾 Save Changes</button>
-                        </div>
-                    </form>
+                    <!-- Footer with buttons -->
+                    <div style="
+                        background: white;
+                        padding: 2rem;
+                        border-top: 1px solid #e0e6ed;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 1rem;
+                    ">
+                        <button type="button" onclick="closeFullScreenModal()" style="
+                            padding: 0.75rem 2rem;
+                            background: #6c757d;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: background 0.3s;
+                        " onmouseover="this.style.background='#5a6268'" onmouseout="this.style.background='#6c757d'">
+                            Cancel
+                        </button>
+                        <button type="submit" form="fullScreenEditForm" style="
+                            padding: 0.75rem 2rem;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: transform 0.3s;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                            💾 Save Changes
+                        </button>
+                    </div>
                 </div>
             `;
 
-            showModal(modalContent, 'dynamicEditModal');
+            document.body.appendChild(fullScreenModal);
             
-            // Initialize children and parents counts after modal is shown
+            // Initialize counts
             setTimeout(() => {
-                updateChildrenCount();
-                updateParentsCount();
+                updateFullScreenParentsCount();
+                updateFullScreenChildrenCount();
             }, 100);
         };
 
@@ -4599,6 +4847,108 @@
         window.logout = function() {
             localStorage.removeItem('currentUser');
             window.location.href = 'index.html';
+        };
+
+        // Full-Screen Modal Functions
+        window.closeFullScreenModal = function() {
+            const modal = document.getElementById('fullScreenEditModal');
+            if (modal) {
+                modal.remove();
+            }
+        };
+
+        window.updateFullScreenParentsCount = function() {
+            const checkboxes = document.querySelectorAll('input[name="editParents"]:checked');
+            const countElement = document.getElementById('fullScreenParentsCount');
+            const allCheckboxes = document.querySelectorAll('input[name="editParents"]');
+            
+            if (countElement) {
+                countElement.textContent = checkboxes.length;
+                
+                // Disable unchecked checkboxes if we've reached the limit of 2
+                if (checkboxes.length >= 2) {
+                    allCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                } else {
+                    allCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            }
+        };
+
+        window.updateFullScreenChildrenCount = function() {
+            const checkboxes = document.querySelectorAll('input[name="editChildren"]:checked');
+            const countElement = document.getElementById('fullScreenChildrenCount');
+            const allCheckboxes = document.querySelectorAll('input[name="editChildren"]');
+            
+            if (countElement) {
+                countElement.textContent = checkboxes.length;
+                
+                // Disable unchecked checkboxes if we've reached the limit of 15
+                if (checkboxes.length >= 15) {
+                    allCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                } else {
+                    allCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            }
+        };
+
+        window.submitFullScreenEdit = async function(event, memberId) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Get selected parents and children
+            const selectedParents = Array.from(document.querySelectorAll('input[name="editParents"]:checked')).map(cb => cb.value);
+            const selectedChildren = Array.from(document.querySelectorAll('input[name="editChildren"]:checked')).map(cb => cb.value);
+            
+            try {
+                // Update the member in Firestore
+                const memberDoc = doc(db, 'family_members', memberId);
+                await updateDoc(memberDoc, {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    birthMonth: data.birthMonth,
+                    birthDay: parseInt(data.birthDay),
+                    birthYear: parseInt(data.birthYear),
+                    familyBranch: data.familyBranch || null,
+                    marriedTo: data.marriedTo || null,
+                    parents: selectedParents,
+                    children: selectedChildren,
+                    mobilePhone: data.mobilePhone || null,
+                    homePhone: data.homePhone || null,
+                    workPhone: data.workPhone || null,
+                    email: data.email || null,
+                    streetAddress: data.streetAddress || null,
+                    city: data.city || null,
+                    state: data.state || null,
+                    zipCode: data.zipCode || null,
+                    anniversaryDate: data.anniversaryDate || null,
+                    notes: data.notes || null
+                });
+
+                // Update bidirectional relationships
+                await updateBidirectionalRelationships(memberId, selectedParents, selectedChildren);
+
+                // Close modal and refresh data
+                closeFullScreenModal();
+                await loadData();
+                showMessage('Family member updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating family member:', error);
+                showMessage('Error updating family member. Please try again.', 'error');
+            }
         };
 
         // Initialize the app
