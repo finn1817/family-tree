@@ -2312,33 +2312,54 @@
 
         // Helper function to get potential parents (older than the member)
         function getPotentialParents(currentMember) {
+            console.log('getPotentialParents called for:', currentMember.firstName, currentMember.lastName);
             const currentAge = getAge(currentMember);
-            return familyMembers
+            console.log('Current member age:', currentAge);
+            
+            const potentials = familyMembers
                 .filter(fm => {
                     if (fm.id === currentMember.id) return false;
                     const parentAge = getAge(fm);
-                    // Parents should be at least 15 years older (reasonable minimum)
-                    return parentAge >= currentAge + 15;
+                    const isOldEnough = parentAge >= currentAge + 15;
+                    console.log(`${fm.firstName} ${fm.lastName}: age ${parentAge}, old enough: ${isOldEnough}`);
+                    return isOldEnough;
                 })
                 .sort((a, b) => getAge(b) - getAge(a)); // Oldest first
+            
+            console.log('Potential parents found:', potentials.length);
+            return potentials;
         }
 
         // Helper function to get potential children (younger than the member)
         function getPotentialChildren(currentMember) {
+            console.log('getPotentialChildren called for:', currentMember.firstName, currentMember.lastName);
             const currentAge = getAge(currentMember);
-            return familyMembers
+            console.log('Current member age:', currentAge);
+            
+            const potentials = familyMembers
                 .filter(fm => {
                     if (fm.id === currentMember.id) return false;
                     const childAge = getAge(fm);
-                    // Children should be at least 15 years younger (reasonable minimum)
-                    return childAge <= currentAge - 15;
+                    const isYoungEnough = childAge <= currentAge - 15;
+                    console.log(`${fm.firstName} ${fm.lastName}: age ${childAge}, young enough: ${isYoungEnough}`);
+                    return isYoungEnough;
                 })
                 .sort((a, b) => getAge(a) - getAge(b)); // Youngest first
+            
+            console.log('Potential children found:', potentials.length);
+            return potentials;
         }
 
         // Helper functions for age and birthday calculations
         function getAge(member) {
-            if (!member.birthYear || !member.birthMonth || !member.birthDay) return 0;
+            if (!member.birthYear || !member.birthMonth || !member.birthDay) {
+                console.log(`Missing birth data for ${member.firstName} ${member.lastName}:`, {
+                    year: member.birthYear,
+                    month: member.birthMonth,
+                    day: member.birthDay
+                });
+                return 0;
+            }
             
             const today = new Date();
             const birthDate = new Date(member.birthYear, getMonthIndex(member.birthMonth), member.birthDay);
@@ -2349,6 +2370,7 @@
                 age--;
             }
             
+            console.log(`Age for ${member.firstName} ${member.lastName}: ${age} (born ${member.birthMonth} ${member.birthDay}, ${member.birthYear})`);
             return age;
         }
 
@@ -2635,7 +2657,7 @@
                 }
             });
 
-            // Populate children checkboxes for add form (sorted youngest first)
+            // Populate children checkboxes for add form (no filtering since no current member yet)
             const addChildrenContainer = document.getElementById('addChildrenSelection');
             if (addChildrenContainer) {
                 const sortedChildrenCandidates = [...familyMembers].sort((a, b) => getAge(a) - getAge(b));
@@ -2649,7 +2671,7 @@
                 updateAddChildrenCount();
             }
 
-            // Populate parents checkboxes for add form (sorted oldest first)
+            // Populate parents checkboxes for add form (no filtering since no current member yet)
             const addParentsContainer = document.getElementById('addParentsSelection');
             if (addParentsContainer) {
                 const sortedParentCandidates = [...familyMembers].sort((a, b) => getAge(b) - getAge(a));
