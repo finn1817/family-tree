@@ -1669,14 +1669,17 @@
         }
 
         function getNextBirthday(member) {
-            if (!member.birthMonth || !member.birthDay) return new Date();
+            if (!member.birthMonth || !member.birthDay) return new Date(9999, 11, 31); // Return far future date for invalid data
             
             const today = new Date();
             const currentYear = today.getFullYear();
             const monthIndex = getMonthIndex(member.birthMonth);
+            
+            // Create birthday for this year
             let nextBirthday = new Date(currentYear, monthIndex, member.birthDay);
             
-            if (nextBirthday < today) {
+            // If the birthday this year has already passed, move to next year
+            if (nextBirthday <= today) {
                 nextBirthday = new Date(currentYear + 1, monthIndex, member.birthDay);
             }
             
@@ -1733,31 +1736,63 @@
         // Display upcoming birthdays
         function displayUpcomingBirthdays() {
             const container = document.getElementById('upcomingBirthdays');
-            const today = new Date();
-            const currentYear = today.getFullYear();
             
-            // Calculate upcoming birthdays
-            const upcoming = familyMembers.map(member => {
-                const monthIndex = new Date(Date.parse(member.birthMonth + " 1, 2000")).getMonth();
-                let birthdayThisYear = new Date(currentYear, monthIndex, member.birthDay);
-                
-                if (birthdayThisYear < today) {
-                    birthdayThisYear = new Date(currentYear + 1, monthIndex, member.birthDay);
-                }
-                
-                return {
-                    ...member,
-                    nextBirthday: birthdayThisYear,
-                    daysUntil: Math.ceil((birthdayThisYear - today) / (1000 * 60 * 60 * 24))
-                };
-            }).sort((a, b) => a.nextBirthday - b.nextBirthday).slice(0, 5);
+            if (!container) {
+                console.warn('Upcoming birthdays container not found');
+                return;
+            }
+            
+            if (!familyMembers || familyMembers.length === 0) {
+                container.innerHTML = '<div class="birthday-item"><span>No family members added yet</span><span>Add some family members to see birthdays</span></div>';
+                return;
+            }
+            
+            const today = new Date();
+            
+            // Filter members with valid birth data and calculate upcoming birthdays
+            const upcoming = familyMembers
+                .filter(member => {
+                    // Check if member has valid birth data
+                    if (!member.birthMonth || !member.birthDay) {
+                        return false;
+                    }
+                    // Additional validation - check if day is valid for the month
+                    const monthIndex = getMonthIndex(member.birthMonth);
+                    const testDate = new Date(2024, monthIndex, member.birthDay); // Use leap year for testing
+                    return testDate.getMonth() === monthIndex && testDate.getDate() == member.birthDay;
+                })
+                .map(member => {
+                    const nextBirthday = getNextBirthday(member); // Use the existing helper function
+                    const daysUntil = Math.ceil((nextBirthday - today) / (1000 * 60 * 60 * 24));
+                    
+                    return {
+                        ...member,
+                        nextBirthday: nextBirthday,
+                        daysUntil: daysUntil
+                    };
+                })
+                .filter(member => member.daysUntil >= 0 && member.daysUntil < 9999) // Filter out any invalid dates
+                .sort((a, b) => a.nextBirthday - b.nextBirthday) // Sort by next birthday date
+                .slice(0, 5); // Show only the next 5 birthdays
 
-            container.innerHTML = upcoming.map(member => `
-                <div class="birthday-item">
-                    <span>${member.firstName} ${member.lastName}</span>
-                    <span>${member.birthMonth} ${member.birthDay} (${member.daysUntil} days)</span>
-                </div>
-            `).join('');
+            if (upcoming.length === 0) {
+                container.innerHTML = '<div class="birthday-item"><span>No upcoming birthdays</span><span>Add birth dates to family members</span></div>';
+                return;
+            }
+
+            container.innerHTML = upcoming.map(member => {
+                // Format the birthday display
+                const dayLabel = member.daysUntil === 0 ? 'Today!' : 
+                                member.daysUntil === 1 ? 'Tomorrow' : 
+                                `${member.daysUntil} day${member.daysUntil === 1 ? '' : 's'}`;
+                
+                return `
+                    <div class="birthday-item">
+                        <span>${member.firstName} ${member.lastName}</span>
+                        <span>${member.birthMonth} ${member.birthDay} (${dayLabel})</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Populate dropdowns
