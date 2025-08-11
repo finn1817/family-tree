@@ -766,6 +766,15 @@
                             <option value="">Select someone</option>
                         </select>
                     </div>
+                    <div class="form-group full-width">
+                        <label for="children">👶 Children (Select up to 15)</label>
+                        <div id="addChildrenSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
+                            <!-- Children checkboxes will be populated by JavaScript -->
+                        </div>
+                        <small style="color: #666; margin-top: 0.5rem; display: block;">
+                            Selected: <span id="addChildrenCount">0</span>/15 children
+                        </small>
+                    </div>
                     <div class="form-group">
                         <label for="mobilePhone">Mobile Phone</label>
                         <input type="tel" id="mobilePhone">
@@ -1863,6 +1872,7 @@
                     <div class="family-info" style="margin-bottom: 1rem;">
                         <div><strong>Family Group:</strong> ${member.familyBranch || 'No group assigned'}</div>
                         ${member.marriedTo ? `<div><strong>💍 Married To:</strong> ${getSpouseName(member.marriedTo)}</div>` : ''}
+                        ${member.children && member.children.length > 0 ? `<div><strong>👶 Children:</strong> ${getChildrenNames(member.children)}</div>` : ''}
                         <div><strong>Mobile:</strong> ${member.mobilePhone || 'Not provided'}</div>
                         <div><strong>Email:</strong> ${member.email || 'Not provided'}</div>
                         <div><strong>Address:</strong> ${member.address ? `${member.address}, ${member.city || ''} ${member.state || ''}` : 'Not provided'}</div>
@@ -1882,6 +1892,20 @@
         function getSpouseName(spouseId) {
             const spouse = familyMembers.find(m => m.id === spouseId);
             return spouse ? `${spouse.firstName} ${spouse.lastName}` : 'Unknown';
+        }
+
+        // Helper function to get children names
+        function getChildrenNames(childrenIds) {
+            if (!childrenIds || childrenIds.length === 0) return 'None';
+            
+            const childNames = childrenIds.map(childId => {
+                const child = familyMembers.find(m => m.id === childId);
+                return child ? `${child.firstName} ${child.lastName}` : 'Unknown';
+            }).filter(name => name !== 'Unknown');
+            
+            if (childNames.length === 0) return 'None';
+            if (childNames.length <= 3) return childNames.join(', ');
+            return `${childNames.slice(0, 3).join(', ')} and ${childNames.length - 3} more`;
         }
 
         // Display branches
@@ -2523,6 +2547,19 @@
                     }
                 }
             });
+
+            // Populate children checkboxes for add form
+            const addChildrenContainer = document.getElementById('addChildrenSelection');
+            if (addChildrenContainer) {
+                addChildrenContainer.innerHTML = familyMembers.map(member => `
+                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
+                        <input type="checkbox" name="children" value="${member.id}" 
+                               onchange="updateAddChildrenCount()" style="margin-right: 0.5rem;">
+                        <span>${member.firstName} ${member.lastName} (Age: ${getAge(member)})</span>
+                    </div>
+                `).join('');
+                updateAddChildrenCount();
+            }
         }
 
         // Setup event listeners
@@ -2641,6 +2678,13 @@
         // Add family member
         async function addFamilyMember() {
             try {
+                // Get selected children
+                const selectedChildren = [];
+                const childrenCheckboxes = document.querySelectorAll('#addChildrenSelection input[name="children"]:checked');
+                childrenCheckboxes.forEach(checkbox => {
+                    selectedChildren.push(checkbox.value);
+                });
+
                 const memberData = {
                     firstName: document.getElementById('firstName').value,
                     lastName: document.getElementById('lastName').value,
@@ -2649,6 +2693,7 @@
                     birthYear: parseInt(document.getElementById('birthYear').value),
                     familyBranch: document.getElementById('familyBranch').value,
                     marriedTo: document.getElementById('marriedTo').value || null,
+                    children: selectedChildren, // Add children array
                     mobilePhone: document.getElementById('mobilePhone').value,
                     homePhone: document.getElementById('homePhone').value,
                     workPhone: document.getElementById('workPhone').value,
@@ -2675,6 +2720,31 @@
                 showMessage('Error adding family member: ' + error.message, 'error');
             }
         }
+
+        // Function to update children count for add form
+        window.updateAddChildrenCount = function() {
+            const checkboxes = document.querySelectorAll('#addChildrenSelection input[name="children"]:checked');
+            const countElement = document.getElementById('addChildrenCount');
+            const allCheckboxes = document.querySelectorAll('#addChildrenSelection input[name="children"]');
+            
+            if (countElement) {
+                countElement.textContent = checkboxes.length;
+                
+                // Disable unchecked checkboxes if we've reached the limit of 15
+                if (checkboxes.length >= 15) {
+                    allCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                } else {
+                    // Re-enable all checkboxes if under limit
+                    allCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            }
+        };
 
         // Update family member (old modal version - will be replaced by new modal)
         async function updateFamilyMember() {
@@ -3896,6 +3966,25 @@
                             </div>
                         </div>
 
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👶 Children (Select up to 15)</label>
+                            <div id="childrenSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
+                                ${familyMembers.filter(fm => fm.id !== member.id).map(child => {
+                                    const isSelected = member.children && member.children.includes(child.id);
+                                    return `
+                                    <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
+                                        <input type="checkbox" name="children" value="${child.id}" ${isSelected ? 'checked' : ''} 
+                                               onchange="updateChildrenCount()" style="margin-right: 0.5rem;">
+                                        <span>${child.firstName} ${child.lastName} (Age: ${getAge(child)})</span>
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            <small style="color: #666; margin-top: 0.5rem; display: block;">
+                                Selected: <span id="childrenCount">0</span>/15 children
+                            </small>
+                        </div>
+
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Mobile Phone</label>
@@ -3963,6 +4052,36 @@
             `;
 
             showModal(modalContent);
+            
+            // Initialize children count after modal is shown
+            setTimeout(() => {
+                updateChildrenCount();
+            }, 100);
+        };
+
+        // Function to update children count and enforce 15-child limit
+        window.updateChildrenCount = function() {
+            const checkboxes = document.querySelectorAll('input[name="children"]:checked');
+            const countElement = document.getElementById('childrenCount');
+            const allCheckboxes = document.querySelectorAll('input[name="children"]');
+            
+            if (countElement) {
+                countElement.textContent = checkboxes.length;
+                
+                // Disable unchecked checkboxes if we've reached the limit of 15
+                if (checkboxes.length >= 15) {
+                    allCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                } else {
+                    // Re-enable all checkboxes if under limit
+                    allCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            }
         };
 
         // Open add member modal function
@@ -3979,6 +4098,13 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
+            // Get selected children
+            const selectedChildren = [];
+            const childrenCheckboxes = document.querySelectorAll('input[name="children"]:checked');
+            childrenCheckboxes.forEach(checkbox => {
+                selectedChildren.push(checkbox.value);
+            });
+            
             try {
                 const memberRef = doc(db, 'family_members', memberId);
                 const updateData = {
@@ -3989,6 +4115,7 @@
                     birthYear: parseInt(formData.get('birthYear')),
                     familyBranch: formData.get('familyBranch'),
                     marriedTo: formData.get('marriedTo') || null,
+                    children: selectedChildren, // Save the children array
                     mobilePhone: formData.get('mobilePhone'),
                     homePhone: formData.get('homePhone'),
                     workPhone: formData.get('workPhone'),
