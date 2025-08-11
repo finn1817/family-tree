@@ -489,6 +489,44 @@
             background: #f8f9ff;
         }
         
+        /* New Relationship System Styles */
+        .relationship-section {
+            display: none;
+        }
+        
+        .relationship-section.active {
+            display: block;
+        }
+        
+        .relationship-tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .relationship-tab {
+            flex: 1;
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            background: #f8f9fa;
+        }
+        
+        .relationship-tab:hover {
+            background: #e9ecef;
+        }
+        
+        .relationship-tab.active {
+            background: #28a745;
+            color: white;
+            border-bottom-color: #20c997;
+        }
+        
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -538,6 +576,9 @@
         <div class="tabs">
             <div class="tab active" onclick="switchTab('family')">👨‍👩‍👧‍👦 Family Members</div>
             <div class="tab" onclick="switchTab('branches')">🌿 Family Branches</div>
+            <div class="tab" onclick="switchTab('relationships')" style="background: linear-gradient(135deg, #28a745, #20c997); color: white;" title="New Relationship System">
+                ✨ Relationships (New!)
+            </div>
             <div class="tab" onclick="switchTab('messages')">💬 Message Board</div>
             <div class="tab admin-only" onclick="switchTab('users')" style="display: none;">👥 Manage Users</div>
             <div class="tab admin-only" onclick="switchTab('import')" style="display: none;">📋 Bulk Import</div>
@@ -588,6 +629,63 @@
                     <button class="btn btn-primary" onclick="openAddBranchModal()">+ Add Family Branch</button>
                 </div>
                 <div id="branchesGrid" class="family-grid"></div>
+            </div>
+
+            <!-- New Relationships System Section -->
+            <div id="relationships" class="section">
+                <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem;">
+                    <h2 style="margin-bottom: 0.5rem;">✨ New Family Relationship System</h2>
+                    <p style="margin: 0; opacity: 0.9;">A modern approach to family connections where people can have multiple roles across different families</p>
+                </div>
+                
+                <div class="tabs" style="margin-bottom: 2rem;">
+                    <div class="tab active" onclick="switchRelationshipTab('people')">👥 People</div>
+                    <div class="tab" onclick="switchRelationshipTab('families')">👪 Families</div>
+                    <div class="tab" onclick="switchRelationshipTab('migration')">🔄 Migration</div>
+                </div>
+
+                <!-- People Sub-tab -->
+                <div id="relationshipsPeople" class="relationship-section active">
+                    <!-- Will be populated by relationshipUI.displayPeopleTab() -->
+                </div>
+
+                <!-- Families Sub-tab -->
+                <div id="relationshipsFamilies" class="relationship-section" style="display: none;">
+                    <!-- Will be populated by relationshipUI.displayFamiliesTab() -->
+                </div>
+
+                <!-- Migration Sub-tab -->
+                <div id="relationshipsMigration" class="relationship-section" style="display: none;">
+                    <div style="text-align: center; padding: 2rem;">
+                        <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 15px; padding: 2rem; margin-bottom: 2rem;">
+                            <h3 style="color: #495057; margin-bottom: 1rem;">🔄 System Migration</h3>
+                            <p style="color: #6c757d; margin-bottom: 1.5rem;">
+                                Transform your current branch-based system into a flexible relationship-based system where people can have multiple family connections.
+                            </p>
+                            
+                            <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                                <h4 style="color: #0c5460; margin-bottom: 0.5rem;">How Migration Works:</h4>
+                                <ul style="color: #0c5460; text-align: left; max-width: 400px; margin: 0 auto;">
+                                    <li>People remain unchanged (all your data is preserved)</li>
+                                    <li>Family branches become "Families" with relationship roles</li>
+                                    <li>Each person can belong to multiple families with different roles</li>
+                                    <li>Your old system remains intact until you're ready to switch</li>
+                                </ul>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="relationshipUI.showMigrationModal()" style="background: #28a745; font-size: 1.1rem; padding: 0.75rem 2rem;">
+                                Start Migration Process
+                            </button>
+                        </div>
+
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 1rem;">
+                            <p style="color: #856404; margin: 0;">
+                                <strong>Safe Migration:</strong> This process creates new data structures alongside your existing system. 
+                                Your current family tree will not be modified or deleted.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Message Board Section -->
@@ -1132,6 +1230,10 @@
         </div>
     </div>
 
+    <!-- Load the new relationship system -->
+    <script src="relationship-system.js"></script>
+    <script src="relationship-ui.js"></script>
+
     <script type="module">
         // Import Firebase using the correct v9+ modular syntax
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
@@ -1148,6 +1250,11 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        // Initialize the new relationship system
+        let relationshipSystem = null;
+        let relationshipUI = null;
+        let useNewSystem = false; // Flag to switch between old and new system
 
         // Global variables
         let currentUser = null;
@@ -1174,8 +1281,41 @@
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
             }
 
+            // Initialize the new relationship system
+            initializeRelationshipSystem();
+
             await loadData();
             setupEventListeners();
+        }
+
+        // Initialize the new relationship system
+        function initializeRelationshipSystem() {
+            try {
+                // Create the relationship system with Firebase modules
+                relationshipSystem = new FamilyRelationshipSystem(db, {
+                    collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc
+                });
+                
+                // Create the UI system
+                relationshipUI = new RelationshipSystemUI(relationshipSystem);
+                relationshipUI.setCurrentUser(currentUser);
+                
+                // Make them globally accessible
+                window.relationshipSystem = relationshipSystem;
+                window.relationshipUI = relationshipUI;
+                
+                console.log('New relationship system initialized successfully');
+                
+                // Check if user wants to use the new system
+                const useNewSystemPref = localStorage.getItem('useNewRelationshipSystem');
+                if (useNewSystemPref === 'true') {
+                    useNewSystem = true;
+                    console.log('Using new relationship system');
+                }
+                
+            } catch (error) {
+                console.error('Failed to initialize relationship system:', error);
+            }
         }
 
         // Load all data
@@ -3151,7 +3291,61 @@
             // Update content sections
             document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
+
+            // If switching to relationships tab, initialize the relationship system display
+            if (tabName === 'relationships' && relationshipSystem && relationshipUI) {
+                initializeRelationshipDisplay();
+            }
         };
+
+        // Relationship tab switching
+        window.switchRelationshipTab = function(subTabName) {
+            // Update sub-tab buttons
+            const relationshipTabs = document.querySelectorAll('#relationships .tab');
+            relationshipTabs.forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update sub-sections
+            document.querySelectorAll('.relationship-section').forEach(section => {
+                section.classList.remove('active');
+                section.style.display = 'none';
+            });
+            
+            const targetSection = document.getElementById('relationships' + subTabName.charAt(0).toUpperCase() + subTabName.slice(1));
+            if (targetSection) {
+                targetSection.classList.add('active');
+                targetSection.style.display = 'block';
+            }
+
+            // Load appropriate content
+            if (relationshipSystem && relationshipUI) {
+                if (subTabName === 'people') {
+                    relationshipUI.displayPeopleTab();
+                } else if (subTabName === 'families') {
+                    relationshipUI.displayFamiliesTab();
+                }
+            }
+        };
+
+        // Initialize relationship system display when first accessed
+        async function initializeRelationshipDisplay() {
+            try {
+                if (relationshipSystem && relationshipUI) {
+                    // Load data for relationship system
+                    await relationshipSystem.loadAllData();
+                    
+                    // Display initial people tab
+                    relationshipUI.displayPeopleTab();
+                    
+                    // Update upcoming birthdays to use new system if it has data
+                    if (relationshipSystem.people.length > 0) {
+                        relationshipUI.displayUpcomingBirthdays();
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing relationship display:', error);
+            }
+        }
 
         // Logout function
         window.logout = function() {
