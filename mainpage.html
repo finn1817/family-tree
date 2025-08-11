@@ -2312,54 +2312,33 @@
 
         // Helper function to get potential parents (older than the member)
         function getPotentialParents(currentMember) {
-            console.log('getPotentialParents called for:', currentMember.firstName, currentMember.lastName);
             const currentAge = getAge(currentMember);
-            console.log('Current member age:', currentAge);
-            
-            const potentials = familyMembers
+            return familyMembers
                 .filter(fm => {
                     if (fm.id === currentMember.id) return false;
                     const parentAge = getAge(fm);
-                    const isOldEnough = parentAge >= currentAge + 15;
-                    console.log(`${fm.firstName} ${fm.lastName}: age ${parentAge}, old enough: ${isOldEnough}`);
-                    return isOldEnough;
+                    // Parents should be at least 15 years older (reasonable minimum)
+                    return parentAge >= currentAge + 15;
                 })
                 .sort((a, b) => getAge(b) - getAge(a)); // Oldest first
-            
-            console.log('Potential parents found:', potentials.length);
-            return potentials;
         }
 
         // Helper function to get potential children (younger than the member)
         function getPotentialChildren(currentMember) {
-            console.log('getPotentialChildren called for:', currentMember.firstName, currentMember.lastName);
             const currentAge = getAge(currentMember);
-            console.log('Current member age:', currentAge);
-            
-            const potentials = familyMembers
+            return familyMembers
                 .filter(fm => {
                     if (fm.id === currentMember.id) return false;
                     const childAge = getAge(fm);
-                    const isYoungEnough = childAge <= currentAge - 15;
-                    console.log(`${fm.firstName} ${fm.lastName}: age ${childAge}, young enough: ${isYoungEnough}`);
-                    return isYoungEnough;
+                    // Children should be at least 15 years younger (reasonable minimum)
+                    return childAge <= currentAge - 15;
                 })
                 .sort((a, b) => getAge(a) - getAge(b)); // Youngest first
-            
-            console.log('Potential children found:', potentials.length);
-            return potentials;
         }
 
         // Helper functions for age and birthday calculations
         function getAge(member) {
-            if (!member.birthYear || !member.birthMonth || !member.birthDay) {
-                console.log(`Missing birth data for ${member.firstName} ${member.lastName}:`, {
-                    year: member.birthYear,
-                    month: member.birthMonth,
-                    day: member.birthDay
-                });
-                return 0;
-            }
+            if (!member.birthYear || !member.birthMonth || !member.birthDay) return 0;
             
             const today = new Date();
             const birthDate = new Date(member.birthYear, getMonthIndex(member.birthMonth), member.birthDay);
@@ -2370,7 +2349,6 @@
                 age--;
             }
             
-            console.log(`Age for ${member.firstName} ${member.lastName}: ${age} (born ${member.birthMonth} ${member.birthDay}, ${member.birthYear})`);
             return age;
         }
 
@@ -4182,12 +4160,12 @@
 
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👫 Parents (Select up to 2)</label>
-                            <div id="parentsSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
+                            <div id="editParentsSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
                                 ${potentialParents.length > 0 ? potentialParents.map(parent => {
                                     const isSelected = member.parents && member.parents.includes(parent.id);
                                     return `
                                     <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
-                                        <input type="checkbox" name="parents" value="${parent.id}" ${isSelected ? 'checked' : ''} 
+                                        <input type="checkbox" name="editParents" value="${parent.id}" ${isSelected ? 'checked' : ''} 
                                                onchange="updateParentsCount()" style="margin-right: 0.5rem;">
                                         <span>${parent.firstName} ${parent.lastName} (Age: ${getAge(parent)})</span>
                                     </div>
@@ -4199,18 +4177,18 @@
                                 `}
                             </div>
                             <small style="color: #666; margin-top: 0.5rem; display: block;">
-                                Selected: <span id="parentsCount">0</span>/2 parents • Showing people 15+ years older, sorted by age (oldest first)
+                                Selected: <span id="editParentsCount">0</span>/2 parents • Showing people 15+ years older, sorted by age (oldest first)
                             </small>
                         </div>
 
                         <div style="margin-bottom: 1rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">👶 Children (Select up to 15)</label>
-                            <div id="childrenSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
+                            <div id="editChildrenSelection" style="border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem; max-height: 200px; overflow-y: auto; background: #f9f9f9;">
                                 ${potentialChildren.length > 0 ? potentialChildren.map(child => {
                                     const isSelected = member.children && member.children.includes(child.id);
                                     return `
                                     <div style="display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; background: white; border-radius: 4px;">
-                                        <input type="checkbox" name="children" value="${child.id}" ${isSelected ? 'checked' : ''} 
+                                        <input type="checkbox" name="editChildren" value="${child.id}" ${isSelected ? 'checked' : ''} 
                                                onchange="updateChildrenCount()" style="margin-right: 0.5rem;">
                                         <span>${child.firstName} ${child.lastName} (Age: ${getAge(child)})</span>
                                     </div>
@@ -4222,7 +4200,7 @@
                                 `}
                             </div>
                             <small style="color: #666; margin-top: 0.5rem; display: block;">
-                                Selected: <span id="childrenCount">0</span>/15 children • Showing people 15+ years younger, sorted by age (youngest first)
+                                Selected: <span id="editChildrenCount">0</span>/15 children • Showing people 15+ years younger, sorted by age (youngest first)
                             </small>
                         </div>
                             </div>
@@ -4308,23 +4286,47 @@
 
         // Function to update parents count and enforce 2-parent limit
         window.updateParentsCount = function() {
-            const checkboxes = document.querySelectorAll('input[name="parents"]:checked');
-            const countElement = document.getElementById('parentsCount');
-            const allCheckboxes = document.querySelectorAll('input[name="parents"]');
+            // Check for both add and edit modal checkboxes
+            const addCheckboxes = document.querySelectorAll('input[name="parents"]:checked');
+            const editCheckboxes = document.querySelectorAll('input[name="editParents"]:checked');
+            const addCountElement = document.getElementById('parentsCount');
+            const editCountElement = document.getElementById('editParentsCount');
+            const addAllCheckboxes = document.querySelectorAll('input[name="parents"]');
+            const editAllCheckboxes = document.querySelectorAll('input[name="editParents"]');
             
-            if (countElement) {
-                countElement.textContent = checkboxes.length;
+            // Handle add modal
+            if (addCountElement) {
+                addCountElement.textContent = addCheckboxes.length;
                 
                 // Disable unchecked checkboxes if we've reached the limit of 2
-                if (checkboxes.length >= 2) {
-                    allCheckboxes.forEach(checkbox => {
+                if (addCheckboxes.length >= 2) {
+                    addAllCheckboxes.forEach(checkbox => {
                         if (!checkbox.checked) {
                             checkbox.disabled = true;
                         }
                     });
                 } else {
                     // Re-enable all checkboxes if under limit
-                    allCheckboxes.forEach(checkbox => {
+                    addAllCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            }
+            
+            // Handle edit modal
+            if (editCountElement) {
+                editCountElement.textContent = editCheckboxes.length;
+                
+                // Disable unchecked checkboxes if we've reached the limit of 2
+                if (editCheckboxes.length >= 2) {
+                    editAllCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                } else {
+                    // Re-enable all checkboxes if under limit
+                    editAllCheckboxes.forEach(checkbox => {
                         checkbox.disabled = false;
                     });
                 }
@@ -4333,23 +4335,47 @@
 
         // Function to update children count and enforce 15-child limit
         window.updateChildrenCount = function() {
-            const checkboxes = document.querySelectorAll('input[name="children"]:checked');
-            const countElement = document.getElementById('childrenCount');
-            const allCheckboxes = document.querySelectorAll('input[name="children"]');
+            // Check for both add and edit modal checkboxes
+            const addCheckboxes = document.querySelectorAll('input[name="children"]:checked');
+            const editCheckboxes = document.querySelectorAll('input[name="editChildren"]:checked');
+            const addCountElement = document.getElementById('childrenCount');
+            const editCountElement = document.getElementById('editChildrenCount');
+            const addAllCheckboxes = document.querySelectorAll('input[name="children"]');
+            const editAllCheckboxes = document.querySelectorAll('input[name="editChildren"]');
             
-            if (countElement) {
-                countElement.textContent = checkboxes.length;
+            // Handle add modal
+            if (addCountElement) {
+                addCountElement.textContent = addCheckboxes.length;
                 
                 // Disable unchecked checkboxes if we've reached the limit of 15
-                if (checkboxes.length >= 15) {
-                    allCheckboxes.forEach(checkbox => {
+                if (addCheckboxes.length >= 15) {
+                    addAllCheckboxes.forEach(checkbox => {
                         if (!checkbox.checked) {
                             checkbox.disabled = true;
                         }
                     });
                 } else {
                     // Re-enable all checkboxes if under limit
-                    allCheckboxes.forEach(checkbox => {
+                    addAllCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            }
+            
+            // Handle edit modal
+            if (editCountElement) {
+                editCountElement.textContent = editCheckboxes.length;
+                
+                // Disable unchecked checkboxes if we've reached the limit of 15
+                if (editCheckboxes.length >= 15) {
+                    editAllCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                        }
+                    });
+                } else {
+                    // Re-enable all checkboxes if under limit
+                    editAllCheckboxes.forEach(checkbox => {
                         checkbox.disabled = false;
                     });
                 }
@@ -4370,16 +4396,16 @@
             event.preventDefault();
             const formData = new FormData(event.target);
             
-            // Get selected children
+            // Get selected children (look for edit modal checkboxes)
             const selectedChildren = [];
-            const childrenCheckboxes = document.querySelectorAll('input[name="children"]:checked');
+            const childrenCheckboxes = document.querySelectorAll('input[name="editChildren"]:checked');
             childrenCheckboxes.forEach(checkbox => {
                 selectedChildren.push(checkbox.value);
             });
             
-            // Get selected parents
+            // Get selected parents (look for edit modal checkboxes)
             const selectedParents = [];
-            const parentsCheckboxes = document.querySelectorAll('input[name="parents"]:checked');
+            const parentsCheckboxes = document.querySelectorAll('input[name="editParents"]:checked');
             parentsCheckboxes.forEach(checkbox => {
                 selectedParents.push(checkbox.value);
             });
