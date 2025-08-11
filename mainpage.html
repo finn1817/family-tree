@@ -1931,47 +1931,64 @@
             return parentNames.join(', ');
         }
 
+        // Update bidirectional relationships
+        async function updateBidirectionalRelationships(memberId, parentIds, childrenIds) {
+            try {
+                // Update parents: add this member as their child
+                for (const parentId of parentIds) {
+                    const parent = familyMembers.find(m => m.id === parentId);
+                    if (parent) {
+                        const updatedChildren = [...(parent.children || [])];
+                        if (!updatedChildren.includes(memberId)) {
+                            updatedChildren.push(memberId);
+                            await updateDoc(doc(db, 'family_members', parentId), {
+                                children: updatedChildren
+                            });
+                        }
+                    }
+                }
+                
+                // Update children: add this member as their parent
+                for (const childId of childrenIds) {
+                    const child = familyMembers.find(m => m.id === childId);
+                    if (child) {
+                        const updatedParents = [...(child.parents || [])];
+                        if (!updatedParents.includes(memberId)) {
+                            updatedParents.push(memberId);
+                            await updateDoc(doc(db, 'family_members', childId), {
+                                parents: updatedParents
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating bidirectional relationships:', error);
+            }
+        }
+
         // Auto-generate family trees based on relationships
         function generateFamilyTrees() {
             const familyTrees = [];
             const processedMembers = new Set();
 
-            // Find all root members (people with no parents or whose parents aren't in the system)
-            const rootMembers = familyMembers.filter(member => {
-                if (!member.parents || member.parents.length === 0) return true;
-                // Check if any of their parents exist in our system
-                const hasParentsInSystem = member.parents.some(parentId => 
-                    familyMembers.find(m => m.id === parentId)
-                );
-                return !hasParentsInSystem;
+            // Find nuclear families (couples with children)
+            const nuclearFamilies = findNuclearFamilies();
+            
+            // Create family trees for each nuclear family
+            nuclearFamilies.forEach(family => {
+                if (family.parents.some(p => processedMembers.has(p.id))) return;
+                
+                const familyTree = createFamilyTree(family, processedMembers);
+                if (familyTree) {
+                    familyTrees.push(familyTree);
+                }
             });
 
-            // For each root member, build their family tree
-            rootMembers.forEach(rootMember => {
-                if (processedMembers.has(rootMember.id)) return;
-
-                const familyTree = {
-                    id: `family_${rootMember.id}`,
-                    name: `${rootMember.firstName} ${rootMember.lastName} Family`,
-                    rootGeneration: [rootMember],
-                    generations: []
-                };
-
-                // Find spouse if married
-                if (rootMember.marriedTo) {
-                    const spouse = familyMembers.find(m => m.id === rootMember.marriedTo);
-                    if (spouse && !processedMembers.has(spouse.id)) {
-                        familyTree.rootGeneration.push(spouse);
-                        processedMembers.add(spouse.id);
-                    }
-                }
-
-                processedMembers.add(rootMember.id);
-
-                // Build generations downward
-                buildGenerationsDown(familyTree, familyTree.rootGeneration, processedMembers);
-
-                if (familyTree.generations.length > 0 || familyTree.rootGeneration.length > 1) {
+            // Handle single parents and childless couples
+            const remainingRoots = findRemainingRoots(processedMembers);
+            remainingRoots.forEach(root => {
+                const familyTree = createSingleParentTree(root, processedMembers);
+                if (familyTree) {
                     familyTrees.push(familyTree);
                 }
             });
@@ -1979,34 +1996,146 @@
             return familyTrees;
         }
 
-        function buildGenerationsDown(familyTree, currentGeneration, processedMembers) {
-            const nextGeneration = [];
+        function findNuclearFamilies() {
+            const families = [];
+            const processedParentPairs = new Set();
 
-            currentGeneration.forEach(parent => {
-                if (parent.children && parent.children.length > 0) {
-                    parent.children.forEach(childId => {
-                        const child = familyMembers.find(m => m.id === childId);
-                        if (child && !processedMembers.has(child.id)) {
-                            nextGeneration.push(child);
-                            processedMembers.add(child.id);
-
-                            // If child is married, add spouse too
-                            if (child.marriedTo) {
-                                const spouse = familyMembers.find(m => m.id === child.marriedTo);
-                                if (spouse && !processedMembers.has(spouse.id)) {
-                                    nextGeneration.push(spouse);
-                                    processedMembers.add(spouse.id);
-                                }
+            familyMembers.forEach(member => {
+                if (member.children && member.children.length > 0) {
+                    // Check if this person has a spouse who is also a parent to the same children
+                    const spouse = member.marriedTo ? familyMembers.find(m => m.id === member.marriedTo) : null;
+                    
+                    if (spouse && spouse.children) {
+                        // Check for shared children
+                        const sharedChildren = member.children.filter(childId => 
+                            spouse.children.includes(childId)
+                        );
+                        
+                        if (sharedChildren.length > 0) {
+                            const pairKey = [member.id, spouse.id].sort().join('-');
+                            if (!processedParentPairs.has(pairKey)) {
+                                processedParentPairs.add(pairKey);
+                                families.push({
+                                    parents: [member, spouse],
+                                    children: sharedChildren.map(id => familyMembers.find(m => m.id === id)).filter(Boolean),
+                                    name: `${member.firstName} & ${spouse.firstName} ${member.lastName} Family`
+                                });
                             }
+                        }
+                    } else {
+                        // Single parent family
+                        families.push({
+                            parents: [member],
+                            children: member.children.map(id => familyMembers.find(m => m.id === id)).filter(Boolean),
+                            name: `${member.firstName} ${member.lastName} Family`
+                        });
+                    }
+                }
+            });
+
+            return families;
+        }
+
+        function createFamilyTree(family, processedMembers) {
+            // Mark parents and children as processed
+            family.parents.forEach(p => processedMembers.add(p.id));
+            family.children.forEach(c => processedMembers.add(c.id));
+
+            const familyTree = {
+                id: `family_${family.parents[0].id}`,
+                name: family.name,
+                generations: [
+                    {
+                        level: 0,
+                        members: family.parents,
+                        type: 'parents'
+                    },
+                    {
+                        level: 1,
+                        members: family.children,
+                        type: 'children'
+                    }
+                ]
+            };
+
+            // Add grandchildren if any
+            const grandchildren = [];
+            family.children.forEach(child => {
+                if (child.children && child.children.length > 0) {
+                    child.children.forEach(grandchildId => {
+                        const grandchild = familyMembers.find(m => m.id === grandchildId);
+                        if (grandchild && !processedMembers.has(grandchild.id)) {
+                            grandchildren.push(grandchild);
+                            processedMembers.add(grandchild.id);
                         }
                     });
                 }
             });
 
-            if (nextGeneration.length > 0) {
-                familyTree.generations.push(nextGeneration);
-                buildGenerationsDown(familyTree, nextGeneration, processedMembers);
+            if (grandchildren.length > 0) {
+                familyTree.generations.push({
+                    level: 2,
+                    members: grandchildren,
+                    type: 'grandchildren'
+                });
             }
+
+            return familyTree;
+        }
+
+        function findRemainingRoots(processedMembers) {
+            return familyMembers.filter(member => {
+                if (processedMembers.has(member.id)) return false;
+                // Find people with no parents or whose parents aren't in the system
+                return !member.parents || member.parents.length === 0 || 
+                       !member.parents.some(parentId => familyMembers.find(m => m.id === parentId));
+            });
+        }
+
+        function createSingleParentTree(rootMember, processedMembers) {
+            if (processedMembers.has(rootMember.id)) return null;
+
+            const familyTree = {
+                id: `family_${rootMember.id}`,
+                name: `${rootMember.firstName} ${rootMember.lastName} Family`,
+                generations: []
+            };
+
+            // Add root generation
+            const rootGeneration = [rootMember];
+            if (rootMember.marriedTo) {
+                const spouse = familyMembers.find(m => m.id === rootMember.marriedTo);
+                if (spouse && !processedMembers.has(spouse.id)) {
+                    rootGeneration.push(spouse);
+                    processedMembers.add(spouse.id);
+                }
+            }
+
+            familyTree.generations.push({
+                level: 0,
+                members: rootGeneration,
+                type: 'parents'
+            });
+
+            processedMembers.add(rootMember.id);
+
+            // Add children if any
+            if (rootMember.children && rootMember.children.length > 0) {
+                const children = rootMember.children
+                    .map(id => familyMembers.find(m => m.id === id))
+                    .filter(child => child && !processedMembers.has(child.id));
+
+                if (children.length > 0) {
+                    children.forEach(child => processedMembers.add(child.id));
+                    familyTree.generations.push({
+                        level: 1,
+                        members: children,
+                        type: 'children'
+                    });
+                }
+            }
+
+            return familyTree.generations.length > 1 ? familyTree : null;
         }
 
         // Display branches with auto-generated family trees
@@ -2030,8 +2159,14 @@
 
             branchesSection.innerHTML = `
                 <div style="margin-bottom: 2rem;">
-                    <h2 style="color: #667eea; margin-bottom: 1rem;">🌳 Auto-Generated Family Trees</h2>
-                    <p style="color: #666; margin-bottom: 2rem;">These family trees are automatically created based on the parent-child relationships you've defined.</p>
+                    <h2 style="color: #667eea; margin-bottom: 1rem;">🌳 Smart Family Trees</h2>
+                    <div style="background: #e8f4fd; border: 1px solid #b3d8f0; border-radius: 10px; padding: 1rem; margin-bottom: 2rem;">
+                        <p style="color: #0066cc; margin: 0; font-size: 0.9rem;">
+                            <strong>💡 Smart Features:</strong> Family trees are automatically created based on parent-child relationships. 
+                            When you add someone as a child, their parent field updates automatically (and vice versa). 
+                            Families are properly grouped by nuclear family units (parents + their children).
+                        </p>
+                    </div>
                 </div>
                 <div id="autoFamilyTrees">
                     ${familyTrees.map(tree => renderFamilyTree(tree)).join('')}
@@ -2045,17 +2180,28 @@
                     <h3 style="color: #667eea; margin-bottom: 1.5rem; text-align: center;">${familyTree.name}</h3>
                     
                     <div class="family-tree-container" style="overflow-x: auto; padding: 1rem;">
-                        <!-- Root Generation -->
-                        <div class="generation" style="display: flex; justify-content: center; margin-bottom: 2rem;">
-                            ${familyTree.rootGeneration.map(member => renderFamilyMember(member, 'root')).join('')}
-                        </div>
-
                         ${familyTree.generations.map((generation, index) => `
-                            <!-- Generation ${index + 1} -->
-                            <div class="generation" style="display: flex; justify-content: center; margin-bottom: 2rem; position: relative;">
+                            <div class="generation-${generation.type}" style="margin-bottom: 2rem;">
+                                <h4 style="text-align: center; color: #666; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">
+                                    ${getGenerationLabel(generation.type, index)}
+                                </h4>
+                                
                                 <!-- Connection Lines -->
-                                <div style="position: absolute; top: -2rem; left: 50%; transform: translateX(-50%); width: 2px; height: 2rem; background: #ddd;"></div>
-                                ${generation.map(member => renderFamilyMember(member, `gen${index + 1}`)).join('')}
+                                ${index > 0 ? `
+                                    <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+                                        <div style="width: 2px; height: 2rem; background: #ddd;"></div>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="generation-members" style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                                    ${generation.members.map(member => renderFamilyMember(member, generation.type)).join('')}
+                                </div>
+                                
+                                ${index < familyTree.generations.length - 1 && familyTree.generations[index + 1] ? `
+                                    <div style="display: flex; justify-content: center; margin-top: 1rem;">
+                                        <div style="width: 2px; height: 2rem; background: #ddd;"></div>
+                                    </div>
+                                ` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -2063,46 +2209,58 @@
             `;
         }
 
+        function getGenerationLabel(type, index) {
+            const labels = {
+                'parents': index === 0 ? 'Parents' : 'Ancestors',
+                'children': 'Children',
+                'grandchildren': 'Grandchildren'
+            };
+            return labels[type] || `Generation ${index + 1}`;
+        }
+
         function renderFamilyMember(member, generationType) {
             const isMarried = member.marriedTo;
             const hasChildren = member.children && member.children.length > 0;
+            const marriageIcon = isMarried ? '💍' : '';
             
             return `
-                <div class="family-member-node" style="margin: 0 1rem; text-align: center; position: relative;">
-                    ${hasChildren ? `
-                        <div style="position: absolute; bottom: -2rem; left: 50%; transform: translateX(-50%); width: 2px; height: 2rem; background: #ddd;"></div>
-                    ` : ''}
-                    
+                <div class="family-member-node" style="text-align: center; position: relative; margin: 0 1rem;">
                     <div style="
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                         color: white;
                         padding: 1rem;
                         border-radius: 50%;
-                        width: 80px;
-                        height: 80px;
+                        width: 100px;
+                        height: 100px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         margin: 0 auto 0.5rem;
                         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
                         cursor: pointer;
+                        position: relative;
                     " onclick="openEditMemberModal('${member.id}')">
-                        <div style="text-align: center; font-size: 0.75rem; line-height: 1.2;">
+                        <div style="text-align: center; font-size: 0.8rem; line-height: 1.2;">
                             <div style="font-weight: bold;">${member.firstName}</div>
                             <div>${member.lastName}</div>
                         </div>
+                        ${marriageIcon ? `
+                            <div style="position: absolute; top: -5px; right: -5px; background: #e74c3c; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">
+                                ${marriageIcon}
+                            </div>
+                        ` : ''}
                     </div>
                     
-                    <div style="font-size: 0.8rem; color: #333; font-weight: 500;">
+                    <div style="font-size: 0.9rem; color: #333; font-weight: 600; margin-bottom: 0.25rem;">
                         ${member.firstName} ${member.lastName}
                     </div>
-                    <div style="font-size: 0.7rem; color: #666;">
+                    <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">
                         Age: ${getAge(member)}
                     </div>
                     
-                    ${isMarried ? `
-                        <div style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #e74c3c20; color: #e74c3c; border-radius: 12px; font-size: 0.7rem;">
-                            💍 Married
+                    ${hasChildren ? `
+                        <div style="font-size: 0.7rem; color: #28a745; font-weight: 500;">
+                            👶 ${member.children.length} child${member.children.length === 1 ? '' : 'ren'}
                         </div>
                     ` : ''}
                 </div>
@@ -2631,7 +2789,12 @@
                     createdBy: currentUser.username
                 };
 
-                await addDoc(collection(db, 'family_members'), memberData);
+                const docRef = await addDoc(collection(db, 'family_members'), memberData);
+                const newMemberId = docRef.id;
+                
+                // Update bidirectional relationships
+                await updateBidirectionalRelationships(newMemberId, selectedParents, selectedChildren);
+                
                 closeModal('addMemberModal');
                 document.getElementById('addMemberForm').reset();
                 await loadFamilyMembers();
@@ -2739,6 +2902,10 @@
                 };
 
                 await updateDoc(doc(db, 'family_members', memberId), memberData);
+                
+                // Update bidirectional relationships
+                await updateBidirectionalRelationships(memberId, selectedParents, selectedChildren);
+                
                 closeModal('editMemberModal');
                 document.getElementById('editMemberForm').reset();
                 await loadFamilyMembers();
