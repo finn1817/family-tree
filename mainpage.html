@@ -761,25 +761,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="relationship">Relationship</label>
-                        <select id="relationship">
-                            <option value="">Select Relationship</option>
-                            <option value="spouse">Spouse</option>
-                            <option value="parent">Parent</option>
-                            <option value="child">Child</option>
-                            <option value="sibling">Sibling</option>
-                            <option value="grandparent">Grandparent</option>
-                            <option value="grandchild">Grandchild</option>
-                            <option value="aunt_uncle">Aunt/Uncle</option>
-                            <option value="niece_nephew">Niece/Nephew</option>
-                            <option value="cousin">Cousin</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="relatedTo">Related To</label>
-                        <select id="relatedTo">
-                            <option value="">Select Person</option>
+                        <label for="marriedTo">💍 Married To</label>
+                        <select id="marriedTo">
+                            <option value="">Select someone</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -875,25 +859,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="editRelationship">Relationship</label>
-                        <select id="editRelationship">
-                            <option value="">Select Relationship</option>
-                            <option value="spouse">Spouse</option>
-                            <option value="parent">Parent</option>
-                            <option value="child">Child</option>
-                            <option value="sibling">Sibling</option>
-                            <option value="grandparent">Grandparent</option>
-                            <option value="grandchild">Grandchild</option>
-                            <option value="aunt_uncle">Aunt/Uncle</option>
-                            <option value="niece_nephew">Niece/Nephew</option>
-                            <option value="cousin">Cousin</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="editRelatedTo">Related To</label>
-                        <select id="editRelatedTo">
-                            <option value="">Select Person</option>
+                        <label for="editMarriedTo">💍 Married To</label>
+                        <select id="editMarriedTo">
+                            <option value="">Select someone</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1448,6 +1416,7 @@
                     <!-- Basic Info -->
                     <div class="family-info" style="margin-bottom: 1rem;">
                         <div><strong>Family Group:</strong> ${member.familyBranch || 'No group assigned'}</div>
+                        ${member.marriedTo ? `<div><strong>💍 Married To:</strong> ${getSpouseName(member.marriedTo)}</div>` : ''}
                         <div><strong>Mobile:</strong> ${member.mobilePhone || 'Not provided'}</div>
                         <div><strong>Email:</strong> ${member.email || 'Not provided'}</div>
                         <div><strong>Address:</strong> ${member.address ? `${member.address}, ${member.city || ''} ${member.state || ''}` : 'Not provided'}</div>
@@ -1527,6 +1496,12 @@
                 m.id !== member.id && 
                 isChildRelationship(member, m)
             ).slice(0, 10); // Limit to 10 suggestions
+        }
+
+        // Helper function to get spouse name
+        function getSpouseName(spouseId) {
+            const spouse = familyMembers.find(m => m.id === spouseId);
+            return spouse ? `${spouse.firstName} ${spouse.lastName}` : 'Unknown';
         }
 
         // Display branches
@@ -2330,16 +2305,16 @@
                 }
             });
 
-            // Related to dropdown
-            const relatedSelects = [
-                document.getElementById('relatedTo'),
-                document.getElementById('editRelatedTo')
+            // Married to dropdown
+            const marriedToSelects = [
+                document.getElementById('marriedTo'),
+                document.getElementById('editMarriedTo')
             ];
             
-            relatedSelects.forEach(relatedSelect => {
-                if (relatedSelect) {
-                    const currentValue = relatedSelect.value;
-                    relatedSelect.innerHTML = '<option value="">Select Person</option>';
+            marriedToSelects.forEach(marriedSelect => {
+                if (marriedSelect) {
+                    const currentValue = marriedSelect.value;
+                    marriedSelect.innerHTML = '<option value="">Select someone</option>';
                     
                     // Sort family members by last name, then first name
                     const sortedMembers = [...familyMembers].sort((a, b) => {
@@ -2352,12 +2327,12 @@
                         const option = document.createElement('option');
                         option.value = member.id;
                         option.textContent = `${member.firstName} ${member.lastName}`;
-                        relatedSelect.appendChild(option);
+                        marriedSelect.appendChild(option);
                     });
                     
                     // Restore previous selection if it still exists
-                    if (currentValue && [...relatedSelect.options].some(opt => opt.value === currentValue)) {
-                        relatedSelect.value = currentValue;
+                    if (currentValue && [...marriedSelect.options].some(opt => opt.value === currentValue)) {
+                        marriedSelect.value = currentValue;
                     }
                 }
             });
@@ -2486,8 +2461,7 @@
                     birthDay: parseInt(document.getElementById('birthDay').value),
                     birthYear: parseInt(document.getElementById('birthYear').value),
                     familyBranch: document.getElementById('familyBranch').value,
-                    relationship: document.getElementById('relationship').value,
-                    relatedTo: document.getElementById('relatedTo').value,
+                    marriedTo: document.getElementById('marriedTo').value || null,
                     mobilePhone: document.getElementById('mobilePhone').value,
                     homePhone: document.getElementById('homePhone').value,
                     workPhone: document.getElementById('workPhone').value,
@@ -2508,13 +2482,14 @@
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
                 populateDropdowns();
-                alert('Family member added successfully!');
+                showMessage('Family member added successfully!', 'success');
             } catch (error) {
-                alert('Error adding family member: ' + error.message);
+                console.error('Error adding family member:', error);
+                showMessage('Error adding family member: ' + error.message, 'error');
             }
         }
 
-        // Update family member
+        // Update family member (old modal version - will be replaced by new modal)
         async function updateFamilyMember() {
             try {
                 const memberId = document.getElementById('editMemberId').value;
@@ -2525,8 +2500,7 @@
                     birthDay: parseInt(document.getElementById('editBirthDay').value),
                     birthYear: parseInt(document.getElementById('editBirthYear').value),
                     familyBranch: document.getElementById('editFamilyBranch').value,
-                    relationship: document.getElementById('editRelationship').value,
-                    relatedTo: document.getElementById('editRelatedTo').value,
+                    marriedTo: document.getElementById('editMarriedTo').value || null,
                     mobilePhone: document.getElementById('editMobilePhone').value,
                     homePhone: document.getElementById('editHomePhone').value,
                     workPhone: document.getElementById('editWorkPhone').value,
@@ -2547,9 +2521,10 @@
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
                 populateDropdowns();
-                alert('Family member updated successfully!');
+                showMessage('Family member updated successfully!', 'success');
             } catch (error) {
-                alert('Error updating family member: ' + error.message);
+                console.error('Error updating family member:', error);
+                showMessage('Error updating family member: ' + error.message, 'error');
             }
         }
 
@@ -3610,8 +3585,320 @@
         }
 
         window.closeModal = function(modalId) {
-            document.getElementById(modalId).classList.remove('active');
+            if (modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            } else {
+                // If no modalId provided, close any active modal
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
         };
+
+        // General showModal function
+        window.showModal = function(content, modalId = 'generalModal') {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById(modalId);
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.className = 'modal';
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: all 0.3s ease;
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            modal.innerHTML = content;
+            modal.classList.add('active');
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+        };
+
+        // Open edit member modal function
+        window.openEditMemberModal = function(memberId) {
+            const member = familyMembers.find(m => m.id === memberId);
+            if (!member) {
+                console.error('Member not found:', memberId);
+                return;
+            }
+
+            // Get list of potential spouses (exclude self)
+            const potentialSpouses = familyMembers
+                .filter(m => m.id !== memberId)
+                .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+
+            const modalContent = `
+                <div style="background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                    <h3 style="color: #667eea; margin-bottom: 1.5rem;">✏️ Edit Family Member</h3>
+                    <form id="editMemberForm" onsubmit="updateFamilyMember(event, '${memberId}')">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">First Name *</label>
+                                <input type="text" name="firstName" value="${member.firstName || ''}" required 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Last Name *</label>
+                                <input type="text" name="lastName" value="${member.lastName || ''}" required 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Birth Month *</label>
+                                <select name="birthMonth" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                                    <option value="">Select Month</option>
+                                    <option value="January" ${member.birthMonth === 'January' ? 'selected' : ''}>January</option>
+                                    <option value="February" ${member.birthMonth === 'February' ? 'selected' : ''}>February</option>
+                                    <option value="March" ${member.birthMonth === 'March' ? 'selected' : ''}>March</option>
+                                    <option value="April" ${member.birthMonth === 'April' ? 'selected' : ''}>April</option>
+                                    <option value="May" ${member.birthMonth === 'May' ? 'selected' : ''}>May</option>
+                                    <option value="June" ${member.birthMonth === 'June' ? 'selected' : ''}>June</option>
+                                    <option value="July" ${member.birthMonth === 'July' ? 'selected' : ''}>July</option>
+                                    <option value="August" ${member.birthMonth === 'August' ? 'selected' : ''}>August</option>
+                                    <option value="September" ${member.birthMonth === 'September' ? 'selected' : ''}>September</option>
+                                    <option value="October" ${member.birthMonth === 'October' ? 'selected' : ''}>October</option>
+                                    <option value="November" ${member.birthMonth === 'November' ? 'selected' : ''}>November</option>
+                                    <option value="December" ${member.birthMonth === 'December' ? 'selected' : ''}>December</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Birth Day *</label>
+                                <input type="number" name="birthDay" min="1" max="31" value="${member.birthDay || ''}" required 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Birth Year *</label>
+                                <input type="number" name="birthYear" min="1900" max="2030" value="${member.birthYear || ''}" required 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Family Group</label>
+                                <select name="familyBranch" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                                    <option value="">Select Group</option>
+                                    ${familyBranches.map(branch => 
+                                        `<option value="${branch.name}" ${member.familyBranch === branch.name ? 'selected' : ''}>${branch.name}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">💍 Married To</label>
+                                <select name="marriedTo" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                                    <option value="">Select someone</option>
+                                    ${potentialSpouses.map(spouse => 
+                                        `<option value="${spouse.id}" ${member.marriedTo === spouse.id ? 'selected' : ''}>${spouse.firstName} ${spouse.lastName}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Mobile Phone</label>
+                                <input type="tel" name="mobilePhone" value="${member.mobilePhone || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Home Phone</label>
+                                <input type="tel" name="homePhone" value="${member.homePhone || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Work Phone</label>
+                                <input type="tel" name="workPhone" value="${member.workPhone || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Email</label>
+                            <input type="email" name="email" value="${member.email || ''}" 
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Street Address</label>
+                                <input type="text" name="address" value="${member.address || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">City</label>
+                                <input type="text" name="city" value="${member.city || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">State</label>
+                                <input type="text" name="state" value="${member.state || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Zip Code</label>
+                                <input type="text" name="zipCode" value="${member.zipCode || ''}" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Anniversary Date</label>
+                            <input type="date" name="anniversaryDate" value="${member.anniversaryDate || ''}" 
+                                   style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">Notes</label>
+                            <textarea name="notes" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; resize: vertical;">${member.notes || ''}</textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                            <button type="button" onclick="closeModal()" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
+                            <button type="submit" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">💾 Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+
+            showModal(modalContent);
+        };
+
+        // Open add member modal function
+        window.openAddMemberModal = function() {
+            const modal = document.getElementById('addMemberModal');
+            if (modal) {
+                populateDropdowns(); // Make sure dropdowns are populated
+                modal.classList.add('active');
+            }
+        };
+
+        // Update family member function
+        window.updateFamilyMember = async function(event, memberId) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const memberRef = doc(db, 'family_members', memberId);
+                const updateData = {
+                    firstName: formData.get('firstName'),
+                    lastName: formData.get('lastName'),
+                    birthMonth: formData.get('birthMonth'),
+                    birthDay: parseInt(formData.get('birthDay')),
+                    birthYear: parseInt(formData.get('birthYear')),
+                    familyBranch: formData.get('familyBranch'),
+                    marriedTo: formData.get('marriedTo') || null,
+                    mobilePhone: formData.get('mobilePhone'),
+                    homePhone: formData.get('homePhone'),
+                    workPhone: formData.get('workPhone'),
+                    email: formData.get('email'),
+                    address: formData.get('address'),
+                    city: formData.get('city'),
+                    state: formData.get('state'),
+                    zipCode: formData.get('zipCode'),
+                    anniversaryDate: formData.get('anniversaryDate'),
+                    notes: formData.get('notes'),
+                    updatedAt: new Date()
+                };
+
+                await updateDoc(memberRef, updateData);
+                
+                closeModal();
+                loadFamilyMembers(); // Refresh the display
+                showMessage('Family member updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating family member:', error);
+                showMessage('Error updating family member: ' + error.message, 'error');
+            }
+        };
+
+        // Delete family member function
+        window.deleteFamilyMember = async function(memberId) {
+            const member = familyMembers.find(m => m.id === memberId);
+            if (!member) return;
+
+            if (!confirm(`Are you sure you want to delete ${member.firstName} ${member.lastName}? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                await deleteDoc(doc(db, 'family_members', memberId));
+                loadFamilyMembers(); // Refresh the display
+                showMessage('Family member deleted successfully!', 'success');
+            } catch (error) {
+                console.error('Error deleting family member:', error);
+                showMessage('Error deleting family member: ' + error.message, 'error');
+            }
+        };
+
+        // Show message function
+        window.showMessage = function(message, type = 'success') {
+            // Remove any existing message
+            const existingMessage = document.querySelector('.floating-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            // Create new message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'floating-message';
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 2000;
+                max-width: 400px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                animation: slideInRight 0.3s ease;
+                background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#ffc107'};
+            `;
+            
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.style.animation = 'slideOutRight 0.3s ease';
+                    setTimeout(() => messageDiv.remove(), 300);
+                }
+            }, 4000);
+        };
+
+        // Add CSS animation for messages
+        if (!document.querySelector('#message-animations')) {
+            const style = document.createElement('style');
+            style.id = 'message-animations';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
         // Tab switching
         window.switchTab = function(tabName) {
