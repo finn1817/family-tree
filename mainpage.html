@@ -1966,6 +1966,41 @@
             }
         }
 
+        // Update bidirectional marriage relationships
+        async function updateBidirectionalMarriage(memberId, oldSpouseId, newSpouseId) {
+            try {
+                // If there was an old spouse, remove the marriage connection
+                if (oldSpouseId && oldSpouseId !== newSpouseId) {
+                    const oldSpouse = familyMembers.find(m => m.id === oldSpouseId);
+                    if (oldSpouse) {
+                        await updateDoc(doc(db, 'family_members', oldSpouseId), { marriedTo: null });
+                        console.log(`Removed marriage connection for old spouse: ${oldSpouse.firstName} ${oldSpouse.lastName}`);
+                    }
+                }
+
+                // If there's a new spouse, set up the bidirectional marriage
+                if (newSpouseId && newSpouseId !== oldSpouseId) {
+                    const newSpouse = familyMembers.find(m => m.id === newSpouseId);
+                    if (newSpouse) {
+                        // Check if the new spouse was married to someone else
+                        if (newSpouse.marriedTo && newSpouse.marriedTo !== memberId) {
+                            const formerSpouse = familyMembers.find(m => m.id === newSpouse.marriedTo);
+                            if (formerSpouse) {
+                                await updateDoc(doc(db, 'family_members', newSpouse.marriedTo), { marriedTo: null });
+                                console.log(`Removed marriage connection for former spouse: ${formerSpouse.firstName} ${formerSpouse.lastName}`);
+                            }
+                        }
+
+                        // Set the new spouse's marriedTo field
+                        await updateDoc(doc(db, 'family_members', newSpouseId), { marriedTo: memberId });
+                        console.log(`Set bidirectional marriage between ${memberId} and ${newSpouseId}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating bidirectional marriage:', error);
+            }
+        }
+
         // Auto-generate family trees based on relationships
         function generateFamilyTrees() {
             const familyTrees = [];
@@ -2820,7 +2855,13 @@
                 const docRef = await addDoc(collection(db, 'family_members'), memberData);
                 const newMemberId = docRef.id;
                 
-                // Update bidirectional relationships
+                // Update bidirectional marriage relationships
+                const spouseId = memberData.marriedTo;
+                if (spouseId) {
+                    await updateBidirectionalMarriage(newMemberId, null, spouseId);
+                }
+                
+                // Update bidirectional parent/child relationships
                 await updateBidirectionalRelationships(newMemberId, selectedParents, selectedChildren);
                 
                 closeModal('addMemberModal');
@@ -4662,6 +4703,11 @@
             });
             
             try {
+                // Get current member to check for marriage changes
+                const currentMember = familyMembers.find(m => m.id === memberId);
+                const oldSpouseId = currentMember?.marriedTo;
+                const newSpouseId = formData.get('marriedTo') || null;
+                
                 const memberRef = doc(db, 'family_members', memberId);
                 const updateData = {
                     firstName: formData.get('firstName'),
@@ -4670,7 +4716,7 @@
                     birthDay: parseInt(formData.get('birthDay')),
                     birthYear: parseInt(formData.get('birthYear')),
                     familyBranch: formData.get('familyBranch'),
-                    marriedTo: formData.get('marriedTo') || null,
+                    marriedTo: newSpouseId,
                     children: selectedChildren, // Save the children array
                     parents: selectedParents, // Save the parents array
                     mobilePhone: formData.get('mobilePhone'),
@@ -4687,6 +4733,12 @@
                 };
 
                 await updateDoc(memberRef, updateData);
+                
+                // Update bidirectional marriage relationships
+                await updateBidirectionalMarriage(memberId, oldSpouseId, newSpouseId);
+                
+                // Update bidirectional parent/child relationships
+                await updateBidirectionalRelationships(memberId, selectedParents, selectedChildren);
                 
                 closeModal('generalModal');
                 await loadFamilyMembers(); // Refresh the data
@@ -4913,6 +4965,11 @@
             const selectedParents = Array.from(document.querySelectorAll('input[name="editParents"]:checked')).map(cb => cb.value);
             const selectedChildren = Array.from(document.querySelectorAll('input[name="editChildren"]:checked')).map(cb => cb.value);
             
+            // Get current member to check for marriage changes
+            const currentMember = familyMembers.find(m => m.id === memberId);
+            const oldSpouseId = currentMember?.marriedTo;
+            const newSpouseId = data.marriedTo || null;
+            
             try {
                 // Update the member in Firestore
                 const memberDoc = doc(db, 'family_members', memberId);
@@ -4923,7 +4980,7 @@
                     birthDay: parseInt(data.birthDay),
                     birthYear: parseInt(data.birthYear),
                     familyBranch: data.familyBranch || null,
-                    marriedTo: data.marriedTo || null,
+                    marriedTo: newSpouseId,
                     parents: selectedParents,
                     children: selectedChildren,
                     mobilePhone: data.mobilePhone || null,
@@ -4938,7 +4995,10 @@
                     notes: data.notes || null
                 });
 
-                // Update bidirectional relationships
+                // Update bidirectional marriage relationships
+                await updateBidirectionalMarriage(memberId, oldSpouseId, newSpouseId);
+
+                // Update bidirectional parent/child relationships
                 await updateBidirectionalRelationships(memberId, selectedParents, selectedChildren);
 
                 // Close modal and refresh data
