@@ -1931,305 +1931,185 @@
             return parentNames.join(', ');
         }
 
-        // Display branches
+        // Auto-generate family trees based on relationships
+        function generateFamilyTrees() {
+            const familyTrees = [];
+            const processedMembers = new Set();
+
+            // Find all root members (people with no parents or whose parents aren't in the system)
+            const rootMembers = familyMembers.filter(member => {
+                if (!member.parents || member.parents.length === 0) return true;
+                // Check if any of their parents exist in our system
+                const hasParentsInSystem = member.parents.some(parentId => 
+                    familyMembers.find(m => m.id === parentId)
+                );
+                return !hasParentsInSystem;
+            });
+
+            // For each root member, build their family tree
+            rootMembers.forEach(rootMember => {
+                if (processedMembers.has(rootMember.id)) return;
+
+                const familyTree = {
+                    id: `family_${rootMember.id}`,
+                    name: `${rootMember.firstName} ${rootMember.lastName} Family`,
+                    rootGeneration: [rootMember],
+                    generations: []
+                };
+
+                // Find spouse if married
+                if (rootMember.marriedTo) {
+                    const spouse = familyMembers.find(m => m.id === rootMember.marriedTo);
+                    if (spouse && !processedMembers.has(spouse.id)) {
+                        familyTree.rootGeneration.push(spouse);
+                        processedMembers.add(spouse.id);
+                    }
+                }
+
+                processedMembers.add(rootMember.id);
+
+                // Build generations downward
+                buildGenerationsDown(familyTree, familyTree.rootGeneration, processedMembers);
+
+                if (familyTree.generations.length > 0 || familyTree.rootGeneration.length > 1) {
+                    familyTrees.push(familyTree);
+                }
+            });
+
+            return familyTrees;
+        }
+
+        function buildGenerationsDown(familyTree, currentGeneration, processedMembers) {
+            const nextGeneration = [];
+
+            currentGeneration.forEach(parent => {
+                if (parent.children && parent.children.length > 0) {
+                    parent.children.forEach(childId => {
+                        const child = familyMembers.find(m => m.id === childId);
+                        if (child && !processedMembers.has(child.id)) {
+                            nextGeneration.push(child);
+                            processedMembers.add(child.id);
+
+                            // If child is married, add spouse too
+                            if (child.marriedTo) {
+                                const spouse = familyMembers.find(m => m.id === child.marriedTo);
+                                if (spouse && !processedMembers.has(spouse.id)) {
+                                    nextGeneration.push(spouse);
+                                    processedMembers.add(spouse.id);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            if (nextGeneration.length > 0) {
+                familyTree.generations.push(nextGeneration);
+                buildGenerationsDown(familyTree, nextGeneration, processedMembers);
+            }
+        }
+
+        // Display branches with auto-generated family trees
         function displayBranches() {
-            const grid = document.getElementById('branchesGrid');
-            
-            // Check if we have family units
-            if (familyUnits.length > 0) {
-                grid.innerHTML = renderFamilyUnitsView();
-            } else {
-                // Fallback to original branch hierarchy view
-                const branchHierarchy = createBranchHierarchy();
-                grid.innerHTML = renderBranchHierarchy(branchHierarchy);
-            }
-        }
+            const branchesSection = document.getElementById('branchesGrid');
+            if (!branchesSection) return;
 
-        // Create hierarchical structure of branches
-        function createBranchHierarchy() {
-            // Sort branches by generation level, then by name
-            const sortedBranches = [...familyBranches].sort((a, b) => {
-                const genA = a.generationLevel || 999;
-                const genB = b.generationLevel || 999;
-                if (genA !== genB) return genA - genB;
-                return a.name.localeCompare(b.name);
-            });
+            // Auto-generate family trees from relationships
+            const familyTrees = generateFamilyTrees();
 
-            // Group by generation
-            const generations = {};
-            sortedBranches.forEach(branch => {
-                const gen = branch.generationLevel || 'Unknown';
-                if (!generations[gen]) generations[gen] = [];
-                generations[gen].push(branch);
-            });
-
-            return generations;
-        }
-
-        // Render the hierarchical branch structure
-        function renderBranchHierarchy(generations) {
-            const generationNames = {
-                1: 'Grandparents Generation',
-                2: 'Parents Generation', 
-                3: 'Children Generation',
-                4: 'Grandchildren Generation'
-            };
-
-            let html = '';
-            
-            Object.keys(generations).sort((a, b) => a - b).forEach(genLevel => {
-                const branches = generations[genLevel];
-                const genName = generationNames[genLevel] || `Generation ${genLevel}`;
-                const genColor = getBranchColor(parseInt(genLevel));
-                
-                html += `
-                    <div style="margin-bottom: 2rem;">
-                        <div style="background: linear-gradient(135deg, ${genColor}, ${genColor}aa); color: white; padding: 1rem; border-radius: 10px 10px 0 0; position: relative; overflow: hidden;">
-                            <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="font-size: 2rem;">${getGenerationIcon(genLevel)}</span>
-                                ${genName}
-                                <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-left: auto;">
-                                    ${branches.length} ${branches.length === 1 ? 'branch' : 'branches'}
-                                </span>
-                            </h2>
-                            <div style="position: absolute; right: -20px; top: -20px; font-size: 6rem; opacity: 0.1; transform: rotate(15deg);">
-                                🌳
-                            </div>
-                        </div>
-                        <div style="background: #f8f9fa; border: 2px solid ${genColor}; border-top: none; border-radius: 0 0 10px 10px; padding: 1rem;">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem;">
-                                ${branches.map(branch => renderBranchCard(branch, genLevel)).join('')}
-                            </div>
-                        </div>
+            if (familyTrees.length === 0) {
+                branchesSection.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #666;">
+                        <h3>🌳 No Family Trees Yet</h3>
+                        <p>Family trees will automatically appear here when you add parent-child relationships in the Family Members section.</p>
+                        <p>Start by editing family members and selecting their parents and children!</p>
                     </div>
                 `;
-            });
-
-            return html || '<div style="text-align: center; padding: 2rem; color: #666;"><h3>No family branches yet</h3><p>Create your first family branch to get started!</p></div>';
-        }
-
-        // Render individual branch card
-        function renderBranchCard(branch, genLevel) {
-            const membersInBranch = familyMembers.filter(member => member.familyBranch === branch.name);
-            const sharedMembersCount = branch.sharedMembers ? branch.sharedMembers.length : 0;
-            const totalMembers = membersInBranch.length + sharedMembersCount;
-            
-            // Get average age for the branch
-            const avgAge = membersInBranch.length > 0 ? 
-                Math.round(membersInBranch.reduce((sum, member) => sum + getAge(member), 0) / membersInBranch.length) : 0;
-            
-            const typeIcon = getBranchTypeIcon(branch.branchType);
-            
-            return `
-                <div class="family-card" style="border-left: 4px solid ${getBranchColor(genLevel)}; margin: 0; position: relative;">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                        <h3 style="margin: 0; color: ${getBranchColor(genLevel)}; font-size: 1.1rem;">
-                            ${typeIcon} ${branch.name}
-                        </h3>
-                        <div style="font-size: 1.2rem; opacity: 0.7;">${getGenerationIcon(genLevel)}</div>
-                    </div>
-                    
-                    <div style="margin-bottom: 0.5rem;">
-                        <span style="background: ${getBranchColor(genLevel)}20; color: ${getBranchColor(genLevel)}; padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold;">
-                            ${formatBranchType(branch.branchType)}
-                        </span>
-                    </div>
-                    
-                    <p style="margin: 0.5rem 0; color: #555; font-size: 0.9rem;">${branch.description || 'No description'}</p>
-                    
-                    ${branch.parentBranch ? `<div style="margin-bottom: 0.5rem; padding: 0.25rem 0.5rem; background: #fff3cd; border-radius: 4px; font-size: 0.8rem;">
-                        <strong>↗️ Parent:</strong> ${branch.parentBranch}
-                    </div>` : ''}
-                    
-                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8f9fa; border-radius: 5px; border-left: 3px solid ${getBranchColor(genLevel)};">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
-                            <div><strong>👥 Members:</strong> ${totalMembers}</div>
-                            <div><strong>📊 Avg Age:</strong> ${avgAge || 'N/A'}</div>
-                            <div><strong>🏠 Direct:</strong> ${membersInBranch.length}</div>
-                            <div><strong>🤝 Shared:</strong> ${sharedMembersCount}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745; font-size: 0.8rem; flex: 1;">
-                            👁️ View Branch
-                        </button>
-                        <button class="btn" onclick="openManageBranchModal('${branch.id}')" style="background: #17a2b8; color: white; font-size: 0.8rem; flex: 1;">
-                            ⚙️ Manage
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteBranch('${branch.id}')" style="font-size: 0.8rem;">🗑️</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Render Family Units View
-        function renderFamilyUnitsView() {
-            let html = `
-                <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                    <h2 style="margin: 0; color: #333;">🏠 Family Units</h2>
-                    <button class="btn btn-primary" onclick="openCreateFamilyUnitModal()" style="background: #007bff;">
-                        + Create Family Unit
-                    </button>
-                </div>
-            `;
-
-            // Get branches that are not in any family unit
-            const branchesInUnits = familyUnits.flatMap(unit => unit.branches || []);
-            const unassignedBranches = familyBranches.filter(branch => 
-                !branchesInUnits.includes(branch.name)
-            );
-
-            // Render family units
-            familyUnits.forEach(unit => {
-                html += renderFamilyUnit(unit);
-            });
-
-            // Show unassigned branches if any
-            if (unassignedBranches.length > 0) {
-                html += `
-                    <div style="margin-top: 2rem;">
-                        <div style="background: linear-gradient(135deg, #6c757d, #6c757daa); color: white; padding: 1rem; border-radius: 10px 10px 0 0;">
-                            <h3 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                                📂 Unassigned Branches
-                                <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-left: auto;">
-                                    ${unassignedBranches.length} ${unassignedBranches.length === 1 ? 'branch' : 'branches'}
-                                </span>
-                            </h3>
-                        </div>
-                        <div style="background: #f8f9fa; border: 2px solid #6c757d; border-top: none; border-radius: 0 0 10px 10px; padding: 1rem;">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem;">
-                                ${unassignedBranches.map(branch => renderBranchCard(branch, branch.generationLevel)).join('')}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                return;
             }
 
-            return html || '<div style="text-align: center; padding: 2rem; color: #666;"><h3>No family units yet</h3><p>Create your first family unit to organize your branches!</p></div>';
-        }
-
-        // Render individual Family Unit
-        function renderFamilyUnit(unit) {
-            const unitBranches = familyBranches.filter(branch => 
-                unit.branches && unit.branches.includes(branch.name)
-            );
-            
-            // Calculate total members across all branches in this unit
-            const totalMembers = unitBranches.reduce((total, branch) => {
-                const branchMembers = familyMembers.filter(member => member.familyBranch === branch.name);
-                const sharedMembers = branch.sharedMembers ? branch.sharedMembers.length : 0;
-                return total + branchMembers.length + sharedMembers;
-            }, 0);
-
-            // Get the primary generation (most common generation in the unit)
-            const generations = unitBranches.map(b => b.generationLevel).filter(g => g);
-            const primaryGeneration = generations.length > 0 ? 
-                generations.sort((a,b) => generations.filter(v => v===a).length - generations.filter(v => v===b).length).pop() : 2;
-
-            const unitColor = getFamilyUnitColor(unit.type || 'extended');
-
-            return `
+            branchesSection.innerHTML = `
                 <div style="margin-bottom: 2rem;">
-                    <div style="background: linear-gradient(135deg, ${unitColor}, ${unitColor}aa); color: white; padding: 1rem; border-radius: 10px 10px 0 0; position: relative; overflow: hidden;">
-                        <h2 style="margin: 0; font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="font-size: 2rem;">${getFamilyUnitIcon(unit.type)}</span>
-                            ${unit.name}
-                            <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 15px; font-size: 0.8rem; margin-left: auto;">
-                                ${unitBranches.length} ${unitBranches.length === 1 ? 'branch' : 'branches'} • ${totalMembers} members
-                            </span>
-                        </h2>
-                        <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">${unit.description || 'No description'}</p>
-                        <div style="position: absolute; right: -20px; top: -20px; font-size: 6rem; opacity: 0.1; transform: rotate(15deg);">
-                            🏠
+                    <h2 style="color: #667eea; margin-bottom: 1rem;">🌳 Auto-Generated Family Trees</h2>
+                    <p style="color: #666; margin-bottom: 2rem;">These family trees are automatically created based on the parent-child relationships you've defined.</p>
+                </div>
+                <div id="autoFamilyTrees">
+                    ${familyTrees.map(tree => renderFamilyTree(tree)).join('')}
+                </div>
+            `;
+        }
+
+        function renderFamilyTree(familyTree) {
+            return `
+                <div style="background: white; border-radius: 15px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #667eea; margin-bottom: 1.5rem; text-align: center;">${familyTree.name}</h3>
+                    
+                    <div class="family-tree-container" style="overflow-x: auto; padding: 1rem;">
+                        <!-- Root Generation -->
+                        <div class="generation" style="display: flex; justify-content: center; margin-bottom: 2rem;">
+                            ${familyTree.rootGeneration.map(member => renderFamilyMember(member, 'root')).join('')}
                         </div>
-                    </div>
-                    <div style="background: #f8f9fa; border: 2px solid ${unitColor}; border-top: none; border-radius: 0 0 10px 10px; padding: 1rem;">
-                        <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
-                            <button class="btn" onclick="manageFamilyUnit('${unit.id}')" style="background: #17a2b8; color: white; font-size: 0.85rem;">
-                                ⚙️ Manage Unit
-                            </button>
-                            <button class="btn btn-danger" onclick="deleteFamilyUnit('${unit.id}')" style="font-size: 0.85rem;">
-                                🗑️ Delete Unit
-                            </button>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem;">
-                            ${unitBranches.map(branch => renderBranchCardInUnit(branch, unit.id)).join('')}
-                        </div>
+
+                        ${familyTree.generations.map((generation, index) => `
+                            <!-- Generation ${index + 1} -->
+                            <div class="generation" style="display: flex; justify-content: center; margin-bottom: 2rem; position: relative;">
+                                <!-- Connection Lines -->
+                                <div style="position: absolute; top: -2rem; left: 50%; transform: translateX(-50%); width: 2px; height: 2rem; background: #ddd;"></div>
+                                ${generation.map(member => renderFamilyMember(member, `gen${index + 1}`)).join('')}
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
             `;
         }
 
-        // Render branch card within a family unit (simplified version)
-        function renderBranchCardInUnit(branch, unitId) {
-            const membersInBranch = familyMembers.filter(member => member.familyBranch === branch.name);
-            const sharedMembersCount = branch.sharedMembers ? branch.sharedMembers.length : 0;
-            const totalMembers = membersInBranch.length + sharedMembersCount;
-            
-            const avgAge = membersInBranch.length > 0 ? 
-                Math.round(membersInBranch.reduce((sum, member) => sum + getAge(member), 0) / membersInBranch.length) : 0;
-            
-            const typeIcon = getBranchTypeIcon(branch.branchType);
-            const genColor = getBranchColor(branch.generationLevel);
+        function renderFamilyMember(member, generationType) {
+            const isMarried = member.marriedTo;
+            const hasChildren = member.children && member.children.length > 0;
             
             return `
-                <div class="family-card" style="border-left: 4px solid ${genColor}; margin: 0; background: white;">
-                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                        <h4 style="margin: 0; color: ${genColor}; font-size: 1rem;">
-                            ${typeIcon} ${branch.name}
-                        </h4>
-                        <div style="font-size: 1rem; opacity: 0.7;">${getGenerationIcon(branch.generationLevel)}</div>
-                    </div>
+                <div class="family-member-node" style="margin: 0 1rem; text-align: center; position: relative;">
+                    ${hasChildren ? `
+                        <div style="position: absolute; bottom: -2rem; left: 50%; transform: translateX(-50%); width: 2px; height: 2rem; background: #ddd;"></div>
+                    ` : ''}
                     
-                    <div style="margin-bottom: 0.5rem;">
-                        <span style="background: ${genColor}20; color: ${genColor}; padding: 0.15rem 0.4rem; border-radius: 10px; font-size: 0.7rem; font-weight: bold;">
-                            Gen ${branch.generationLevel} • ${formatBranchType(branch.branchType)}
-                        </span>
-                    </div>
-                    
-                    <div style="margin-top: 0.5rem; padding: 0.4rem; background: #f8f9fa; border-radius: 4px; font-size: 0.8rem;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem;">
-                            <div><strong>👥</strong> ${totalMembers} members</div>
-                            <div><strong>📊</strong> Avg ${avgAge}</div>
+                    <div style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 1rem;
+                        border-radius: 50%;
+                        width: 80px;
+                        height: 80px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin: 0 auto 0.5rem;
+                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                        cursor: pointer;
+                    " onclick="openEditMemberModal('${member.id}')">
+                        <div style="text-align: center; font-size: 0.75rem; line-height: 1.2;">
+                            <div style="font-weight: bold;">${member.firstName}</div>
+                            <div>${member.lastName}</div>
                         </div>
                     </div>
                     
-                    <div style="margin-top: 0.8rem; display: flex; gap: 0.3rem;">
-                        <button class="btn btn-primary" onclick="viewBranchMembers('${branch.name}')" style="background: #28a745; font-size: 0.75rem; flex: 1;">
-                            👁️ View
-                        </button>
-                        <button class="btn" onclick="openManageBranchModal('${branch.id}')" style="background: #17a2b8; color: white; font-size: 0.75rem; flex: 1;">
-                            ⚙️ Edit
-                        </button>
-                        <button class="btn" onclick="removeBranchFromUnit('${branch.name}', '${unitId}')" style="background: #ffc107; color: #212529; font-size: 0.75rem;">
-                            ↗️
-                        </button>
+                    <div style="font-size: 0.8rem; color: #333; font-weight: 500;">
+                        ${member.firstName} ${member.lastName}
                     </div>
+                    <div style="font-size: 0.7rem; color: #666;">
+                        Age: ${getAge(member)}
+                    </div>
+                    
+                    ${isMarried ? `
+                        <div style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #e74c3c20; color: #e74c3c; border-radius: 12px; font-size: 0.7rem;">
+                            💍 Married
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
 
-        // Helper functions for Family Units
-        function getFamilyUnitColor(unitType) {
-            const colors = {
-                'nuclear': '#28a745',      // Green for nuclear families
-                'extended': '#007bff',     // Blue for extended families  
-                'ancestral': '#8e24aa',    // Purple for ancestral lines
-                'mixed': '#fd7e14'         // Orange for mixed families
-            };
-            return colors[unitType] || '#007bff';
-        }
 
-        function getFamilyUnitIcon(unitType) {
-            const icons = {
-                'nuclear': '👨‍👩‍👧‍👦',
-                'extended': '🏘️',
-                'ancestral': '🌳',
-                'mixed': '�'
-            };
-            return icons[unitType] || '🏠';
-        }
 
         // Helper functions for branch display
         function getBranchColor(generationLevel) {
@@ -2757,6 +2637,7 @@
                 await loadFamilyMembers();
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
+                displayBranches(); // Refresh family trees
                 populateDropdowns();
                 showMessage('Family member added successfully!', 'success');
             } catch (error) {
@@ -2819,6 +2700,21 @@
         async function updateFamilyMember() {
             try {
                 const memberId = document.getElementById('editMemberId').value;
+                
+                // Get selected children
+                const selectedChildren = [];
+                const childrenCheckboxes = document.querySelectorAll('#editChildrenSelection input[name="editChildren"]:checked');
+                childrenCheckboxes.forEach(checkbox => {
+                    selectedChildren.push(checkbox.value);
+                });
+
+                // Get selected parents
+                const selectedParents = [];
+                const parentsCheckboxes = document.querySelectorAll('#editParentsSelection input[name="editParents"]:checked');
+                parentsCheckboxes.forEach(checkbox => {
+                    selectedParents.push(checkbox.value);
+                });
+
                 const memberData = {
                     firstName: document.getElementById('editFirstName').value,
                     lastName: document.getElementById('editLastName').value,
@@ -2827,6 +2723,8 @@
                     birthYear: parseInt(document.getElementById('editBirthYear').value),
                     familyBranch: document.getElementById('editFamilyBranch').value,
                     marriedTo: document.getElementById('editMarriedTo').value || null,
+                    children: selectedChildren, // Add children array
+                    parents: selectedParents, // Add parents array
                     mobilePhone: document.getElementById('editMobilePhone').value,
                     homePhone: document.getElementById('editHomePhone').value,
                     workPhone: document.getElementById('editWorkPhone').value,
@@ -2846,6 +2744,7 @@
                 await loadFamilyMembers();
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
+                displayBranches(); // Refresh family trees
                 populateDropdowns();
                 showMessage('Family member updated successfully!', 'success');
             } catch (error) {
@@ -4350,6 +4249,11 @@
             // If switching to relationships tab, initialize the relationship system display
             if (tabName === 'relationships' && relationshipSystem && relationshipUI) {
                 initializeRelationshipDisplay();
+            }
+            
+            // If switching to branches tab, refresh the auto-generated family trees
+            if (tabName === 'branches') {
+                displayBranches();
             }
         };
 
