@@ -614,7 +614,6 @@
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <button class="btn btn-primary" onclick="openAddMemberModal()">+ Add Family Member</button>
-                        <button class="btn btn-danger admin-only" onclick="removeAllFamilyMembers()" style="display: none; background: #dc3545; font-weight: bold;" id="deleteAllBtn">🗑️ DELETE ALL MEMBERS</button>
                     </div>
                 </div>
                 <div id="familyGrid" class="family-grid"></div>
@@ -2194,16 +2193,9 @@
 
             branchesSection.innerHTML = `
                 <div style="margin-bottom: 2rem;">
-                    <h2 style="color: #667eea; margin-bottom: 1rem;">🌳 Smart Family Trees</h2>
-                    <div style="background: #e8f4fd; border: 1px solid #b3d8f0; border-radius: 10px; padding: 1rem; margin-bottom: 2rem;">
-                        <p style="color: #0066cc; margin: 0; font-size: 0.9rem;">
-                            <strong>💡 Smart Features:</strong> Family trees are automatically created based on parent-child relationships. 
-                            When you add someone as a child, their parent field updates automatically (and vice versa). 
-                            Families are properly grouped by nuclear family units (parents + their children).
-                        </p>
-                    </div>
+                    <h2 style="color: #667eea; margin-bottom: 1rem; text-align: center;">🌳 Family Trees</h2>
                 </div>
-                <div id="autoFamilyTrees">
+                <div id="autoFamilyTrees" style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: flex-start;">
                     ${familyTrees.map(tree => renderFamilyTree(tree)).join('')}
                 </div>
             `;
@@ -2211,14 +2203,14 @@
 
         function renderFamilyTree(familyTree) {
             return `
-                <div style="background: white; border-radius: 15px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="background: white; border-radius: 15px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); flex: 1; min-width: 400px; max-width: 500px;">
                     <h3 style="color: #667eea; margin-bottom: 1.5rem; text-align: center;">${familyTree.name}</h3>
                     
                     <div class="family-tree-container" style="overflow-x: auto; padding: 1rem;">
-                        ${familyTree.generations.map((generation, index) => `
+                        ${familyTree.generations.slice().reverse().map((generation, index) => `
                             <div class="generation-${generation.type}" style="margin-bottom: 2rem;">
                                 <h4 style="text-align: center; color: #666; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">
-                                    ${getGenerationLabel(generation.type, index)}
+                                    ${getGenerationLabel(generation.type, familyTree.generations.length - 1 - index)}
                                 </h4>
                                 
                                 <!-- Connection Lines -->
@@ -2229,10 +2221,10 @@
                                 ` : ''}
                                 
                                 <div class="generation-members" style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
-                                    ${generation.members.map(member => renderFamilyMember(member, generation.type)).join('')}
+                                    ${generation.members.sort((a, b) => getAge(b) - getAge(a)).map(member => renderFamilyMember(member, generation.type)).join('')}
                                 </div>
                                 
-                                ${index < familyTree.generations.length - 1 && familyTree.generations[index + 1] ? `
+                                ${index < familyTree.generations.length - 1 ? `
                                     <div style="display: flex; justify-content: center; margin-top: 1rem;">
                                         <div style="width: 2px; height: 2rem; background: #ddd;"></div>
                                     </div>
@@ -2244,13 +2236,13 @@
             `;
         }
 
-        function getGenerationLabel(type, index) {
+        function getGenerationLabel(type, originalIndex) {
             const labels = {
-                'parents': index === 0 ? 'Parents' : 'Ancestors',
+                'parents': originalIndex === 0 ? 'Parents' : 'Ancestors',
                 'children': 'Children',
                 'grandchildren': 'Grandchildren'
             };
-            return labels[type] || `Generation ${index + 1}`;
+            return labels[type] || `Generation ${originalIndex + 1}`;
         }
 
         function renderFamilyMember(member, generationType) {
