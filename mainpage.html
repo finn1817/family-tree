@@ -1843,10 +1843,6 @@
                 const nextBirthday = getNextBirthday(member);
                 const daysUntilBirthday = Math.ceil((nextBirthday - new Date()) / (1000 * 60 * 60 * 24));
                 
-                // Find potential parents and children
-                const potentialParents = findPotentialParents(member);
-                const potentialChildren = findPotentialChildren(member);
-                
                 return `
                 <div class="family-card">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
