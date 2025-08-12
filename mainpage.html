@@ -2421,18 +2421,103 @@
             }
 
             branchesSection.innerHTML = `
-                <div style="margin-bottom: 2rem;">
-                    <h2 style="color: #667eea; margin-bottom: 1rem; text-align: center;">🌳 Family Trees</h2>
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 style="color: #667eea; margin: 0;">🌳 Family Trees (${familyTrees.length} families)</h2>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="toggleCompactView()" class="btn" style="background: #28a745; color: white; padding: 0.5rem 1rem;">
+                                📊 Compact View
+                            </button>
+                            <button onclick="toggleDetailedView()" class="btn" style="background: #007bff; color: white; padding: 0.5rem 1rem;">
+                                📋 Detailed View
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div id="autoFamilyTrees" style="display: flex; flex-wrap: wrap; gap: 2rem; justify-content: flex-start;">
-                    ${familyTrees.map(tree => renderFamilyTree(tree)).join('')}
+                
+                <!-- Compact Grid View -->
+                <div id="compactFamilyView" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    ${familyTrees.map(tree => renderCompactFamilyCard(tree)).join('')}
+                </div>
+                
+                <!-- Detailed Tree View (initially hidden) -->
+                <div id="detailedFamilyView" style="display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+                        ${familyTrees.map(tree => renderDetailedFamilyTree(tree)).join('')}
+                    </div>
                 </div>
             `;
         }
 
-        function renderFamilyTree(familyTree) {
+        function renderCompactFamilyCard(familyTree) {
+            const parents = familyTree.generations.find(g => g.type === 'parents')?.members || [];
+            const children = familyTree.generations.find(g => g.type === 'children')?.members || [];
+            const grandchildren = familyTree.generations.find(g => g.type === 'grandchildren')?.members || [];
+            
             return `
-                <div style="background: white; border-radius: 15px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1); flex: 1; min-width: 400px; max-width: 500px;">
+                <div class="family-card" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem; font-size: 1.1rem; text-align: center;">${familyTree.name}</h3>
+                    
+                    <!-- Parents -->
+                    ${parents.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                👫 Parents (${parents.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${parents.map(p => `
+                                    <span style="background: #f8f9ff; color: #667eea; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #e0e6ed;">
+                                        ${p.firstName} ${p.lastName} ${p.marriedTo ? '💍' : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Children -->
+                    ${children.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                👶 Children (${children.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${children.map(c => `
+                                    <span style="background: #e8f5e8; color: #28a745; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #d4edda;">
+                                        ${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Grandchildren -->
+                    ${grandchildren.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                👼 Grandchildren (${grandchildren.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${grandchildren.map(gc => `
+                                    <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #ffeaa7;">
+                                        ${gc.firstName} ${gc.lastName} ${getAge(gc) ? `(${getAge(gc)})` : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;">
+                        <button onclick="showDetailedFamily('${familyTree.id}')" style="background: #667eea; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+                            🌳 View Tree
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDetailedFamilyTree(familyTree) {
+            return `
+                <div style="background: white; border-radius: 15px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                     <h3 style="color: #667eea; margin-bottom: 1.5rem; text-align: center;">${familyTree.name}</h3>
                     
                     <div class="family-tree-container" style="overflow-x: auto; padding: 1rem;">
@@ -2448,6 +2533,16 @@
                                         <div style="width: 2px; height: 2rem; background: #ddd;"></div>
                                     </div>
                                 ` : ''}
+                                
+                                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+                                    ${generation.members.map(member => renderFamilyMember(member, generation.type)).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
                                 
                                 <div class="generation-members" style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
                                     ${generation.members.sort((a, b) => getAge(b) - getAge(a)).map(member => renderFamilyMember(member, generation.type)).join('')}
@@ -2473,6 +2568,45 @@
             };
             return labels[type] || `Generation ${index + 1}`;
         }
+
+        // Toggle functions for view switching
+        window.toggleCompactView = function() {
+            document.getElementById('compactFamilyView').style.display = 'grid';
+            document.getElementById('detailedFamilyView').style.display = 'none';
+            
+            // Update button states
+            const compactBtn = document.querySelector('button[onclick="toggleCompactView()"]');
+            const detailedBtn = document.querySelector('button[onclick="toggleDetailedView()"]');
+            if (compactBtn && detailedBtn) {
+                compactBtn.style.background = '#28a745';
+                detailedBtn.style.background = '#6c757d';
+            }
+        };
+
+        window.toggleDetailedView = function() {
+            document.getElementById('compactFamilyView').style.display = 'none';
+            document.getElementById('detailedFamilyView').style.display = 'grid';
+            
+            // Update button states
+            const compactBtn = document.querySelector('button[onclick="toggleCompactView()"]');
+            const detailedBtn = document.querySelector('button[onclick="toggleDetailedView()"]');
+            if (compactBtn && detailedBtn) {
+                compactBtn.style.background = '#6c757d';
+                detailedBtn.style.background = '#007bff';
+            }
+        };
+
+        window.showDetailedFamily = function(familyId) {
+            // Switch to detailed view and scroll to family
+            toggleDetailedView();
+            // Optional: scroll to specific family if needed
+            setTimeout(() => {
+                const element = document.getElementById(familyId);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        };
 
         function renderFamilyMember(member, generationType) {
             const isMarried = member.marriedTo;
