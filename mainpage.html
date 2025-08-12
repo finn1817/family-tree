@@ -2986,12 +2986,22 @@
 
         // Show detailed family information in modal
         window.showFamilyDetail = function(familyId) {
+            console.log('showFamilyDetail called with ID:', familyId);
+            
+            // Ensure any existing modal is properly closed first
+            closeModal('familyDetailModal');
+            
             const familyTrees = generateFamilyTrees();
-            const family = familyTrees.find(tree => (tree.id || tree.patriarch.id) === familyId);
+            const family = familyTrees.find(tree => (tree.id || tree.patriarch?.id) === familyId);
             
-            if (!family) return;
+            if (!family) {
+                console.log('Family not found for ID:', familyId);
+                return;
+            }
             
-            const familyName = family.name || `${family.patriarch.firstName} Family`;
+            console.log('Found family:', family.name);
+            
+            const familyName = family.name || `${family.patriarch?.firstName || 'Unknown'} Family`;
             
             // Set modal title
             document.getElementById('familyDetailTitle').textContent = `${familyName} Details`;
@@ -3001,7 +3011,12 @@
             
             // Display in modal
             document.getElementById('familyDetailContent').innerHTML = content;
-            document.getElementById('familyDetailModal').classList.add('active');
+            
+            // Small delay to ensure modal is properly reset before opening
+            setTimeout(() => {
+                document.getElementById('familyDetailModal').classList.add('active');
+                console.log('Modal opened for:', familyName);
+            }, 50);
         };
 
         function renderFamilyMember(member, generationType) {
@@ -5048,15 +5063,19 @@
                 const modal = document.getElementById(modalId);
                 if (modal) {
                     modal.classList.remove('active');
-                    modal.style.opacity = '0';
-                    modal.style.visibility = 'hidden';
+                    // Clear any inline styles that might interfere
+                    modal.style.opacity = '';
+                    modal.style.visibility = '';
+                    modal.style.display = '';
                 }
             } else {
                 // If no modalId provided, close any active modal
                 document.querySelectorAll('.modal.active, .modal[style*="visible"]').forEach(modal => {
                     modal.classList.remove('active');
-                    modal.style.opacity = '0';
-                    modal.style.visibility = 'hidden';
+                    // Clear any inline styles that might interfere
+                    modal.style.opacity = '';
+                    modal.style.visibility = '';
+                    modal.style.display = '';
                 });
             }
         };
@@ -6504,8 +6523,34 @@
             }
         };
             // forcing a push
+
+        // Initialize modal event listeners
+        function initializeModals() {
+            // Add click-outside-to-close for family detail modal
+            const familyDetailModal = document.getElementById('familyDetailModal');
+            if (familyDetailModal) {
+                familyDetailModal.addEventListener('click', function(e) {
+                    if (e.target === familyDetailModal) {
+                        closeModal('familyDetailModal');
+                    }
+                });
+            }
+
+            // Add escape key handler for all modals
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    // Close any active modal
+                    const activeModal = document.querySelector('.modal.active');
+                    if (activeModal) {
+                        closeModal(activeModal.id);
+                    }
+                }
+            });
+        }
+
         // Initialize the app
         init();
+        initializeModals();
     </script>
 </body>
 </html>
