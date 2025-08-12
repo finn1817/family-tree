@@ -2022,8 +2022,26 @@
                 const member = familyMembers.find(m => m.id === memberId);
                 if (!member) return;
 
-                // Update parents: add this member as their child
-                for (const parentId of parentIds) {
+                const oldParents = member.parents || [];
+                const oldChildren = member.children || [];
+
+                // Handle parent relationships
+                // Remove this member from old parents who are no longer selected
+                const removedParents = oldParents.filter(id => !parentIds.includes(id));
+                for (const parentId of removedParents) {
+                    const parent = familyMembers.find(m => m.id === parentId);
+                    if (parent) {
+                        const updatedChildren = (parent.children || []).filter(id => id !== memberId);
+                        await updateDoc(doc(db, 'family_members', parentId), {
+                            children: updatedChildren
+                        });
+                        console.log(`Removed child ${member.firstName} from parent ${parent.firstName}`);
+                    }
+                }
+
+                // Add this member to new parents
+                const newParents = parentIds.filter(id => !oldParents.includes(id));
+                for (const parentId of newParents) {
                     const parent = familyMembers.find(m => m.id === parentId);
                     if (parent) {
                         const updatedChildren = [...(parent.children || [])];
@@ -2032,6 +2050,7 @@
                             await updateDoc(doc(db, 'family_members', parentId), {
                                 children: updatedChildren
                             });
+                            console.log(`Added child ${member.firstName} to parent ${parent.firstName}`);
                         }
 
                         // If parent has a spouse, sync the children with them too
@@ -2040,9 +2059,24 @@
                         }
                     }
                 }
-                
-                // Update children: add this member as their parent
-                for (const childId of childrenIds) {
+
+                // Handle children relationships
+                // Remove this member from old children who are no longer selected
+                const removedChildren = oldChildren.filter(id => !childrenIds.includes(id));
+                for (const childId of removedChildren) {
+                    const child = familyMembers.find(m => m.id === childId);
+                    if (child) {
+                        const updatedParents = (child.parents || []).filter(id => id !== memberId);
+                        await updateDoc(doc(db, 'family_members', childId), {
+                            parents: updatedParents
+                        });
+                        console.log(`Removed parent ${member.firstName} from child ${child.firstName}`);
+                    }
+                }
+
+                // Add this member to new children
+                const newChildren = childrenIds.filter(id => !oldChildren.includes(id));
+                for (const childId of newChildren) {
                     const child = familyMembers.find(m => m.id === childId);
                     if (child) {
                         const updatedParents = [...(child.parents || [])];
@@ -2051,6 +2085,7 @@
                             await updateDoc(doc(db, 'family_members', childId), {
                                 parents: updatedParents
                             });
+                            console.log(`Added parent ${member.firstName} to child ${child.firstName}`);
                         }
                     }
                 }
