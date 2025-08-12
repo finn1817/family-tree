@@ -1979,7 +1979,7 @@
                     <!-- Basic Info -->
                     <div class="family-info" style="margin-bottom: 1rem;">
                         <div><strong>Family Group:</strong> ${member.familyBranch || 'No group assigned'}</div>
-                        ${member.marriedTo ? `<div><strong>💍 Currently Married To:</strong> ${getSpouseName(member.marriedTo)}</div>` : ''}
+                        ${member.marriedTo && member.marriedTo.length > 0 ? `<div><strong>💍 Currently Married To:</strong> ${getSpousesNames(member.marriedTo)}</div>` : ''}
                         ${member.marriageHistory && member.marriageHistory.length > 0 ? `
                             <div><strong>📚 Marriage History:</strong>
                                 ${member.marriageHistory.map(marriage => {
@@ -2011,6 +2011,23 @@
         function getSpouseName(spouseId) {
             const spouse = familyMembers.find(m => m.id === spouseId);
             return spouse ? `${spouse.firstName} ${spouse.lastName}` : 'Unknown';
+        }
+
+        // Helper function to get multiple spouses names
+        function getSpousesNames(spouseIds) {
+            if (!spouseIds || spouseIds.length === 0) return 'None';
+            
+            // Handle backward compatibility - if it's a string, convert to array
+            if (typeof spouseIds === 'string') {
+                spouseIds = [spouseIds];
+            }
+            
+            const spouseNames = spouseIds.map(spouseId => {
+                const spouse = familyMembers.find(m => m.id === spouseId);
+                return spouse ? `${spouse.firstName} ${spouse.lastName}` : 'Unknown';
+            }).filter(name => name !== 'Unknown');
+            
+            return spouseNames.length > 0 ? spouseNames.join(', ') : 'None';
         }
 
         // Helper function to get children names
@@ -2250,6 +2267,36 @@
                 console.log(`Successfully synchronized children for married couple`);
             } catch (error) {
                 console.error('Error synchronizing children for married couple:', error);
+            }
+        }
+
+        // Update bidirectional marriage relationships for multiple spouses
+        async function updateBidirectionalMarriageMultiple(memberId, spouseId) {
+            try {
+                const member = familyMembers.find(m => m.id === memberId);
+                const spouse = familyMembers.find(m => m.id === spouseId);
+                
+                if (!member || !spouse) return;
+
+                // Add this member to spouse's marriedTo array (if it's not already there)
+                let spouseMarriedTo = spouse.marriedTo || [];
+                
+                // Handle backward compatibility - if it's a string, convert to array
+                if (typeof spouseMarriedTo === 'string') {
+                    spouseMarriedTo = spouseMarriedTo ? [spouseMarriedTo] : [];
+                }
+                
+                if (!spouseMarriedTo.includes(memberId)) {
+                    spouseMarriedTo.push(memberId);
+                    await updateDoc(doc(db, 'family_members', spouseId), { marriedTo: spouseMarriedTo });
+                    console.log(`Added ${member.firstName} to ${spouse.firstName}'s marriedTo array`);
+                }
+                
+                // Update local data
+                spouse.marriedTo = spouseMarriedTo;
+                
+            } catch (error) {
+                console.error('Error updating bidirectional marriage for multiple spouses:', error);
             }
         }
 
@@ -3507,6 +3554,15 @@
                     return;
                 }
 
+                // Get selected spouses
+                const selectedSpouses = [];
+                const spousesCheckboxes = document.querySelectorAll('input[name="spouses"]:checked');
+                spousesCheckboxes.forEach(checkbox => {
+                    selectedSpouses.push(checkbox.value);
+                });
+
+                console.log('📋 Selected spouses:', selectedSpouses);
+
                 const memberData = {
                     firstName: document.getElementById('addFirstName').value.trim(),
                     lastName: document.getElementById('addLastName').value.trim(),
@@ -3514,8 +3570,7 @@
                     birthDay: parseInt(document.getElementById('addBirthDay').value) || null,
                     birthYear: parseInt(document.getElementById('addBirthYear').value) || null,
                     familyBranch: document.getElementById('addFamilyBranch').value || null,
-                    marriedTo: document.getElementById('addMarriedTo').value || null,
-                    marriageHistory: collectMarriageHistory(), // Collect marriage history
+                    marriedTo: selectedSpouses, // Changed to array for multiple spouses
                     children: selectedChildren,
                     parents: selectedParents,
                     email: document.getElementById('addEmail').value?.trim() || null,
@@ -3571,14 +3626,16 @@
                 familyMembers.push(newMember);
                 console.log('✅ Added to local familyMembers array. New count:', familyMembers.length);
                 
-                // Update bidirectional marriage relationships
-                const spouseId = memberData.marriedTo;
-                if (spouseId) {
-                    console.log('🔄 Updating marriage relationships...');
-                    await updateBidirectionalMarriage(newMemberId, null, spouseId);
-                    // Synchronize children with spouse
-                    console.log('👶 Synchronizing children with spouse...');
-                    await synchronizeMarriedCoupleChildren(newMemberId, spouseId);
+                // Update bidirectional marriage relationships for multiple spouses
+                const spouseIds = memberData.marriedTo;
+                if (spouseIds && spouseIds.length > 0) {
+                    console.log('🔄 Updating marriage relationships for multiple spouses...');
+                    for (const spouseId of spouseIds) {
+                        await updateBidirectionalMarriageMultiple(newMemberId, spouseId);
+                        // Synchronize children with each spouse
+                        console.log(`👶 Synchronizing children with spouse ${spouseId}...`);
+                        await synchronizeMarriedCoupleChildren(newMemberId, spouseId);
+                    }
                 }
                 
                 // Update bidirectional parent/child relationships
@@ -5547,25 +5604,22 @@
                                 }).join('')}
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="addMarriedTo">Currently Married To</label>
-                            <select id="addMarriedTo" name="marriedTo">
-                                <option value="">Not Married</option>
-                                ${familyMembers.map(member => 
-                                    `<option value="${member.id}">${member.firstName} ${member.lastName}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
                         <div class="form-group full-width">
-                            <label>💍 Marriage History</label>
-                            <div style="background: #f8f9fa; border: 1px solid #e0e6ed; border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
-                                <div id="marriageHistoryContainer">
-                                    <p style="color: #666; font-size: 0.9rem; margin: 0;">Click "Add Previous Marriage" to record past marriages (including deceased spouses)</p>
-                                </div>
-                                <button type="button" onclick="addMarriageHistoryEntry()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
-                                    + Add Previous Marriage
-                                </button>
+                            <label>💍 Married To (Select all current spouses)</label>
+                            <div style="margin-bottom: 0.5rem;">
+                                <input type="text" id="spouseSearchInput" placeholder="🔍 Search spouses by name..." 
+                                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                       oninput="filterSpouses(this.value)">
                             </div>
+                            <div id="spousesSelectionContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; background: #f9f9f9;">
+                                ${familyMembers.map(member => `
+                                    <label class="spouse-option" style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
+                                        <input type="checkbox" name="spouses" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateSpouseCount()">
+                                        ${member.firstName} ${member.lastName} (${getAge(member)} years old)
+                                    </label>
+                                `).join('')}
+                            </div>
+                            <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">Select all people this person is currently married to (for remarriage scenarios)</p>
                         </div>
                         <div class="form-group full-width">
                             <label for="addEmail">Email</label>
@@ -5624,9 +5678,14 @@
                     <!-- Parents Selection -->
                     <div style="margin-top: 1.5rem;">
                         <h3 style="color: #667eea; margin-bottom: 1rem;">👫 Parents <span id="parentsCount" style="font-size: 0.8rem; color: #666;">(0/2)</span></h3>
-                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <input type="text" id="parentSearchInput" placeholder="🔍 Search parents by name..." 
+                                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                   oninput="filterParents(this.value)">
+                        </div>
+                        <div id="parentsSelectionContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
                             ${getPotentialParentsForNew().map(member => `
-                                <label style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
+                                <label class="parent-option" style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
                                     <input type="checkbox" name="parents" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateParentCount()">
                                     ${member.firstName} ${member.lastName} (${getAge(member)} years old)
                                 </label>
@@ -5638,9 +5697,14 @@
                     <!-- Children Selection -->
                     <div style="margin-top: 1.5rem;">
                         <h3 style="color: #667eea; margin-bottom: 1rem;">👶 Children <span id="childrenCount" style="font-size: 0.8rem; color: #666;">(0/15)</span></h3>
-                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <input type="text" id="childrenSearchInput" placeholder="🔍 Search children by name..." 
+                                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                   oninput="filterChildren(this.value)">
+                        </div>
+                        <div id="childrenSelectionContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
                             ${getPotentialChildrenForNew().map(member => `
-                                <label style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
+                                <label class="children-option" style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
                                     <input type="checkbox" name="children" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateChildrenCount()">
                                     ${member.firstName} ${member.lastName} (${getAge(member)} years old)
                                 </label>
@@ -5710,6 +5774,54 @@
                     });
                 }
             }
+        };
+
+        // Search filter functions for add member modal
+        window.filterParents = function(searchTerm) {
+            const parentOptions = document.querySelectorAll('.parent-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            parentOptions.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+
+        window.filterChildren = function(searchTerm) {
+            const childrenOptions = document.querySelectorAll('.children-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            childrenOptions.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+
+        window.filterSpouses = function(searchTerm) {
+            const spouseOptions = document.querySelectorAll('.spouse-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            spouseOptions.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+
+        window.updateSpouseCount = function() {
+            const spouseCheckboxes = document.querySelectorAll('input[name="spouses"]:checked');
+            console.log(`Selected ${spouseCheckboxes.length} spouse(s)`);
         };
 
         // Marriage History Management Functions
