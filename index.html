@@ -78,10 +78,56 @@
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s;
+            margin-bottom: 1rem;
         }
         
-        .login-btn:hover {
+        .request-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .login-btn:hover, .request-btn:hover {
             transform: translateY(-2px);
+        }
+        
+        .request-form {
+            display: none;
+        }
+        
+        .switch-mode {
+            text-align: center;
+            margin-top: 1rem;
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .password-requirements {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        .waiting-view {
+            display: none;
+            text-align: center;
+        }
+        
+        .waiting-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
         }
         
         .error {
@@ -119,6 +165,8 @@
     <div class="login-container">
         <div class="logo">🌳</div>
         <h1>Family Tree</h1>
+        
+        <!-- Login Form -->
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -129,10 +177,51 @@
                 <input type="password" id="password" required minlength="5">
             </div>
             <button type="submit" class="login-btn">Login</button>
+            <button type="button" class="request-btn" onclick="showRequestForm()">Request Account</button>
             <div class="loading" id="loading">Logging in...</div>
             <div class="error" id="error"></div>
             <div class="success" id="success"></div>
         </form>
+
+        <!-- Request Account Form -->
+        <form id="requestForm" class="request-form">
+            <h2 style="color: #28a745; margin-bottom: 1.5rem;">Request Account Access</h2>
+            <div class="form-group">
+                <label for="reqUsername">Username</label>
+                <input type="text" id="reqUsername" required minlength="5">
+            </div>
+            <div class="form-group">
+                <label for="reqPassword">Password</label>
+                <input type="password" id="reqPassword" required minlength="6">
+                <div class="password-requirements">Must be 6+ characters with 1 capital letter and 1 number</div>
+            </div>
+            <div class="form-group">
+                <label for="reqFirstName">First Name</label>
+                <input type="text" id="reqFirstName" required>
+            </div>
+            <div class="form-group">
+                <label for="reqLastName">Last Name</label>
+                <input type="text" id="reqLastName" required>
+            </div>
+            <button type="submit" class="request-btn">Submit Request</button>
+            <div class="switch-mode" onclick="showLoginForm()">Back to Login</div>
+            <div class="loading" id="requestLoading" style="display: none;">Submitting request...</div>
+            <div class="error" id="requestError"></div>
+            <div class="success" id="requestSuccess"></div>
+        </form>
+
+        <!-- Waiting for Approval View -->
+        <div id="waitingView" class="waiting-view">
+            <h2 style="color: #667eea; margin-bottom: 1.5rem;">Account Request Submitted</h2>
+            <div class="waiting-message">
+                <h3>⏳ Waiting for Admin Approval</h3>
+                <p>Your account request has been submitted and is pending approval from an administrator.</p>
+                <p><strong>Username:</strong> <span id="waitingUsername"></span></p>
+            </div>
+            <div id="statusUpdate" style="margin: 1rem 0;"></div>
+            <div class="switch-mode" onclick="showLoginForm()">Back to Login</div>
+        </div>
+
         <div class="debug" id="debug"></div>
     </div>
 
@@ -164,6 +253,171 @@
         // Initialize default user when page loads
         debugLog('Initializing Firebase...');
 
+        // Check if user is waiting for approval
+        const waitingUsername = localStorage.getItem('waitingForApproval');
+        if (waitingUsername) {
+            showWaitingView(waitingUsername);
+            // Start real-time status checking
+            startStatusMonitoring(waitingUsername);
+        }
+
+        // Form switching functions
+        window.showRequestForm = function() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('requestForm').style.display = 'block';
+            document.getElementById('waitingView').style.display = 'none';
+        };
+
+        window.showLoginForm = function() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('requestForm').style.display = 'none';
+            document.getElementById('waitingView').style.display = 'none';
+            localStorage.removeItem('waitingForApproval');
+        };
+
+        window.showWaitingView = function(username) {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('requestForm').style.display = 'none';
+            document.getElementById('waitingView').style.display = 'block';
+            document.getElementById('waitingUsername').textContent = username;
+        };
+
+        // Password validation
+        function validatePassword(password) {
+            const minLength = password.length >= 6;
+            const hasCapital = /[A-Z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            return minLength && hasCapital && hasNumber;
+        }
+
+        // Check if username is denied
+        async function isUsernameDenied(username) {
+            try {
+                const deniedRef = collection(db, 'denied_accounts');
+                const q = query(deniedRef, where('username', '==', username));
+                const querySnapshot = await getDocs(q);
+                return !querySnapshot.empty;
+            } catch (error) {
+                debugLog(`Error checking denied accounts: ${error.message}`);
+                return false;
+            }
+        }
+
+        // Real-time status monitoring
+        function startStatusMonitoring(username) {
+            const statusDiv = document.getElementById('statusUpdate');
+            
+            const checkStatus = async () => {
+                try {
+                    // Check if user was approved (exists in users collection)
+                    const usersRef = collection(db, 'users');
+                    const userQuery = query(usersRef, where('username', '==', username));
+                    const userSnapshot = await getDocs(userQuery);
+                    
+                    if (!userSnapshot.empty) {
+                        statusDiv.innerHTML = '<div style="background: #d4edda; color: #155724; padding: 1rem; border-radius: 10px; margin: 1rem 0;"><strong>✅ Account Approved!</strong><br>Refresh page and log in again.</div>';
+                        localStorage.removeItem('waitingForApproval');
+                        return;
+                    }
+                    
+                    // Check if user was denied
+                    const deniedRef = collection(db, 'denied_accounts');
+                    const deniedQuery = query(deniedRef, where('username', '==', username));
+                    const deniedSnapshot = await getDocs(deniedQuery);
+                    
+                    if (!deniedSnapshot.empty) {
+                        statusDiv.innerHTML = '<div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 10px; margin: 1rem 0;"><strong>❌ Account Denied</strong><br>Your request has been denied by an administrator.</div>';
+                        localStorage.removeItem('waitingForApproval');
+                        return;
+                    }
+                    
+                } catch (error) {
+                    debugLog(`Status check error: ${error.message}`);
+                }
+            };
+            
+            // Check immediately and then every 3 seconds
+            checkStatus();
+            setInterval(checkStatus, 3000);
+        }
+
+        // Request account form submission
+        document.getElementById('requestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('reqUsername').value;
+            const password = document.getElementById('reqPassword').value;
+            const firstName = document.getElementById('reqFirstName').value;
+            const lastName = document.getElementById('reqLastName').value;
+            const errorDiv = document.getElementById('requestError');
+            const successDiv = document.getElementById('requestSuccess');
+            const loadingDiv = document.getElementById('requestLoading');
+            
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+            loadingDiv.style.display = 'block';
+            
+            // Validate password
+            if (!validatePassword(password)) {
+                errorDiv.textContent = 'Password must be 6+ characters with 1 capital letter and 1 number';
+                loadingDiv.style.display = 'none';
+                return;
+            }
+            
+            try {
+                // Check if username is denied
+                const isDenied = await isUsernameDenied(username);
+                if (isDenied) {
+                    errorDiv.textContent = 'This username has been denied access and cannot create an account';
+                    loadingDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Check if username already exists
+                const usersRef = collection(db, 'users');
+                const userQuery = query(usersRef, where('username', '==', username));
+                const userSnapshot = await getDocs(userQuery);
+                
+                if (!userSnapshot.empty) {
+                    errorDiv.textContent = 'Username already exists';
+                    loadingDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Check if request already exists
+                const requestsRef = collection(db, 'account_requests');
+                const requestQuery = query(requestsRef, where('username', '==', username));
+                const requestSnapshot = await getDocs(requestQuery);
+                
+                if (!requestSnapshot.empty) {
+                    errorDiv.textContent = 'A request for this username already exists';
+                    loadingDiv.style.display = 'none';
+                    return;
+                }
+                
+                // Submit request
+                await addDoc(requestsRef, {
+                    username: username,
+                    password: password,
+                    firstName: firstName,
+                    lastName: lastName,
+                    requestDate: new Date().toISOString(),
+                    status: 'pending'
+                });
+                
+                debugLog(`Account request submitted for: ${username}`);
+                localStorage.setItem('waitingForApproval', username);
+                showWaitingView(username);
+                startStatusMonitoring(username);
+                
+            } catch (error) {
+                debugLog(`Request submission error: ${error.message}`);
+                errorDiv.textContent = 'Error submitting request: ' + error.message;
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        });
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -180,6 +434,14 @@
             debugLog(`Attempting login for user: ${username}`);
             
             try {
+                // Check if user is denied first
+                const isDenied = await isUsernameDenied(username);
+                if (isDenied) {
+                    errorDiv.textContent = 'This account has been denied access';
+                    loadingDiv.style.display = 'none';
+                    return;
+                }
+                
                 const usersRef = collection(db, 'users');
                 const q = query(usersRef, where('username', '==', username), where('password', '==', password));
                 const querySnapshot = await getDocs(q);
@@ -189,6 +451,13 @@
                 if (!querySnapshot.empty) {
                     const userData = querySnapshot.docs[0].data();
                     debugLog(`Login successful. User isAdmin: ${userData.isAdmin}`);
+                    
+                    // Check if user is admin - only admins can log in for now
+                    if (!userData.isAdmin) {
+                        errorDiv.textContent = 'Waiting on an admin to verify you';
+                        loadingDiv.style.display = 'none';
+                        return;
+                    }
                     
                     localStorage.setItem('currentUser', JSON.stringify({
                         username: userData.username,
@@ -200,8 +469,19 @@
                         window.location.href = 'mainpage.html';
                     }, 1000);
                 } else {
-                    debugLog('Login failed: Invalid credentials');
-                    errorDiv.textContent = 'Invalid username or password';
+                    // Check if there's a pending request
+                    const requestsRef = collection(db, 'account_requests');
+                    const requestQuery = query(requestsRef, where('username', '==', username));
+                    const requestSnapshot = await getDocs(requestQuery);
+                    
+                    if (!requestSnapshot.empty) {
+                        localStorage.setItem('waitingForApproval', username);
+                        showWaitingView(username);
+                        startStatusMonitoring(username);
+                    } else {
+                        debugLog('Login failed: Invalid credentials');
+                        errorDiv.textContent = 'Invalid username or password';
+                    }
                 }
             } catch (error) {
                 debugLog(`Login error: ${error.message}`);
