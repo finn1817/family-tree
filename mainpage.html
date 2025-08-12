@@ -1945,15 +1945,18 @@
                 const age = getAge(member);
                 const nextBirthday = getNextBirthday(member);
                 const daysUntilBirthday = Math.ceil((nextBirthday - new Date()) / (1000 * 60 * 60 * 24));
+                const deceasedStyle = member.deceased ? 'border: 3px solid #e74c3c; box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);' : '';
+                const deceasedIcon = member.deceased ? '🕊️ ' : '';
                 
                 return `
-                <div class="family-card">
+                <div class="family-card" style="${deceasedStyle}">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
                         <div>
-                            <h3 style="color: #667eea; margin-bottom: 0.5rem;">${member.firstName || ''} ${member.lastName || ''}</h3>
+                            <h3 style="color: ${member.deceased ? '#e74c3c' : '#667eea'}; margin-bottom: 0.5rem;">${deceasedIcon}${member.firstName || ''} ${member.lastName || ''}</h3>
                             <p style="color: #666; font-size: 0.9rem;">Age: ${age} | Birthday: ${member.birthMonth || 'N/A'} ${member.birthDay || 'N/A'}, ${member.birthYear || 'N/A'}</p>
+                            ${member.deceased ? '<p style="color: #e74c3c; font-size: 0.8rem; font-style: italic;">🕊️ Deceased</p>' : ''}
                         </div>
-                        ${daysUntilBirthday <= 30 ? `
+                        ${daysUntilBirthday <= 30 && !member.deceased ? `
                             <span style="background: #e74c3c20; color: #e74c3c; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
                                 🎂 ${daysUntilBirthday} days
                             </span>
@@ -2617,11 +2620,15 @@
                                 ${mainGenerationIcon} ${mainGenerationLabel} (${mainGeneration.length})
                             </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${mainGeneration.map(p => `
-                                    <span style="background: #f8f9ff; color: #667eea; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #e0e6ed;">
-                                        ${p.firstName} ${p.lastName} ${getAge(p) ? `(${getAge(p)})` : ''} ${p.marriedTo ? '💍' : ''}
+                                ${mainGeneration.map(p => {
+                                    const isDeceased = p.deceased;
+                                    const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #f8f9ff; color: #667eea; border: 1px solid #e0e6ed;';
+                                    const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                                    return `
+                                    <span style="${deceasedStyle} padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                        ${deceasedIcon}${p.firstName} ${p.lastName} ${getAge(p) ? `(${getAge(p)})` : ''} ${p.marriedTo ? '💍' : ''}
                                     </span>
-                                `).join('')}
+                                `}).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -2633,11 +2640,15 @@
                                 👶 Children (${children.length})
                             </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${children.map(c => `
-                                    <span style="background: #e8f5e8; color: #2d5a2d; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #b8e6b8;">
-                                        ${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''} ${c.marriedTo ? '💍' : ''}
+                                ${children.map(c => {
+                                    const isDeceased = c.deceased;
+                                    const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #e8f5e8; color: #2d5a2d; border: 1px solid #b8e6b8;';
+                                    const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                                    return `
+                                    <span style="${deceasedStyle} padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                        ${deceasedIcon}${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''} ${c.marriedTo ? '💍' : ''}
                                     </span>
-                                `).join('')}
+                                `}).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -2649,11 +2660,15 @@
                                 👶 Children (${children.length})
                             </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${children.map(c => `
-                                    <span style="background: #e8f5e8; color: #2d5a2d; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #b8e6b8;">
-                                        ${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''} ${c.marriedTo ? '💍' : ''}
+                                ${children.map(c => {
+                                    const isDeceased = c.deceased;
+                                    const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #e8f5e8; color: #2d5a2d; border: 1px solid #b8e6b8;';
+                                    const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                                    return `
+                                    <span style="${deceasedStyle} padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                        ${deceasedIcon}${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''} ${c.marriedTo ? '💍' : ''}
                                     </span>
-                                `).join('')}
+                                `}).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -2665,11 +2680,15 @@
                                 👼 Grandchildren (${grandchildren.length})
                             </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${grandchildren.map(gc => `
-                                    <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #ffeaa7;">
-                                        ${gc.firstName} ${gc.lastName} ${getAge(gc) ? `(${getAge(gc)})` : ''}
+                                ${grandchildren.map(gc => {
+                                    const isDeceased = gc.deceased;
+                                    const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #fff3cd; color: #856404; border: 1px solid #ffeaa7;';
+                                    const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                                    return `
+                                    <span style="${deceasedStyle} padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                        ${deceasedIcon}${gc.firstName} ${gc.lastName} ${getAge(gc) ? `(${getAge(gc)})` : ''}
                                     </span>
-                                `).join('')}
+                                `}).join('')}
                             </div>
                         </div>
                     ` : ''}
@@ -2790,11 +2809,14 @@
             const isMarried = member.marriedTo;
             const hasChildren = member.children && member.children.length > 0;
             const marriageIcon = isMarried ? '💍' : '';
+            const isDeceased = member.deceased;
+            const deceasedStyle = isDeceased ? 'border: 4px solid #e74c3c; box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);' : '';
+            const backgroundColor = isDeceased ? 'background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);' : 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);';
             
             return `
                 <div class="family-member-node" style="text-align: center; position: relative; margin: 0 1rem;">
                     <div style="
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        ${backgroundColor}
                         color: white;
                         padding: 1rem;
                         border-radius: 50%;
@@ -2807,13 +2829,14 @@
                         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
                         cursor: pointer;
                         position: relative;
+                        ${deceasedStyle}
                     " onclick="openEditMemberModal('${member.id}')">
                         <div style="text-align: center; font-size: 0.8rem; line-height: 1.2;">
-                            <div style="font-weight: bold;">${member.firstName}</div>
+                            <div style="font-weight: bold;">${isDeceased ? '🕊️ ' : ''}${member.firstName}</div>
                             <div>${member.lastName}</div>
                         </div>
                         ${marriageIcon ? `
-                            <div style="position: absolute; top: -5px; right: -5px; background: #e74c3c; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">
+                            <div style="position: absolute; top: -5px; right: -5px; background: #27ae60; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">
                                 ${marriageIcon}
                             </div>
                         ` : ''}
@@ -3449,53 +3472,78 @@
                 }
 
                 const memberData = {
-                    firstName: document.getElementById('addFirstName').value,
-                    lastName: document.getElementById('addLastName').value,
+                    firstName: document.getElementById('addFirstName').value.trim(),
+                    lastName: document.getElementById('addLastName').value.trim(),
                     birthMonth: document.getElementById('addBirthMonth').value,
-                    birthDay: parseInt(document.getElementById('addBirthDay').value),
-                    birthYear: parseInt(document.getElementById('addBirthYear').value),
+                    birthDay: parseInt(document.getElementById('addBirthDay').value) || null,
+                    birthYear: parseInt(document.getElementById('addBirthYear').value) || null,
                     familyBranch: document.getElementById('addFamilyBranch').value || null,
                     marriedTo: document.getElementById('addMarriedTo').value || null,
                     children: selectedChildren,
                     parents: selectedParents,
-                    email: document.getElementById('addEmail').value || null,
-                    mobilePhone: document.getElementById('addMobilePhone').value || null,
-                    homePhone: document.getElementById('addHomePhone').value || null,
-                    workPhone: document.getElementById('addWorkPhone').value || null,
-                    address: document.getElementById('addAddress').value || null,
-                    city: document.getElementById('addCity').value || null,
-                    state: document.getElementById('addState').value || null,
-                    zipCode: document.getElementById('addZipCode').value || null,
-                    notes: document.getElementById('addNotes').value || null,
+                    email: document.getElementById('addEmail').value?.trim() || null,
+                    mobilePhone: document.getElementById('addMobilePhone').value?.trim() || null,
+                    homePhone: document.getElementById('addHomePhone').value?.trim() || null,
+                    workPhone: document.getElementById('addWorkPhone').value?.trim() || null,
+                    address: document.getElementById('addAddress').value?.trim() || null,
+                    city: document.getElementById('addCity').value?.trim() || null,
+                    state: document.getElementById('addState').value?.trim() || null,
+                    zipCode: document.getElementById('addZipCode').value?.trim() || null,
+                    notes: document.getElementById('addNotes').value?.trim() || null,
+                    deceased: document.getElementById('addDeceased')?.checked || false,
                     createdAt: new Date(),
                     createdBy: currentUser.username
                 };
 
-                console.log('Adding family member:', memberData);
+                // Validate required fields
+                if (!memberData.firstName || !memberData.lastName || !memberData.birthMonth || !memberData.birthDay || !memberData.birthYear) {
+                    showMessage('Please fill in all required fields (Name, Birth Month, Day, Year)', 'error');
+                    return;
+                }
 
+                console.log('✅ Adding family member with data:', memberData);
+
+                // Save to Firebase with enhanced error handling
+                console.log('📤 Attempting to save to Firebase...');
                 const docRef = await addDoc(collection(db, 'family_members'), memberData);
                 const newMemberId = docRef.id;
                 
-                console.log('New member added with ID:', newMemberId);
+                console.log('✅ New member successfully added with ID:', newMemberId);
+                console.log('📁 Document reference:', docRef);
+                
+                // Add the new member to local array immediately for instant UI update
+                const newMember = { id: newMemberId, ...memberData };
+                familyMembers.push(newMember);
+                console.log('✅ Added to local familyMembers array. New count:', familyMembers.length);
                 
                 // Update bidirectional marriage relationships
                 const spouseId = memberData.marriedTo;
                 if (spouseId) {
+                    console.log('🔄 Updating marriage relationships...');
                     await updateBidirectionalMarriage(newMemberId, null, spouseId);
                     // Synchronize children with spouse
+                    console.log('👶 Synchronizing children with spouse...');
                     await synchronizeMarriedCoupleChildren(newMemberId, spouseId);
                 }
                 
                 // Update bidirectional parent/child relationships
-                await updateBidirectionalRelationships(newMemberId, selectedParents, selectedChildren);
+                if (selectedParents.length > 0 || selectedChildren.length > 0) {
+                    console.log('👨‍👩‍👧‍👦 Updating family relationships...');
+                    await updateBidirectionalRelationships(newMemberId, selectedParents, selectedChildren);
+                }
                 
                 closeModal('addMemberModal');
+                
+                // Refresh everything
+                console.log('🔄 Refreshing all data and UI...');
                 await loadFamilyMembers();
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
                 displayBranches(); // Refresh family trees
                 populateDropdowns();
-                showMessage('Family member added successfully!', 'success');
+                
+                showMessage(`✅ ${memberData.firstName} ${memberData.lastName} added successfully!`, 'success');
+                console.log('✅ All updates completed successfully!');
             } catch (error) {
                 console.error('Error adding family member:', error);
                 showMessage('Error adding family member: ' + error.message, 'error');
@@ -5213,6 +5261,15 @@
                                         ">
                                     </div>
                                 </div>
+                                <div style="margin-bottom: 1.5rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; font-weight: 600; color: #333;">
+                                        <input type="checkbox" name="deceased" ${member.deceased ? 'checked' : ''} style="transform: scale(1.3);">
+                                        <span style="display: flex; align-items: center; gap: 0.5rem;">
+                                            🕊️ Deceased
+                                            <small style="color: #666; font-weight: normal;">(Will be outlined in red on the family tree)</small>
+                                        </span>
+                                    </label>
+                                </div>
                                 <div>
                                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Notes</label>
                                     <textarea name="notes" rows="4" style="
@@ -5482,6 +5539,13 @@
                         <div class="form-group full-width">
                             <label for="addNotes">Notes</label>
                             <textarea id="addNotes" name="notes" rows="3" placeholder="Optional notes about this family member"></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="addDeceased" name="deceased" style="transform: scale(1.2);">
+                                <span>🕊️ Deceased</span>
+                                <small style="color: #666; font-weight: normal;">(Will be outlined in red on the family tree)</small>
+                            </label>
                         </div>
                     </div>
                     
@@ -5892,7 +5956,8 @@
                     state: data.state || null,
                     zipCode: data.zipCode || null,
                     anniversaryDate: data.anniversaryDate || null,
-                    notes: data.notes || null
+                    notes: data.notes || null,
+                    deceased: data.deceased === 'on' // Checkbox value conversion
                 });
 
                 // Update bidirectional marriage relationships
@@ -5900,6 +5965,12 @@
 
                 // Update bidirectional parent/child relationships
                 await updateBidirectionalRelationships(memberId, selectedParents, selectedChildren);
+
+                // AUTOMATIC CHILDREN SYNC: If member is married, automatically sync children with spouse
+                if (newSpouseId) {
+                    console.log('🔄 Auto-syncing children with spouse after edit...');
+                    await synchronizeMarriedCoupleChildren(memberId, newSpouseId);
+                }
 
                 // Close modal and refresh data
                 closeFullScreenModal();
