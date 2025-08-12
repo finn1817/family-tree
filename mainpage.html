@@ -2543,22 +2543,6 @@
                 </div>
             `;
         }
-                                
-                                <div class="generation-members" style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
-                                    ${generation.members.sort((a, b) => getAge(b) - getAge(a)).map(member => renderFamilyMember(member, generation.type)).join('')}
-                                </div>
-                                
-                                ${index < familyTree.generations.length - 1 ? `
-                                    <div style="display: flex; justify-content: center; margin-top: 1rem;">
-                                        <div style="width: 2px; height: 2rem; background: #ddd;"></div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
 
         function getGenerationLabel(type, index) {
             const labels = {
