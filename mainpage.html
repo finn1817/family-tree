@@ -902,21 +902,15 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="editMarriedTo">💍 Currently Married To</label>
-                        <select id="editMarriedTo">
-                            <option value="">Select someone</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Marriage History Section -->
-                    <div class="form-group full-width">
-                        <label>📚 Marriage History</label>
-                        <div id="editMarriageHistoryContainer" style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background: #f9f9f9;">
-                            <div id="editMarriageHistoryEntries"></div>
-                            <button type="button" onclick="addEditMarriageHistoryEntry()" style="background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; margin-top: 0.5rem;">
-                                ➕ Add Marriage History Entry
-                            </button>
+                        <label for="editMarriedTo">💍 Married To</label>
+                        <div style="margin-bottom: 0.5rem;">
+                            <input type="text" id="editMarriedToSearchInput" placeholder="🔍 Search for spouse..." 
+                                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                   oninput="filterEditMarriedToOptions(this.value)">
                         </div>
+                        <select id="editMarriedTo">
+                            <option value="">Not Married</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="editMobilePhone">Mobile Phone</label>
@@ -1979,7 +1973,7 @@
                     <!-- Basic Info -->
                     <div class="family-info" style="margin-bottom: 1rem;">
                         <div><strong>Family Group:</strong> ${member.familyBranch || 'No group assigned'}</div>
-                        ${member.marriedTo && member.marriedTo.length > 0 ? `<div><strong>💍 Currently Married To:</strong> ${getSpousesNames(member.marriedTo)}</div>` : ''}
+                        ${member.marriedTo ? `<div><strong>💍 Married To:</strong> ${getSpouseName(member.marriedTo)}</div>` : ''}
                         ${member.marriageHistory && member.marriageHistory.length > 0 ? `
                             <div><strong>📚 Marriage History:</strong>
                                 ${member.marriageHistory.map(marriage => {
@@ -3554,15 +3548,6 @@
                     return;
                 }
 
-                // Get selected spouses
-                const selectedSpouses = [];
-                const spousesCheckboxes = document.querySelectorAll('input[name="spouses"]:checked');
-                spousesCheckboxes.forEach(checkbox => {
-                    selectedSpouses.push(checkbox.value);
-                });
-
-                console.log('📋 Selected spouses:', selectedSpouses);
-
                 const memberData = {
                     firstName: document.getElementById('addFirstName').value.trim(),
                     lastName: document.getElementById('addLastName').value.trim(),
@@ -3570,7 +3555,7 @@
                     birthDay: parseInt(document.getElementById('addBirthDay').value) || null,
                     birthYear: parseInt(document.getElementById('addBirthYear').value) || null,
                     familyBranch: document.getElementById('addFamilyBranch').value || null,
-                    marriedTo: selectedSpouses, // Changed to array for multiple spouses
+                    marriedTo: document.getElementById('addMarriedTo').value || null,
                     children: selectedChildren,
                     parents: selectedParents,
                     email: document.getElementById('addEmail').value?.trim() || null,
@@ -3626,16 +3611,14 @@
                 familyMembers.push(newMember);
                 console.log('✅ Added to local familyMembers array. New count:', familyMembers.length);
                 
-                // Update bidirectional marriage relationships for multiple spouses
-                const spouseIds = memberData.marriedTo;
-                if (spouseIds && spouseIds.length > 0) {
-                    console.log('🔄 Updating marriage relationships for multiple spouses...');
-                    for (const spouseId of spouseIds) {
-                        await updateBidirectionalMarriageMultiple(newMemberId, spouseId);
-                        // Synchronize children with each spouse
-                        console.log(`👶 Synchronizing children with spouse ${spouseId}...`);
-                        await synchronizeMarriedCoupleChildren(newMemberId, spouseId);
-                    }
+                // Update bidirectional marriage relationships
+                const spouseId = memberData.marriedTo;
+                if (spouseId) {
+                    console.log('🔄 Updating marriage relationships...');
+                    await updateBidirectionalMarriage(newMemberId, null, spouseId);
+                    // Synchronize children with spouse
+                    console.log('👶 Synchronizing children with spouse...');
+                    await synchronizeMarriedCoupleChildren(newMemberId, spouseId);
                 }
                 
                 // Update bidirectional parent/child relationships
@@ -5169,6 +5152,11 @@
                                     </div>
                                     <div>
                                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">💍 Married To</label>
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <input type="text" id="editAdvancedMarriedToSearchInput" placeholder="🔍 Search for spouse..." 
+                                                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                                   oninput="filterAdvancedEditMarriedToOptions(this.value)">
+                                        </div>
                                         <select name="marriedTo" style="
                                             width: 100%;
                                             padding: 0.75rem;
@@ -5177,9 +5165,9 @@
                                             font-size: 1rem;
                                             background: white;
                                         ">
-                                            <option value="">Select someone</option>
+                                            <option value="">Not Married</option>
                                             ${potentialSpouses.map(spouse => 
-                                                `<option value="${spouse.id}" ${member.marriedTo === spouse.id ? 'selected' : ''}>${spouse.firstName} ${spouse.lastName}</option>`
+                                                `<option value="${spouse.id}" class="edit-advanced-married-to-option" ${member.marriedTo === spouse.id ? 'selected' : ''}>${spouse.firstName} ${spouse.lastName}</option>`
                                             ).join('')}
                                         </select>
                                     </div>
@@ -5189,6 +5177,11 @@
                                     <!-- Parents -->
                                     <div>
                                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">👫 Parents (Select up to 2)</label>
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <input type="text" id="editAdvancedParentsSearchInput" placeholder="🔍 Search parents..." 
+                                                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                                   oninput="filterAdvancedEditParents(this.value)">
+                                        </div>
                                         <div style="
                                             border: 2px solid #e0e6ed;
                                             border-radius: 8px;
@@ -5199,7 +5192,7 @@
                                             ${potentialParents.length > 0 ? potentialParents.map(parent => {
                                                 const isSelected = member.parents && member.parents.includes(parent.id);
                                                 return `
-                                                <div style="
+                                                <div class="edit-advanced-parent-option" style="
                                                     display: flex;
                                                     align-items: center;
                                                     padding: 0.75rem;
@@ -5210,6 +5203,11 @@
                                                 ">
                                                     <input type="checkbox" name="editParents" value="${parent.id}" ${isSelected ? 'checked' : ''} 
                                                            onchange="updateFullScreenParentsCount()" style="margin-right: 0.75rem; transform: scale(1.2);">
+                                                    <span style="font-weight: 500; color: #2c3e50;">${parent.firstName} ${parent.lastName} (Age: ${getAge(parent)})</span>
+                                                </div>`;
+                                            }).join('') : '<p style="padding: 1rem; margin: 0; color: #666;">No potential parents available</p>'}
+                                        </div>
+                                    </div>
                                                     <span style="font-size: 0.95rem;">${parent.firstName} ${parent.lastName} (Age: ${getAge(parent)})</span>
                                                 </div>
                                                 `;
@@ -5227,6 +5225,11 @@
                                     <!-- Children -->
                                     <div>
                                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">👶 Children (Select up to 15)</label>
+                                        <div style="margin-bottom: 0.5rem;">
+                                            <input type="text" id="editAdvancedChildrenSearchInput" placeholder="🔍 Search children..." 
+                                                   style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
+                                                   oninput="filterAdvancedEditChildren(this.value)">
+                                        </div>
                                         <div style="
                                             border: 2px solid #e0e6ed;
                                             border-radius: 8px;
@@ -5237,9 +5240,25 @@
                                             ${potentialChildren.length > 0 ? potentialChildren.map(child => {
                                                 const isSelected = member.children && member.children.includes(child.id);
                                                 return `
-                                                <div style="
+                                                <div class="edit-advanced-children-option" style="
                                                     display: flex;
                                                     align-items: center;
+                                                    padding: 0.75rem;
+                                                    border-bottom: 1px solid #e0e6ed;
+                                                    background: white;
+                                                    margin: 0.25rem;
+                                                    border-radius: 6px;
+                                                ">
+                                                    <input type="checkbox" name="editChildren" value="${child.id}" ${isSelected ? 'checked' : ''} 
+                                                           onchange="updateFullScreenChildrenCount()" style="margin-right: 0.75rem; transform: scale(1.2);">
+                                                    <span style="font-weight: 500; color: #2c3e50;">${child.firstName} ${child.lastName} (Age: ${getAge(child)})</span>
+                                                </div>`;
+                                            }).join('') : '<p style="padding: 1rem; margin: 0; color: #666;">No potential children available</p>'}
+                                        </div>
+                                        <small style="color: #666; margin-top: 0.5rem; display: block;">
+                                            Selected: <span id="fullScreenChildrenCount">0</span>/15 children
+                                        </small>
+                                    </div>
                                                     padding: 0.75rem;
                                                     border-bottom: 1px solid #e0e6ed;
                                                     background: white;
@@ -5604,22 +5623,19 @@
                                 }).join('')}
                             </select>
                         </div>
-                        <div class="form-group full-width">
-                            <label>💍 Married To (Select all current spouses)</label>
+                        <div class="form-group">
+                            <label for="addMarriedTo">💍 Married To</label>
                             <div style="margin-bottom: 0.5rem;">
-                                <input type="text" id="spouseSearchInput" placeholder="🔍 Search spouses by name..." 
+                                <input type="text" id="marriedToSearchInput" placeholder="🔍 Search for spouse..." 
                                        style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem;"
-                                       oninput="filterSpouses(this.value)">
+                                       oninput="filterMarriedToOptions(this.value)">
                             </div>
-                            <div id="spousesSelectionContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; background: #f9f9f9;">
-                                ${familyMembers.map(member => `
-                                    <label class="spouse-option" style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
-                                        <input type="checkbox" name="spouses" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateSpouseCount()">
-                                        ${member.firstName} ${member.lastName} (${getAge(member)} years old)
-                                    </label>
-                                `).join('')}
-                            </div>
-                            <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">Select all people this person is currently married to (for remarriage scenarios)</p>
+                            <select id="addMarriedTo" name="marriedTo" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="">Not Married</option>
+                                ${familyMembers.map(member => 
+                                    `<option value="${member.id}" class="married-to-option">${member.firstName} ${member.lastName}</option>`
+                                ).join('')}
+                            </select>
                         </div>
                         <div class="form-group full-width">
                             <label for="addEmail">Email</label>
@@ -5822,6 +5838,81 @@
         window.updateSpouseCount = function() {
             const spouseCheckboxes = document.querySelectorAll('input[name="spouses"]:checked');
             console.log(`Selected ${spouseCheckboxes.length} spouse(s)`);
+        };
+
+        window.filterMarriedToOptions = function(searchTerm) {
+            const select = document.getElementById('addMarriedTo');
+            const options = select.querySelectorAll('.married-to-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+
+        window.filterEditMarriedToOptions = function(searchTerm) {
+            const select = document.getElementById('editMarriedTo');
+            const options = select.querySelectorAll('.edit-married-to-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            options.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+
+        window.filterAdvancedEditMarriedToOptions = function(searchTerm) {
+            const select = document.querySelector('select[name="marriedTo"]');
+            if (select) {
+                const options = select.querySelectorAll('.edit-advanced-married-to-option');
+                const searchLower = searchTerm.toLowerCase();
+                
+                options.forEach(option => {
+                    const text = option.textContent.toLowerCase();
+                    if (text.includes(searchLower)) {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+            }
+        };
+
+        window.filterAdvancedEditParents = function(searchTerm) {
+            const parentOptions = document.querySelectorAll('.edit-advanced-parent-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            parentOptions.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+        };
+
+        window.filterAdvancedEditChildren = function(searchTerm) {
+            const childrenOptions = document.querySelectorAll('.edit-advanced-children-option');
+            const searchLower = searchTerm.toLowerCase();
+            
+            childrenOptions.forEach(option => {
+                const text = option.textContent.toLowerCase();
+                if (text.includes(searchLower)) {
+                    option.style.display = 'flex';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
         };
 
         // Marriage History Management Functions
