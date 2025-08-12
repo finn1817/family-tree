@@ -3583,21 +3583,12 @@
             if (addMemberForm) {
                 addMemberForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    await addFamilyMember();
+                    await addFamilyMember(e);
                 });
                 console.log('Add member form listener added');
             } else {
                 console.warn('addMemberForm not found');
             }
-
-            // Add member form (dynamically created, so use event delegation)
-            document.addEventListener('submit', function(e) {
-                if (e.target && e.target.id === 'addMemberForm') {
-                    console.log('📋 Add member form submitted via event delegation');
-                    e.preventDefault();
-                    window.addFamilyMember(e);
-                }
-            });
             console.log('Add member form delegated listener added');
 
             // Add branch form
@@ -5709,7 +5700,7 @@
             const modalContent = modal.querySelector('.modal-content');
             modalContent.innerHTML = `
                 <h2>➕ Add Family Member</h2>
-                <form id="addMemberForm" onsubmit="window.addFamilyMember(event); return false;">
+                <form id="addMemberForm">
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="addFirstName">First Name *</label>
