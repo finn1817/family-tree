@@ -2207,10 +2207,10 @@
                     <h3 style="color: #667eea; margin-bottom: 1.5rem; text-align: center;">${familyTree.name}</h3>
                     
                     <div class="family-tree-container" style="overflow-x: auto; padding: 1rem;">
-                        ${familyTree.generations.slice().reverse().map((generation, index) => `
+                        ${familyTree.generations.map((generation, index) => `
                             <div class="generation-${generation.type}" style="margin-bottom: 2rem;">
                                 <h4 style="text-align: center; color: #666; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">
-                                    ${getGenerationLabel(generation.type, familyTree.generations.length - 1 - index)}
+                                    ${getGenerationLabel(generation.type, index)}
                                 </h4>
                                 
                                 <!-- Connection Lines -->
@@ -2236,13 +2236,13 @@
             `;
         }
 
-        function getGenerationLabel(type, originalIndex) {
+        function getGenerationLabel(type, index) {
             const labels = {
-                'parents': originalIndex === 0 ? 'Parents' : 'Ancestors',
+                'parents': index === 0 ? 'Parents' : 'Ancestors',
                 'children': 'Children',
                 'grandchildren': 'Grandchildren'
             };
-            return labels[type] || `Generation ${originalIndex + 1}`;
+            return labels[type] || `Generation ${index + 1}`;
         }
 
         function renderFamilyMember(member, generationType) {
