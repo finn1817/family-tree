@@ -2878,6 +2878,22 @@
             return types[branchType] || 'Family Branch';
         }
 
+        // Helper function to get potential parents for new member (anyone who could be a parent)
+        function getPotentialParentsForNew() {
+            return familyMembers.filter(member => {
+                const memberAge = getAge(member);
+                return memberAge >= 15; // Must be at least 15 to be a parent
+            }).sort((a, b) => getAge(b) - getAge(a)); // Sort by age, oldest first
+        }
+
+        // Helper function to get potential children for new member (anyone who could be a child)
+        function getPotentialChildrenForNew() {
+            return familyMembers.filter(member => {
+                const memberAge = getAge(member);
+                return memberAge >= 0; // Anyone can be a child
+            }).sort((a, b) => getAge(a) - getAge(b)); // Sort by age, youngest first
+        }
+
         // Helper function to get potential parents (older than the member)
         function getPotentialParents(currentMember) {
             const currentAge = getAge(currentMember);
@@ -3401,47 +3417,66 @@
         }
 
         // Add family member
-        async function addFamilyMember() {
+        // Add family member - UPDATED FOR NEW FORM STRUCTURE
+        async function addFamilyMember(event) {
+            if (event) event.preventDefault();
+            
             try {
                 // Get selected children
                 const selectedChildren = [];
-                const childrenCheckboxes = document.querySelectorAll('#addChildrenSelection input[name="children"]:checked');
+                const childrenCheckboxes = document.querySelectorAll('input[name="children"]:checked');
                 childrenCheckboxes.forEach(checkbox => {
                     selectedChildren.push(checkbox.value);
                 });
 
                 // Get selected parents
                 const selectedParents = [];
-                const parentsCheckboxes = document.querySelectorAll('#addParentsSelection input[name="parents"]:checked');
+                const parentsCheckboxes = document.querySelectorAll('input[name="parents"]:checked');
                 parentsCheckboxes.forEach(checkbox => {
                     selectedParents.push(checkbox.value);
                 });
 
+                // Validate parent limit
+                if (selectedParents.length > 2) {
+                    showMessage('Maximum 2 parents allowed', 'error');
+                    return;
+                }
+
+                // Validate children limit
+                if (selectedChildren.length > 15) {
+                    showMessage('Maximum 15 children allowed', 'error');
+                    return;
+                }
+
                 const memberData = {
-                    firstName: document.getElementById('firstName').value,
-                    lastName: document.getElementById('lastName').value,
-                    birthMonth: document.getElementById('birthMonth').value,
-                    birthDay: parseInt(document.getElementById('birthDay').value),
-                    birthYear: parseInt(document.getElementById('birthYear').value),
-                    familyBranch: document.getElementById('familyBranch').value,
-                    marriedTo: document.getElementById('marriedTo').value || null,
-                    children: selectedChildren, // Add children array
-                    parents: selectedParents, // Add parents array
-                    mobilePhone: document.getElementById('mobilePhone').value,
-                    homePhone: document.getElementById('homePhone').value,
-                    workPhone: document.getElementById('workPhone').value,
-                    address: document.getElementById('address').value,
-                    city: document.getElementById('city').value,
-                    state: document.getElementById('state').value,
-                    zipCode: document.getElementById('zipCode').value,
-                    anniversaryDate: document.getElementById('anniversaryDate').value,
-                    notes: document.getElementById('notes').value,
+                    firstName: document.getElementById('addFirstName').value,
+                    lastName: document.getElementById('addLastName').value,
+                    birthMonth: document.getElementById('addBirthMonth').value,
+                    birthDay: parseInt(document.getElementById('addBirthDay').value),
+                    birthYear: parseInt(document.getElementById('addBirthYear').value),
+                    familyBranch: document.getElementById('addFamilyBranch').value || null,
+                    marriedTo: document.getElementById('addMarriedTo').value || null,
+                    children: selectedChildren,
+                    parents: selectedParents,
+                    email: document.getElementById('addEmail').value || null,
+                    mobilePhone: document.getElementById('addMobilePhone').value || null,
+                    homePhone: document.getElementById('addHomePhone').value || null,
+                    workPhone: document.getElementById('addWorkPhone').value || null,
+                    address: document.getElementById('addAddress').value || null,
+                    city: document.getElementById('addCity').value || null,
+                    state: document.getElementById('addState').value || null,
+                    zipCode: document.getElementById('addZipCode').value || null,
+                    notes: document.getElementById('addNotes').value || null,
                     createdAt: new Date(),
                     createdBy: currentUser.username
                 };
 
+                console.log('Adding family member:', memberData);
+
                 const docRef = await addDoc(collection(db, 'family_members'), memberData);
                 const newMemberId = docRef.id;
+                
+                console.log('New member added with ID:', newMemberId);
                 
                 // Update bidirectional marriage relationships
                 const spouseId = memberData.marriedTo;
@@ -3455,7 +3490,6 @@
                 await updateBidirectionalRelationships(newMemberId, selectedParents, selectedChildren);
                 
                 closeModal('addMemberModal');
-                document.getElementById('addMemberForm').reset();
                 await loadFamilyMembers();
                 displayFamilyMembers();
                 displayUpcomingBirthdays();
@@ -5344,9 +5378,201 @@
         // Open add member modal function
         window.openAddMemberModal = function() {
             const modal = document.getElementById('addMemberModal');
-            if (modal) {
-                populateDropdowns(); // Make sure dropdowns are populated
-                modal.classList.add('active');
+            if (!modal) return;
+            
+            // Build the complete form based on our database structure
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.innerHTML = `
+                <h2>➕ Add Family Member</h2>
+                <form id="addMemberForm" onsubmit="addFamilyMember(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="addFirstName">First Name *</label>
+                            <input type="text" id="addFirstName" name="firstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="addLastName">Last Name *</label>
+                            <input type="text" id="addLastName" name="lastName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="addBirthMonth">Birth Month *</label>
+                            <select id="addBirthMonth" name="birthMonth" required>
+                                <option value="">Select Month</option>
+                                <option value="January">January</option>
+                                <option value="February">February</option>
+                                <option value="March">March</option>
+                                <option value="April">April</option>
+                                <option value="May">May</option>
+                                <option value="June">June</option>
+                                <option value="July">July</option>
+                                <option value="August">August</option>
+                                <option value="September">September</option>
+                                <option value="October">October</option>
+                                <option value="November">November</option>
+                                <option value="December">December</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="addBirthDay">Birth Day *</label>
+                            <select id="addBirthDay" name="birthDay" required>
+                                <option value="">Select Day</option>
+                                ${Array.from({length: 31}, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="addBirthYear">Birth Year *</label>
+                            <select id="addBirthYear" name="birthYear" required>
+                                <option value="">Select Year</option>
+                                ${Array.from({length: 100}, (_, i) => {
+                                    const year = new Date().getFullYear() - i;
+                                    return `<option value="${year}">${year}</option>`;
+                                }).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="addMarriedTo">Married To</label>
+                            <select id="addMarriedTo" name="marriedTo">
+                                <option value="">Not Married</option>
+                                ${familyMembers.map(member => 
+                                    `<option value="${member.id}">${member.firstName} ${member.lastName}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="addEmail">Email</label>
+                            <input type="email" id="addEmail" name="email" placeholder="Optional">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="addMobilePhone">Mobile Phone</label>
+                            <input type="tel" id="addMobilePhone" name="mobilePhone" placeholder="Optional">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="addHomePhone">Home Phone</label>
+                            <input type="tel" id="addHomePhone" name="homePhone" placeholder="Optional">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="addAddress">Address</label>
+                            <input type="text" id="addAddress" name="address" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="addCity">City</label>
+                            <input type="text" id="addCity" name="city" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="addState">State</label>
+                            <input type="text" id="addState" name="state" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="addZipCode">Zip Code</label>
+                            <input type="text" id="addZipCode" name="zipCode" placeholder="Optional">
+                        </div>
+                        <div class="form-group">
+                            <label for="addWorkPhone">Work Phone</label>
+                            <input type="tel" id="addWorkPhone" name="workPhone" placeholder="Optional">
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="addFamilyBranch">Family Branch</label>
+                            <select id="addFamilyBranch" name="familyBranch">
+                                <option value="">No group assigned</option>
+                                ${familyBranches.map(branch => 
+                                    `<option value="${branch.name}">${branch.name}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="addNotes">Notes</label>
+                            <textarea id="addNotes" name="notes" rows="3" placeholder="Optional notes about this family member"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Parents Selection -->
+                    <div style="margin-top: 1.5rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">👫 Parents <span id="parentsCount" style="font-size: 0.8rem; color: #666;">(0/2)</span></h3>
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                            ${getPotentialParentsForNew().map(member => `
+                                <label style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" name="parents" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateParentCount()">
+                                    ${member.firstName} ${member.lastName} (${getAge(member)} years old)
+                                </label>
+                            `).join('')}
+                        </div>
+                        <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">Maximum 2 parents allowed</p>
+                    </div>
+                    
+                    <!-- Children Selection -->
+                    <div style="margin-top: 1.5rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">👶 Children <span id="childrenCount" style="font-size: 0.8rem; color: #666;">(0/15)</span></h3>
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 1rem;">
+                            ${getPotentialChildrenForNew().map(member => `
+                                <label style="display: block; margin-bottom: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" name="children" value="${member.id}" style="margin-right: 0.5rem;" onchange="updateChildrenCount()">
+                                    ${member.firstName} ${member.lastName} (${getAge(member)} years old)
+                                </label>
+                            `).join('')}
+                        </div>
+                        <p style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">Maximum 15 children allowed</p>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn" onclick="closeModal('addMemberModal')" style="background: #6c757d; color: white;">Cancel</button>
+                        <button type="submit" class="btn btn-primary">✅ Add Family Member</button>
+                    </div>
+                </form>
+            `;
+            
+            modal.classList.add('active');
+        };
+
+        // Real-time validation functions for add member modal
+        window.updateParentCount = function() {
+            const checkboxes = document.querySelectorAll('input[name="parents"]:checked');
+            const countElement = document.getElementById('parentsCount');
+            const allCheckboxes = document.querySelectorAll('input[name="parents"]');
+            
+            if (countElement) {
+                countElement.textContent = `(${checkboxes.length}/2)`;
+                countElement.style.color = checkboxes.length > 2 ? '#e74c3c' : '#666';
+                
+                // Disable unchecked checkboxes if we've reached the limit of 2
+                if (checkboxes.length >= 2) {
+                    allCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                            checkbox.parentElement.style.opacity = '0.5';
+                        }
+                    });
+                } else {
+                    allCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                        checkbox.parentElement.style.opacity = '1';
+                    });
+                }
+            }
+        };
+
+        window.updateChildrenCount = function() {
+            const checkboxes = document.querySelectorAll('input[name="children"]:checked');
+            const countElement = document.getElementById('childrenCount');
+            const allCheckboxes = document.querySelectorAll('input[name="children"]');
+            
+            if (countElement) {
+                countElement.textContent = `(${checkboxes.length}/15)`;
+                countElement.style.color = checkboxes.length > 15 ? '#e74c3c' : '#666';
+                
+                // Disable unchecked checkboxes if we've reached the limit of 15
+                if (checkboxes.length >= 15) {
+                    allCheckboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.disabled = true;
+                            checkbox.parentElement.style.opacity = '0.5';
+                        }
+                    });
+                } else {
+                    allCheckboxes.forEach(checkbox => {
+                        checkbox.disabled = false;
+                        checkbox.parentElement.style.opacity = '1';
+                    });
+                }
             }
         };
 
