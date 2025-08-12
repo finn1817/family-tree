@@ -2682,49 +2682,6 @@
                 </div>
             `;
         }
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Children -->
-                    ${children.length > 0 ? `
-                        <div style="margin-bottom: 1rem;">
-                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                                👶 Children (${children.length})
-                            </div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${children.map(c => `
-                                    <span style="background: #e8f5e8; color: #28a745; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #d4edda;">
-                                        ${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Grandchildren -->
-                    ${grandchildren.length > 0 ? `
-                        <div style="margin-bottom: 1rem;">
-                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                                👼 Grandchildren (${grandchildren.length})
-                            </div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${grandchildren.map(gc => `
-                                    <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #ffeaa7;">
-                                        ${gc.firstName} ${gc.lastName} ${getAge(gc) ? `(${getAge(gc)})` : ''}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;">
-                        <button onclick="showDetailedFamily('${familyTree.id}')" style="background: #667eea; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
-                            🌳 View Tree
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
 
         function renderDetailedFamilyTree(familyTree) {
             return `
