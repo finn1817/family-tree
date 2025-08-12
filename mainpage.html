@@ -2229,34 +2229,161 @@
             }
         }
 
-        // Auto-generate family trees based on relationships
+        // Auto-generate family trees based on relationships - REWRITTEN FOR MULTI-GENERATIONAL SUPPORT
         function generateFamilyTrees() {
             const familyTrees = [];
             const processedMembers = new Set();
 
-            // Find nuclear families (couples with children)
-            const nuclearFamilies = findNuclearFamilies();
+            // Step 1: Find all patriarchs/matriarchs (oldest generation with no parents in system)
+            const patriarchs = findPatriarchs();
             
-            // Create family trees for each nuclear family
-            nuclearFamilies.forEach(family => {
-                if (family.parents.some(p => processedMembers.has(p.id))) return;
+            // Step 2: Build complete multi-generational trees starting from patriarchs
+            patriarchs.forEach(patriarch => {
+                if (processedMembers.has(patriarch.id)) return;
                 
-                const familyTree = createFamilyTree(family, processedMembers);
-                if (familyTree) {
+                const familyTree = buildMultiGenerationalTree(patriarch, processedMembers);
+                if (familyTree && familyTree.generations.length > 0) {
                     familyTrees.push(familyTree);
                 }
             });
 
-            // Handle single parents and childless couples
-            const remainingRoots = findRemainingRoots(processedMembers);
-            remainingRoots.forEach(root => {
-                const familyTree = createSingleParentTree(root, processedMembers);
-                if (familyTree) {
-                    familyTrees.push(familyTree);
+            // Step 3: Handle any remaining isolated members
+            const remainingMembers = familyMembers.filter(member => !processedMembers.has(member.id));
+            remainingMembers.forEach(member => {
+                if (processedMembers.has(member.id)) return;
+                
+                const isolatedTree = createIsolatedMemberTree(member, processedMembers);
+                if (isolatedTree) {
+                    familyTrees.push(isolatedTree);
                 }
+            });
+
+            // Step 4: Sort trees by oldest member's age (oldest first)
+            familyTrees.sort((a, b) => {
+                const aOldest = Math.max(...a.generations.flatMap(gen => gen.members.map(member => getAge(member))));
+                const bOldest = Math.max(...b.generations.flatMap(gen => gen.members.map(member => getAge(member))));
+                return bOldest - aOldest; // Oldest first
             });
 
             return familyTrees;
+        }
+
+        // Find patriarchs/matriarchs (oldest generation members with no parents in the system)
+        function findPatriarchs() {
+            return familyMembers.filter(member => {
+                // No parents or parents not in the system
+                const hasParentsInSystem = member.parents && member.parents.length > 0 && 
+                    member.parents.some(parentId => familyMembers.find(m => m.id === parentId));
+                return !hasParentsInSystem;
+            }).sort((a, b) => getAge(b) - getAge(a)); // Sort by age, oldest first
+        }
+
+        // Build a complete multi-generational tree starting from a patriarch/matriarch
+        function buildMultiGenerationalTree(patriarch, processedMembers) {
+            const familyTree = {
+                id: `family_${patriarch.id}`,
+                name: `${patriarch.firstName} ${patriarch.lastName} Family`,
+                generations: []
+            };
+
+            // Start with the patriarch's generation
+            const patriarchGeneration = buildGenerationFromMember(patriarch, processedMembers, 'patriarch');
+            if (patriarchGeneration.members.length > 0) {
+                familyTree.generations.push(patriarchGeneration);
+            }
+
+            // Build subsequent generations (children, grandchildren, etc.)
+            let currentGeneration = patriarchGeneration.members;
+            let generationLevel = 1;
+            let generationType = 'children';
+
+            while (currentGeneration.length > 0) {
+                const nextGeneration = buildNextGeneration(currentGeneration, processedMembers, generationType, generationLevel);
+                if (nextGeneration.members.length === 0) break;
+
+                familyTree.generations.push(nextGeneration);
+                currentGeneration = nextGeneration.members;
+                generationLevel++;
+                
+                // Update generation type
+                if (generationType === 'children') generationType = 'grandchildren';
+                else if (generationType === 'grandchildren') generationType = 'great-grandchildren';
+                else generationType = `generation-${generationLevel}`;
+            }
+
+            return familyTree;
+        }
+
+        // Build a generation starting from a specific member (includes spouse)
+        function buildGenerationFromMember(member, processedMembers, type) {
+            const generationMembers = [member];
+            processedMembers.add(member.id);
+
+            // Add spouse if married and not already processed
+            if (member.marriedTo) {
+                const spouse = familyMembers.find(m => m.id === member.marriedTo);
+                if (spouse && !processedMembers.has(spouse.id)) {
+                    generationMembers.push(spouse);
+                    processedMembers.add(spouse.id);
+                }
+            }
+
+            return {
+                level: 0,
+                members: generationMembers.sort((a, b) => getAge(b) - getAge(a)), // Sort by age
+                type: type
+            };
+        }
+
+        // Build the next generation (children of current generation)
+        function buildNextGeneration(currentGeneration, processedMembers, type, level) {
+            const nextGenerationMembers = [];
+
+            currentGeneration.forEach(parent => {
+                if (parent.children && parent.children.length > 0) {
+                    parent.children.forEach(childId => {
+                        const child = familyMembers.find(m => m.id === childId);
+                        if (child && !processedMembers.has(child.id)) {
+                            nextGenerationMembers.push(child);
+                            processedMembers.add(child.id);
+
+                            // Also add the child's spouse if married and not processed
+                            if (child.marriedTo) {
+                                const spouse = familyMembers.find(m => m.id === child.marriedTo);
+                                if (spouse && !processedMembers.has(spouse.id)) {
+                                    nextGenerationMembers.push(spouse);
+                                    processedMembers.add(spouse.id);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Remove duplicates and sort by age
+            const uniqueMembers = [...new Set(nextGenerationMembers)];
+            
+            return {
+                level: level,
+                members: uniqueMembers.sort((a, b) => getAge(b) - getAge(a)),
+                type: type
+            };
+        }
+
+        // Create tree for isolated member (no family connections)
+        function createIsolatedMemberTree(member, processedMembers) {
+            const familyTree = {
+                id: `family_${member.id}`,
+                name: `${member.firstName} ${member.lastName}`,
+                generations: []
+            };
+
+            const generation = buildGenerationFromMember(member, processedMembers, 'individual');
+            if (generation.members.length > 0) {
+                familyTree.generations.push(generation);
+            }
+
+            return familyTree.generations.length > 0 ? familyTree : null;
         }
 
         function findNuclearFamilies() {
@@ -2450,27 +2577,111 @@
         }
 
         function renderCompactFamilyCard(familyTree) {
-            const parents = familyTree.generations.find(g => g.type === 'parents')?.members || [];
-            const children = familyTree.generations.find(g => g.type === 'children')?.members || [];
-            const grandchildren = familyTree.generations.find(g => g.type === 'grandchildren')?.members || [];
+            // Get all generations and organize them
+            const allGenerations = familyTree.generations;
+            const patriarch = allGenerations.find(g => g.type === 'patriarch')?.members || [];
+            const parents = allGenerations.find(g => g.type === 'parents')?.members || [];
+            const children = allGenerations.find(g => g.type === 'children')?.members || [];
+            const grandchildren = allGenerations.find(g => g.type === 'grandchildren')?.members || [];
+            const greatGrandchildren = allGenerations.find(g => g.type === 'great-grandchildren')?.members || [];
+            
+            // Use patriarch as the main generation if available, otherwise use parents
+            const mainGeneration = patriarch.length > 0 ? patriarch : parents;
+            const mainGenerationLabel = patriarch.length > 0 ? 'Patriarch/Matriarch' : 'Parents';
+            const mainGenerationIcon = patriarch.length > 0 ? '👑' : '👫';
             
             return `
                 <div class="family-card" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #667eea;">
                     <h3 style="color: #667eea; margin-bottom: 1rem; font-size: 1.1rem; text-align: center;">${familyTree.name}</h3>
                     
-                    <!-- Parents -->
-                    ${parents.length > 0 ? `
+                    <!-- Main Generation (Patriarch or Parents) -->
+                    ${mainGeneration.length > 0 ? `
                         <div style="margin-bottom: 1rem;">
                             <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                                👫 Parents (${parents.length})
+                                ${mainGenerationIcon} ${mainGenerationLabel} (${mainGeneration.length})
                             </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
-                                ${parents.map(p => `
+                                ${mainGeneration.map(p => `
                                     <span style="background: #f8f9ff; color: #667eea; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #e0e6ed;">
-                                        ${p.firstName} ${p.lastName} ${p.marriedTo ? '💍' : ''}
+                                        ${p.firstName} ${p.lastName} ${getAge(p) ? `(${getAge(p)})` : ''} ${p.marriedTo ? '💍' : ''}
                                     </span>
                                 `).join('')}
                             </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Children (only show if patriarch exists, otherwise this is the main generation) -->
+                    ${children.length > 0 && patriarch.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                👶 Children (${children.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${children.map(c => `
+                                    <span style="background: #e8f5e8; color: #2d5a2d; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #b8e6b8;">
+                                        ${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''} ${c.marriedTo ? '💍' : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Show next generation as children if no patriarch -->
+                    ${children.length > 0 && patriarch.length === 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                👶 Children (${children.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${children.map(c => `
+                                    <span style="background: #e8f5e8; color: #2d5a2d; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #b8e6b8;">
+                                        ${c.firstName} ${c.lastName} ${getAge(c) ? `(${getAge(c)})` : ''} ${c.marriedTo ? '💍' : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Grandchildren -->
+                    ${grandchildren.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                👼 Grandchildren (${grandchildren.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${grandchildren.map(gc => `
+                                    <span style="background: #fff3cd; color: #856404; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #ffeaa7;">
+                                        ${gc.firstName} ${gc.lastName} ${getAge(gc) ? `(${getAge(gc)})` : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Great-Grandchildren -->
+                    ${greatGrandchildren.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #666; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                🌟 Great-Grandchildren (${greatGrandchildren.length})
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">
+                                ${greatGrandchildren.map(ggc => `
+                                    <span style="background: #f8d7da; color: #721c24; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; border: 1px solid #f5c6cb;">
+                                        ${ggc.firstName} ${ggc.lastName} ${getAge(ggc) ? `(${getAge(ggc)})` : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f0f0f0;">
+                        <button onclick="showDetailedFamily('${familyTree.id}')" style="background: #667eea; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer;">
+                            🌳 View Tree
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
                         </div>
                     ` : ''}
                     
@@ -2546,10 +2757,20 @@
 
         function getGenerationLabel(type, index) {
             const labels = {
+                'patriarch': 'Patriarch/Matriarch',
                 'parents': index === 0 ? 'Parents' : 'Ancestors',
                 'children': 'Children',
-                'grandchildren': 'Grandchildren'
+                'grandchildren': 'Grandchildren',
+                'great-grandchildren': 'Great-Grandchildren',
+                'individual': 'Individual'
             };
+            
+            // Handle dynamic generation types
+            if (type.startsWith('generation-')) {
+                const genNum = parseInt(type.split('-')[1]);
+                return `Generation ${genNum}`;
+            }
+            
             return labels[type] || `Generation ${index + 1}`;
         }
 
