@@ -902,10 +902,21 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="editMarriedTo">💍 Married To</label>
+                        <label for="editMarriedTo">💍 Currently Married To</label>
                         <select id="editMarriedTo">
                             <option value="">Select someone</option>
                         </select>
+                    </div>
+                    
+                    <!-- Marriage History Section -->
+                    <div class="form-group full-width">
+                        <label>📚 Marriage History</label>
+                        <div id="editMarriageHistoryContainer" style="border: 1px solid #ddd; padding: 1rem; border-radius: 8px; background: #f9f9f9;">
+                            <div id="editMarriageHistoryEntries"></div>
+                            <button type="button" onclick="addEditMarriageHistoryEntry()" style="background: #3498db; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; margin-top: 0.5rem;">
+                                ➕ Add Marriage History Entry
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="editMobilePhone">Mobile Phone</label>
@@ -1968,7 +1979,17 @@
                     <!-- Basic Info -->
                     <div class="family-info" style="margin-bottom: 1rem;">
                         <div><strong>Family Group:</strong> ${member.familyBranch || 'No group assigned'}</div>
-                        ${member.marriedTo ? `<div><strong>💍 Married To:</strong> ${getSpouseName(member.marriedTo)}</div>` : ''}
+                        ${member.marriedTo ? `<div><strong>💍 Currently Married To:</strong> ${getSpouseName(member.marriedTo)}</div>` : ''}
+                        ${member.marriageHistory && member.marriageHistory.length > 0 ? `
+                            <div><strong>📚 Marriage History:</strong>
+                                ${member.marriageHistory.map(marriage => {
+                                    const spouseName = getSpouseName(marriage.spouseId);
+                                    const statusEmoji = marriage.status === 'widowed' ? '🕊️' : marriage.status === 'divorced' ? '💔' : '💍';
+                                    const duration = marriage.startYear && marriage.endYear ? ` (${marriage.startYear}-${marriage.endYear})` : '';
+                                    return `<div style="margin-left: 1rem;">${statusEmoji} ${marriage.status}: ${spouseName}${duration}</div>`;
+                                }).join('')}
+                            </div>
+                        ` : ''}
                         ${member.parents && member.parents.length > 0 ? `<div><strong>👫 Parents:</strong> ${getParentsNames(member.parents)}</div>` : ''}
                         ${member.children && member.children.length > 0 ? `<div><strong>👶 Children:</strong> ${getChildrenNames(member.children)}</div>` : ''}
                         <div><strong>Mobile:</strong> ${member.mobilePhone || 'Not provided'}</div>
@@ -3494,6 +3515,7 @@
                     birthYear: parseInt(document.getElementById('addBirthYear').value) || null,
                     familyBranch: document.getElementById('addFamilyBranch').value || null,
                     marriedTo: document.getElementById('addMarriedTo').value || null,
+                    marriageHistory: collectMarriageHistory(), // Collect marriage history
                     children: selectedChildren,
                     parents: selectedParents,
                     email: document.getElementById('addEmail').value?.trim() || null,
@@ -3666,6 +3688,7 @@
                     birthYear: parseInt(document.getElementById('editBirthYear').value),
                     familyBranch: document.getElementById('editFamilyBranch').value,
                     marriedTo: document.getElementById('editMarriedTo').value || null,
+                    marriageHistory: collectEditMarriageHistory(), // Collect marriage history
                     children: selectedChildren, // Add children array
                     parents: selectedParents, // Add parents array
                     mobilePhone: document.getElementById('editMobilePhone').value,
@@ -4747,6 +4770,9 @@
             document.getElementById('editAnniversaryDate').value = member.anniversaryDate || '';
             document.getElementById('editNotes').value = member.notes || '';
 
+            // Populate marriage history
+            populateEditMarriageHistory(member.marriageHistory || []);
+
             // Show the modal
             document.getElementById('editMemberModal').classList.add('active');
         };
@@ -5522,13 +5548,24 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="addMarriedTo">Married To</label>
+                            <label for="addMarriedTo">Currently Married To</label>
                             <select id="addMarriedTo" name="marriedTo">
                                 <option value="">Not Married</option>
                                 ${familyMembers.map(member => 
                                     `<option value="${member.id}">${member.firstName} ${member.lastName}</option>`
                                 ).join('')}
                             </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>💍 Marriage History</label>
+                            <div style="background: #f8f9fa; border: 1px solid #e0e6ed; border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
+                                <div id="marriageHistoryContainer">
+                                    <p style="color: #666; font-size: 0.9rem; margin: 0;">Click "Add Previous Marriage" to record past marriages (including deceased spouses)</p>
+                                </div>
+                                <button type="button" onclick="addMarriageHistoryEntry()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
+                                    + Add Previous Marriage
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group full-width">
                             <label for="addEmail">Email</label>
@@ -5674,6 +5711,213 @@
                 }
             }
         };
+
+        // Marriage History Management Functions
+        let marriageHistoryCounter = 0;
+
+        window.addMarriageHistoryEntry = function() {
+            marriageHistoryCounter++;
+            const container = document.getElementById('marriageHistoryContainer');
+            
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'marriage-history-entry';
+            entryDiv.style.cssText = 'background: white; border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin: 0.5rem 0; position: relative;';
+            entryDiv.id = `marriageEntry${marriageHistoryCounter}`;
+            
+            entryDiv.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 1rem; align-items: end;">
+                    <div>
+                        <label style="font-size: 0.9rem; color: #333; margin-bottom: 0.25rem; display: block;">Previous Spouse</label>
+                        <select name="previousSpouse${marriageHistoryCounter}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="">Select Previous Spouse</option>
+                            ${familyMembers.map(member => 
+                                `<option value="${member.id}">${member.firstName} ${member.lastName}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.9rem; color: #333; margin-bottom: 0.25rem; display: block;">Status</label>
+                        <select name="marriageStatus${marriageHistoryCounter}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="divorced">Divorced</option>
+                            <option value="widowed">Widowed (Spouse Deceased)</option>
+                            <option value="separated">Separated</option>
+                            <option value="annulled">Annulled</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="removeMarriageHistoryEntry('marriageEntry${marriageHistoryCounter}')" 
+                            style="padding: 0.5rem; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        🗑️
+                    </button>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <label style="font-size: 0.9rem; color: #333; margin-bottom: 0.25rem; display: block;">Marriage Duration (Optional)</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <input type="number" name="marriageStartYear${marriageHistoryCounter}" placeholder="Start Year (e.g., 2010)" 
+                               style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <input type="number" name="marriageEndYear${marriageHistoryCounter}" placeholder="End Year (e.g., 2018)" 
+                               style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                </div>
+            `;
+            
+            // Remove the initial message if this is the first entry
+            const initialMessage = container.querySelector('p');
+            if (initialMessage) {
+                initialMessage.remove();
+            }
+            
+            container.appendChild(entryDiv);
+        };
+
+        window.removeMarriageHistoryEntry = function(entryId) {
+            const entry = document.getElementById(entryId);
+            if (entry) {
+                entry.remove();
+                
+                // If no entries left, show the initial message again
+                const container = document.getElementById('marriageHistoryContainer');
+                if (container.children.length === 0) {
+                    container.innerHTML = '<p style="color: #666; font-size: 0.9rem; margin: 0;">Click "Add Previous Marriage" to record past marriages (including deceased spouses)</p>';
+                }
+            }
+        };
+
+        window.collectMarriageHistory = function() {
+            const marriageHistory = [];
+            const container = document.getElementById('marriageHistoryContainer');
+            const entries = container.querySelectorAll('.marriage-history-entry');
+            
+            entries.forEach((entry, index) => {
+                const entryId = entry.id.replace('marriageEntry', '');
+                const spouseSelect = entry.querySelector(`select[name="previousSpouse${entryId}"]`);
+                const statusSelect = entry.querySelector(`select[name="marriageStatus${entryId}"]`);
+                const startYearInput = entry.querySelector(`input[name="marriageStartYear${entryId}"]`);
+                const endYearInput = entry.querySelector(`input[name="marriageEndYear${entryId}"]`);
+                
+                if (spouseSelect.value) {
+                    const spouseMember = familyMembers.find(m => m.id === spouseSelect.value);
+                    marriageHistory.push({
+                        spouseId: spouseSelect.value,
+                        spouseName: spouseMember ? `${spouseMember.firstName} ${spouseMember.lastName}` : 'Unknown',
+                        status: statusSelect.value,
+                        startYear: startYearInput.value ? parseInt(startYearInput.value) : null,
+                        endYear: endYearInput.value ? parseInt(endYearInput.value) : null,
+                        createdAt: new Date()
+                    });
+                }
+            });
+            
+            return marriageHistory;
+        };
+
+        // Edit Modal Marriage History Management Functions
+        function populateEditMarriageHistory(marriageHistory) {
+            const container = document.getElementById('editMarriageHistoryEntries');
+            container.innerHTML = '';
+            
+            marriageHistory.forEach((marriage, index) => {
+                addEditMarriageHistoryEntry(marriage, index);
+            });
+        }
+
+        function addEditMarriageHistoryEntry(existingMarriage = null, index = null) {
+            const container = document.getElementById('editMarriageHistoryEntries');
+            const entryId = index !== null ? index : Date.now();
+            
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'marriage-history-entry';
+            entryDiv.style.cssText = 'border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background: white;';
+            
+            entryDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; color: #2c3e50;">Marriage Entry #${container.children.length + 1}</h4>
+                    <button type="button" onclick="removeEditMarriageHistoryEntry(this)" style="background: #e74c3c; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
+                        🗑️ Remove
+                    </button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Previous Spouse</label>
+                        <select class="edit-marriage-spouse" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="">Select previous spouse</option>
+                            ${familyMembers.map(member => 
+                                `<option value="${member.id}" ${existingMarriage && existingMarriage.spouseId === member.id ? 'selected' : ''}>
+                                    ${member.firstName} ${member.lastName}
+                                </option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Marriage Status</label>
+                        <select class="edit-marriage-status" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="divorced" ${existingMarriage && existingMarriage.status === 'divorced' ? 'selected' : ''}>Divorced</option>
+                            <option value="widowed" ${existingMarriage && existingMarriage.status === 'widowed' ? 'selected' : ''}>Widowed</option>
+                            <option value="separated" ${existingMarriage && existingMarriage.status === 'separated' ? 'selected' : ''}>Separated</option>
+                            <option value="annulled" ${existingMarriage && existingMarriage.status === 'annulled' ? 'selected' : ''}>Annulled</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Marriage Start Year</label>
+                        <input type="number" class="edit-marriage-start-year" min="1900" max="2030" 
+                               value="${existingMarriage ? existingMarriage.startYear || '' : ''}"
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" 
+                               placeholder="e.g., 1995">
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Marriage End Year</label>
+                        <input type="number" class="edit-marriage-end-year" min="1900" max="2030" 
+                               value="${existingMarriage ? existingMarriage.endYear || '' : ''}"
+                               style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" 
+                               placeholder="e.g., 2010">
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(entryDiv);
+        }
+
+        function removeEditMarriageHistoryEntry(button) {
+            const entry = button.closest('.marriage-history-entry');
+            entry.remove();
+            
+            // Renumber remaining entries
+            const entries = document.querySelectorAll('#editMarriageHistoryEntries .marriage-history-entry h4');
+            entries.forEach((header, index) => {
+                header.textContent = `Marriage Entry #${index + 1}`;
+            });
+        }
+
+        function collectEditMarriageHistory() {
+            const entries = document.querySelectorAll('#editMarriageHistoryEntries .marriage-history-entry');
+            const marriageHistory = [];
+            
+            entries.forEach(entry => {
+                const spouseId = entry.querySelector('.edit-marriage-spouse').value;
+                const status = entry.querySelector('.edit-marriage-status').value;
+                const startYear = parseInt(entry.querySelector('.edit-marriage-start-year').value) || null;
+                const endYear = parseInt(entry.querySelector('.edit-marriage-end-year').value) || null;
+                
+                if (spouseId && status) {
+                    marriageHistory.push({
+                        spouseId,
+                        status,
+                        startYear,
+                        endYear
+                    });
+                }
+            });
+            
+            return marriageHistory;
+        }
+
+        window.addEditMarriageHistoryEntry = addEditMarriageHistoryEntry;
+        window.removeEditMarriageHistoryEntry = removeEditMarriageHistoryEntry;
 
         // Update family member function
         window.updateFamilyMember = async function(event, memberId) {
