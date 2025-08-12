@@ -2232,27 +2232,34 @@
         // Auto-generate family trees based on relationships - REWRITTEN FOR MULTI-GENERATIONAL SUPPORT
         function generateFamilyTrees() {
             const familyTrees = [];
-            const processedMembers = new Set();
+            const processedPatriarchs = new Set(); // Only track patriarchs to avoid duplicate trees
 
             // Step 1: Find all patriarchs/matriarchs (oldest generation with no parents in system)
             const patriarchs = findPatriarchs();
             
             // Step 2: Build complete multi-generational trees starting from patriarchs
             patriarchs.forEach(patriarch => {
-                if (processedMembers.has(patriarch.id)) return;
+                if (processedPatriarchs.has(patriarch.id)) return;
                 
-                const familyTree = buildMultiGenerationalTree(patriarch, processedMembers);
+                const familyTree = buildMultiGenerationalTree(patriarch, processedPatriarchs);
                 if (familyTree && familyTree.generations.length > 0) {
                     familyTrees.push(familyTree);
                 }
             });
 
-            // Step 3: Handle any remaining isolated members
-            const remainingMembers = familyMembers.filter(member => !processedMembers.has(member.id));
-            remainingMembers.forEach(member => {
-                if (processedMembers.has(member.id)) return;
+            // Step 3: Handle any remaining isolated members (no family connections)
+            const isolatedMembers = familyMembers.filter(member => {
+                // Check if member is truly isolated (no parents, no children, no spouse)
+                const hasFamily = (member.parents && member.parents.length > 0) ||
+                                 (member.children && member.children.length > 0) ||
+                                 member.marriedTo;
+                return !hasFamily;
+            });
+            
+            isolatedMembers.forEach(member => {
+                if (processedPatriarchs.has(member.id)) return;
                 
-                const isolatedTree = createIsolatedMemberTree(member, processedMembers);
+                const isolatedTree = createIsolatedMemberTree(member, processedPatriarchs);
                 if (isolatedTree) {
                     familyTrees.push(isolatedTree);
                 }
@@ -2279,26 +2286,27 @@
         }
 
         // Build a complete multi-generational tree starting from a patriarch/matriarch
-        function buildMultiGenerationalTree(patriarch, processedMembers) {
+        function buildMultiGenerationalTree(patriarch, processedPatriarchs) {
             const familyTree = {
                 id: `family_${patriarch.id}`,
                 name: `${patriarch.firstName} ${patriarch.lastName} Family`,
                 generations: []
             };
 
-            // Start with the patriarch's generation
-            const patriarchGeneration = buildGenerationFromMember(patriarch, processedMembers, 'patriarch');
+            // Start with the patriarch's generation (only mark patriarch as processed to avoid duplicate trees)
+            const patriarchGeneration = buildGenerationFromMember(patriarch, processedPatriarchs, 'patriarch');
             if (patriarchGeneration.members.length > 0) {
                 familyTree.generations.push(patriarchGeneration);
             }
 
             // Build subsequent generations (children, grandchildren, etc.)
+            // NOTE: We don't track processed members for descendants - they can appear in multiple trees
             let currentGeneration = patriarchGeneration.members;
             let generationLevel = 1;
             let generationType = 'children';
 
             while (currentGeneration.length > 0) {
-                const nextGeneration = buildNextGeneration(currentGeneration, processedMembers, generationType, generationLevel);
+                const nextGeneration = buildNextGenerationAllowDuplicates(currentGeneration, generationType, generationLevel);
                 if (nextGeneration.members.length === 0) break;
 
                 familyTree.generations.push(nextGeneration);
@@ -2315,16 +2323,23 @@
         }
 
         // Build a generation starting from a specific member (includes spouse)
-        function buildGenerationFromMember(member, processedMembers, type) {
+        function buildGenerationFromMember(member, processedPatriarchs, type) {
             const generationMembers = [member];
-            processedMembers.add(member.id);
+            
+            // Only mark patriarch as processed to prevent duplicate family trees
+            if (type === 'patriarch') {
+                processedPatriarchs.add(member.id);
+            }
 
-            // Add spouse if married and not already processed
+            // Add spouse if married
             if (member.marriedTo) {
                 const spouse = familyMembers.find(m => m.id === member.marriedTo);
-                if (spouse && !processedMembers.has(spouse.id)) {
+                if (spouse) {
                     generationMembers.push(spouse);
-                    processedMembers.add(spouse.id);
+                    // Also mark spouse as processed if they're also a patriarch
+                    if (type === 'patriarch') {
+                        processedPatriarchs.add(spouse.id);
+                    }
                 }
             }
 
@@ -2335,24 +2350,25 @@
             };
         }
 
-        // Build the next generation (children of current generation)
-        function buildNextGeneration(currentGeneration, processedMembers, type, level) {
+        // Build the next generation (children of current generation) - ALLOWS DUPLICATES FOR DESCENDANTS
+        function buildNextGenerationAllowDuplicates(currentGeneration, type, level) {
             const nextGenerationMembers = [];
+            const seenInThisGeneration = new Set(); // Only prevent duplicates within the same generation of the same tree
 
             currentGeneration.forEach(parent => {
                 if (parent.children && parent.children.length > 0) {
                     parent.children.forEach(childId => {
                         const child = familyMembers.find(m => m.id === childId);
-                        if (child && !processedMembers.has(child.id)) {
+                        if (child && !seenInThisGeneration.has(child.id)) {
                             nextGenerationMembers.push(child);
-                            processedMembers.add(child.id);
+                            seenInThisGeneration.add(child.id);
 
-                            // Also add the child's spouse if married and not processed
+                            // Also add the child's spouse if married
                             if (child.marriedTo) {
                                 const spouse = familyMembers.find(m => m.id === child.marriedTo);
-                                if (spouse && !processedMembers.has(spouse.id)) {
+                                if (spouse && !seenInThisGeneration.has(spouse.id)) {
                                     nextGenerationMembers.push(spouse);
-                                    processedMembers.add(spouse.id);
+                                    seenInThisGeneration.add(spouse.id);
                                 }
                             }
                         }
@@ -2371,14 +2387,14 @@
         }
 
         // Create tree for isolated member (no family connections)
-        function createIsolatedMemberTree(member, processedMembers) {
+        function createIsolatedMemberTree(member, processedPatriarchs) {
             const familyTree = {
                 id: `family_${member.id}`,
                 name: `${member.firstName} ${member.lastName}`,
                 generations: []
             };
 
-            const generation = buildGenerationFromMember(member, processedMembers, 'individual');
+            const generation = buildGenerationFromMember(member, processedPatriarchs, 'individual');
             if (generation.members.length > 0) {
                 familyTree.generations.push(generation);
             }
