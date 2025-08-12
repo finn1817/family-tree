@@ -3604,18 +3604,8 @@
                 console.warn('sortOrder element not found');
             }
 
-            // Add member form
-            const addMemberForm = document.getElementById('addMemberForm');
-            if (addMemberForm) {
-                addMemberForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    await addFamilyMember(e);
-                });
-                console.log('Add member form listener added');
-            } else {
-                console.warn('addMemberForm not found');
-            }
-            console.log('Add member form delegated listener added');
+            // Add member form - handled dynamically when modal opens
+            console.log('Add member form will be handled when modal opens');
 
             // Add branch form
             const addBranchForm = document.getElementById('addBranchForm');
@@ -4576,10 +4566,6 @@
         };
 
         // Modal functions
-        window.openAddMemberModal = function() {
-            document.getElementById('addMemberModal').classList.add('active');
-        };
-
         window.openAddBranchModal = function() {
             populateParentBranchDropdown();
             generateSmartSuggestions();
@@ -5898,6 +5884,16 @@
                     </div>
                 </form>
             `;
+            
+            // Add event listener to the newly created form
+            const newForm = modal.querySelector('#addMemberForm');
+            if (newForm) {
+                newForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await addFamilyMember(e);
+                });
+                console.log('Add member form listener attached to new form');
+            }
             
             modal.classList.add('active');
         };
