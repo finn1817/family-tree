@@ -3682,8 +3682,17 @@
 
         // Add family member
         // Add family member - UPDATED FOR NEW FORM STRUCTURE
+        let isAddingMember = false; // Prevent duplicate submissions
         window.addFamilyMember = async function(event) {
             if (event) event.preventDefault();
+            
+            // Prevent duplicate submissions
+            if (isAddingMember) {
+                console.log('⚠️ Add member already in progress, ignoring duplicate call');
+                return;
+            }
+            
+            isAddingMember = true;
             
             try {
                 console.log('🚀 addFamilyMember function called');
@@ -3824,6 +3833,9 @@
                 console.error('❌ Error details:', error.message);
                 console.error('❌ Error stack:', error.stack);
                 showMessage('Error adding family member: ' + error.message, 'error');
+            } finally {
+                // Reset flag to allow future submissions
+                isAddingMember = false;
             }
         };
 
@@ -5882,7 +5894,7 @@
                     
                     <div class="form-actions">
                         <button type="button" class="btn" onclick="closeModal('addMemberModal')" style="background: #6c757d; color: white;">Cancel</button>
-                        <button type="submit" class="btn btn-primary" onclick="window.addFamilyMember(event)">✅ Add Family Member</button>
+                        <button type="submit" class="btn btn-primary">✅ Add Family Member</button>
                     </div>
                 </form>
             `;
