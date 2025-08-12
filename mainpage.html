@@ -244,6 +244,43 @@
             color: #333;
         }
         
+        /* Small View Styles */
+        .small-view-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        .small-view-family-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        .small-view-family-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .small-view-family-btn .family-name {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .small-view-family-btn .member-count {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
         .modal {
             display: none;
             position: fixed;
@@ -1195,6 +1232,20 @@
                 <div id="branchSuggestions">
                     <!-- Will be populated with AI suggestions -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Family Detail Modal -->
+    <div id="familyDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; width: 1000px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="familyDetailTitle">Family Details</h2>
+                <button class="btn" onclick="closeModal('familyDetailModal')" style="background: #6c757d; color: white;">✕ Close</button>
+            </div>
+            
+            <div id="familyDetailContent">
+                <!-- Family detail content will be populated here -->
             </div>
         </div>
     </div>
@@ -2645,6 +2696,9 @@
                             <button onclick="toggleDetailedView()" class="btn" style="background: #007bff; color: white; padding: 0.5rem 1rem;">
                                 📋 Detailed View
                             </button>
+                            <button onclick="toggleSmallView()" class="btn" style="background: #6f42c1; color: white; padding: 0.5rem 1rem;">
+                                📱 Small View
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2658,6 +2712,13 @@
                 <div id="detailedFamilyView" style="display: none;">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
                         ${familyTrees.map(tree => renderDetailedFamilyTree(tree)).join('')}
+                    </div>
+                </div>
+                
+                <!-- Small Button View (initially hidden) -->
+                <div id="smallFamilyView" style="display: none;">
+                    <div class="small-view-grid">
+                        <!-- Content will be populated by renderSmallView() -->
                     </div>
                 </div>
             `;
@@ -2838,27 +2899,53 @@
         window.toggleCompactView = function() {
             document.getElementById('compactFamilyView').style.display = 'grid';
             document.getElementById('detailedFamilyView').style.display = 'none';
+            document.getElementById('smallFamilyView').style.display = 'none';
             
             // Update button states
             const compactBtn = document.querySelector('button[onclick="toggleCompactView()"]');
             const detailedBtn = document.querySelector('button[onclick="toggleDetailedView()"]');
-            if (compactBtn && detailedBtn) {
+            const smallBtn = document.querySelector('button[onclick="toggleSmallView()"]');
+            if (compactBtn && detailedBtn && smallBtn) {
                 compactBtn.style.background = '#28a745';
                 detailedBtn.style.background = '#6c757d';
+                smallBtn.style.background = '#6c757d';
             }
         };
 
         window.toggleDetailedView = function() {
             document.getElementById('compactFamilyView').style.display = 'none';
+            document.getElementById('detailedFamilyView').style.display = 'none';
+            document.getElementById('smallFamilyView').style.display = 'none';
             document.getElementById('detailedFamilyView').style.display = 'grid';
             
             // Update button states
             const compactBtn = document.querySelector('button[onclick="toggleCompactView()"]');
             const detailedBtn = document.querySelector('button[onclick="toggleDetailedView()"]');
-            if (compactBtn && detailedBtn) {
+            const smallBtn = document.querySelector('button[onclick="toggleSmallView()"]');
+            if (compactBtn && detailedBtn && smallBtn) {
                 compactBtn.style.background = '#6c757d';
                 detailedBtn.style.background = '#007bff';
+                smallBtn.style.background = '#6c757d';
             }
+        };
+
+        window.toggleSmallView = function() {
+            document.getElementById('compactFamilyView').style.display = 'none';
+            document.getElementById('detailedFamilyView').style.display = 'none';
+            document.getElementById('smallFamilyView').style.display = 'block';
+            
+            // Update button states
+            const compactBtn = document.querySelector('button[onclick="toggleCompactView()"]');
+            const detailedBtn = document.querySelector('button[onclick="toggleDetailedView()"]');
+            const smallBtn = document.querySelector('button[onclick="toggleSmallView()"]');
+            if (compactBtn && detailedBtn && smallBtn) {
+                compactBtn.style.background = '#6c757d';
+                detailedBtn.style.background = '#6c757d';
+                smallBtn.style.background = '#6f42c1';
+            }
+            
+            // Render small view content
+            renderSmallView();
         };
 
         window.showDetailedFamily = function(familyId) {
@@ -2871,6 +2958,46 @@
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }, 100);
+        };
+
+        // Render small view with family buttons
+        function renderSmallView() {
+            const familyTrees = generateFamilyTrees();
+            const smallViewContainer = document.querySelector('#smallFamilyView .small-view-grid');
+            
+            if (!smallViewContainer) return;
+            
+            smallViewContainer.innerHTML = familyTrees.map(tree => {
+                const memberCount = tree.members ? tree.members.length : 0;
+                const familyName = tree.name || `${tree.patriarch.firstName} Family`;
+                
+                return `
+                    <button class="small-view-family-btn" onclick="showFamilyDetail('${tree.id || tree.patriarch.id}')">
+                        <div class="family-name">🌳 ${familyName}</div>
+                        <div class="member-count">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        // Show detailed family information in modal
+        window.showFamilyDetail = function(familyId) {
+            const familyTrees = generateFamilyTrees();
+            const family = familyTrees.find(tree => (tree.id || tree.patriarch.id) === familyId);
+            
+            if (!family) return;
+            
+            const familyName = family.name || `${family.patriarch.firstName} Family`;
+            
+            // Set modal title
+            document.getElementById('familyDetailTitle').textContent = `${familyName} Details`;
+            
+            // Generate detailed family content
+            const content = renderDetailedFamilyTree(family);
+            
+            // Display in modal
+            document.getElementById('familyDetailContent').innerHTML = content;
+            document.getElementById('familyDetailModal').classList.add('active');
         };
 
         function renderFamilyMember(member, generationType) {
