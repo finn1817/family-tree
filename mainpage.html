@@ -2427,11 +2427,18 @@
             let generationType = 'children';
 
             while (currentGeneration.length > 0) {
-                const nextGeneration = buildNextGenerationAllowDuplicates(currentGeneration, generationType, generationLevel);
-                if (nextGeneration.members.length === 0) break;
-
-                familyTree.generations.push(nextGeneration);
-                currentGeneration = nextGeneration.members;
+                const generationResult = buildNextGenerationAllowDuplicates(currentGeneration, generationType, generationLevel);
+                
+                // Add children generation
+                if (generationResult.childrenGeneration.members.length === 0) break;
+                familyTree.generations.push(generationResult.childrenGeneration);
+                
+                // Add spouses generation if it exists
+                if (generationResult.spousesGeneration && generationResult.spousesGeneration.members.length > 0) {
+                    familyTree.generations.push(generationResult.spousesGeneration);
+                }
+                
+                currentGeneration = generationResult.childrenGeneration.members;
                 generationLevel++;
                 
                 // Update generation type
@@ -2473,23 +2480,25 @@
 
         // Build the next generation (children of current generation) - ALLOWS DUPLICATES FOR DESCENDANTS
         function buildNextGenerationAllowDuplicates(currentGeneration, type, level) {
-            const nextGenerationMembers = [];
-            const seenInThisGeneration = new Set(); // Only prevent duplicates within the same generation of the same tree
+            const childrenMembers = [];
+            const spousesMembers = [];
+            const seenChildren = new Set();
+            const seenSpouses = new Set();
 
             currentGeneration.forEach(parent => {
                 if (parent.children && parent.children.length > 0) {
                     parent.children.forEach(childId => {
                         const child = familyMembers.find(m => m.id === childId);
-                        if (child && !seenInThisGeneration.has(child.id)) {
-                            nextGenerationMembers.push(child);
-                            seenInThisGeneration.add(child.id);
+                        if (child && !seenChildren.has(child.id)) {
+                            childrenMembers.push(child);
+                            seenChildren.add(child.id);
 
-                            // Also add the child's spouse if married
+                            // Add the child's spouse to separate spouses array
                             if (child.marriedTo) {
                                 const spouse = familyMembers.find(m => m.id === child.marriedTo);
-                                if (spouse && !seenInThisGeneration.has(spouse.id)) {
-                                    nextGenerationMembers.push(spouse);
-                                    seenInThisGeneration.add(spouse.id);
+                                if (spouse && !seenSpouses.has(spouse.id)) {
+                                    spousesMembers.push(spouse);
+                                    seenSpouses.add(spouse.id);
                                 }
                             }
                         }
@@ -2497,14 +2506,23 @@
                 }
             });
 
-            // Remove duplicates and sort by age
-            const uniqueMembers = [...new Set(nextGenerationMembers)];
-            
-            return {
+            // Create children generation
+            const childrenGeneration = {
                 level: level,
-                members: uniqueMembers.sort((a, b) => getAge(b) - getAge(a)),
-                type: type
+                members: childrenMembers.sort((a, b) => getAge(b) - getAge(a)),
+                type: type,
+                isChildren: true
             };
+
+            // Create spouses generation (if there are any spouses)
+            const spousesGeneration = spousesMembers.length > 0 ? {
+                level: level,
+                members: spousesMembers.sort((a, b) => getAge(b) - getAge(a)),
+                type: type + '-spouses',
+                isSpouses: true
+            } : null;
+
+            return { childrenGeneration, spousesGeneration };
         }
 
         // Create tree for isolated member (no family connections)
@@ -2854,18 +2872,18 @@
                     <div class="family-tree-container" style="overflow-x: auto; padding: 1rem;">
                         ${familyTree.generations.map((generation, index) => `
                             <div class="generation-${generation.type}" style="margin-bottom: 2rem;">
-                                <h4 style="text-align: center; color: #666; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">
-                                    ${getGenerationLabel(generation.type, index)}
+                                <h4 style="text-align: center; color: ${generation.type.includes('-spouses') ? '#e67e22' : '#666'}; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; ${generation.type.includes('-spouses') ? 'background: #fff8f0; padding: 0.5rem; border-radius: 8px; border: 1px solid #f39c12;' : ''}">
+                                    ${generation.type.includes('-spouses') ? '💑 ' : ''}${getGenerationLabel(generation.type, index)}
                                 </h4>
                                 
                                 <!-- Connection Lines -->
-                                ${index > 0 ? `
+                                ${index > 0 && !generation.type.includes('-spouses') ? `
                                     <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
                                         <div style="width: 2px; height: 2rem; background: #ddd;"></div>
                                     </div>
                                 ` : ''}
                                 
-                                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 1rem;">
+                                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 1rem; ${generation.type.includes('-spouses') ? 'background: #fefcf8; padding: 1rem; border-radius: 10px; border: 1px dashed #f39c12;' : ''}">
                                     ${generation.members.map(member => renderFamilyMember(member, generation.type)).join('')}
                                 </div>
                             </div>
@@ -2880,15 +2898,24 @@
                 'patriarch': 'Patriarch/Matriarch',
                 'parents': index === 0 ? 'Parents' : 'Ancestors',
                 'children': 'Children',
+                'children-spouses': 'Children\'s Spouses',
                 'grandchildren': 'Grandchildren',
+                'grandchildren-spouses': 'Grandchildren\'s Spouses',
                 'great-grandchildren': 'Great-Grandchildren',
+                'great-grandchildren-spouses': 'Great-Grandchildren\'s Spouses',
                 'individual': 'Individual'
             };
             
             // Handle dynamic generation types
             if (type.startsWith('generation-')) {
-                const genNum = parseInt(type.split('-')[1]);
-                return `Generation ${genNum}`;
+                const parts = type.split('-');
+                if (parts.length > 2 && parts[2] === 'spouses') {
+                    const genNum = parseInt(parts[1]);
+                    return `Generation ${genNum} Spouses`;
+                } else {
+                    const genNum = parseInt(parts[1]);
+                    return `Generation ${genNum}`;
+                }
             }
             
             return labels[type] || `Generation ${index + 1}`;
