@@ -3376,6 +3376,16 @@
                 console.warn('addMemberForm not found');
             }
 
+            // Add member form (dynamically created, so use event delegation)
+            document.addEventListener('submit', function(e) {
+                if (e.target && e.target.id === 'addMemberForm') {
+                    console.log('📋 Add member form submitted via event delegation');
+                    e.preventDefault();
+                    window.addFamilyMember(e);
+                }
+            });
+            console.log('Add member form delegated listener added');
+
             // Add branch form
             const addBranchForm = document.getElementById('addBranchForm');
             if (addBranchForm) {
@@ -3441,10 +3451,12 @@
 
         // Add family member
         // Add family member - UPDATED FOR NEW FORM STRUCTURE
-        async function addFamilyMember(event) {
+        window.addFamilyMember = async function(event) {
             if (event) event.preventDefault();
             
             try {
+                console.log('🚀 addFamilyMember function called');
+                
                 // Get selected children
                 const selectedChildren = [];
                 const childrenCheckboxes = document.querySelectorAll('input[name="children"]:checked');
@@ -3458,6 +3470,9 @@
                 parentsCheckboxes.forEach(checkbox => {
                     selectedParents.push(checkbox.value);
                 });
+
+                console.log('📋 Selected parents:', selectedParents);
+                console.log('👶 Selected children:', selectedChildren);
 
                 // Validate parent limit
                 if (selectedParents.length > 2) {
@@ -3495,16 +3510,34 @@
                     createdBy: currentUser.username
                 };
 
+                console.log('📝 Form field values:', {
+                    firstName: document.getElementById('addFirstName').value,
+                    lastName: document.getElementById('addLastName').value,
+                    birthMonth: document.getElementById('addBirthMonth').value,
+                    birthDay: document.getElementById('addBirthDay').value,
+                    birthYear: document.getElementById('addBirthYear').value
+                });
+
                 // Validate required fields
                 if (!memberData.firstName || !memberData.lastName || !memberData.birthMonth || !memberData.birthDay || !memberData.birthYear) {
+                    console.error('❌ Validation failed - missing required fields');
                     showMessage('Please fill in all required fields (Name, Birth Month, Day, Year)', 'error');
                     return;
                 }
 
                 console.log('✅ Adding family member with data:', memberData);
 
+                // Check if Firebase is available
+                if (!db) {
+                    console.error('❌ Firebase database not initialized');
+                    showMessage('Database connection error. Please refresh the page.', 'error');
+                    return;
+                }
+
                 // Save to Firebase with enhanced error handling
                 console.log('📤 Attempting to save to Firebase...');
+                console.log('🔗 Database reference:', db);
+                
                 const docRef = await addDoc(collection(db, 'family_members'), memberData);
                 const newMemberId = docRef.id;
                 
@@ -3545,10 +3578,12 @@
                 showMessage(`✅ ${memberData.firstName} ${memberData.lastName} added successfully!`, 'success');
                 console.log('✅ All updates completed successfully!');
             } catch (error) {
-                console.error('Error adding family member:', error);
+                console.error('❌ Error adding family member:', error);
+                console.error('❌ Error details:', error.message);
+                console.error('❌ Error stack:', error.stack);
                 showMessage('Error adding family member: ' + error.message, 'error');
             }
-        }
+        };
 
         // Function to update children count for add form
         window.updateAddChildrenCount = function() {
@@ -5441,7 +5476,7 @@
             const modalContent = modal.querySelector('.modal-content');
             modalContent.innerHTML = `
                 <h2>➕ Add Family Member</h2>
-                <form id="addMemberForm" onsubmit="addFamilyMember(event)">
+                <form id="addMemberForm" onsubmit="window.addFamilyMember(event); return false;">
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="addFirstName">First Name *</label>
@@ -5579,7 +5614,7 @@
                     
                     <div class="form-actions">
                         <button type="button" class="btn" onclick="closeModal('addMemberModal')" style="background: #6c757d; color: white;">Cancel</button>
-                        <button type="submit" class="btn btn-primary">✅ Add Family Member</button>
+                        <button type="submit" class="btn btn-primary" onclick="window.addFamilyMember(event)">✅ Add Family Member</button>
                     </div>
                 </form>
             `;
