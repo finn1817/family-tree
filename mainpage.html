@@ -2968,11 +2968,15 @@
             if (!smallViewContainer) return;
             
             smallViewContainer.innerHTML = familyTrees.map(tree => {
-                const memberCount = tree.members ? tree.members.length : 0;
-                const familyName = tree.name || `${tree.patriarch.firstName} Family`;
+                // Calculate total member count across all generations
+                const memberCount = tree.generations.reduce((total, generation) => {
+                    return total + (generation.members ? generation.members.length : 0);
+                }, 0);
+                
+                const familyName = tree.name || `${tree.patriarch?.firstName || 'Unknown'} Family`;
                 
                 return `
-                    <button class="small-view-family-btn" onclick="showFamilyDetail('${tree.id || tree.patriarch.id}')">
+                    <button class="small-view-family-btn" onclick="showFamilyDetail('${tree.id || tree.patriarch?.id}')">
                         <div class="family-name">🌳 ${familyName}</div>
                         <div class="member-count">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
                     </button>
