@@ -1706,7 +1706,6 @@
             if (!userData) {
                 window.location.href = 'index.html';
                 return;
-            }
 
             currentUser = JSON.parse(userData);
             document.getElementById('username').textContent = currentUser.username;
@@ -2010,9 +2009,12 @@
             return parentNames.join(', ');
         }
 
-        // Update bidirectional relationships
+        // Update bidirectional relationships and sync with spouse
         async function updateBidirectionalRelationships(memberId, parentIds, childrenIds) {
             try {
+                const member = familyMembers.find(m => m.id === memberId);
+                if (!member) return;
+
                 // Update parents: add this member as their child
                 for (const parentId of parentIds) {
                     const parent = familyMembers.find(m => m.id === parentId);
@@ -2023,6 +2025,11 @@
                             await updateDoc(doc(db, 'family_members', parentId), {
                                 children: updatedChildren
                             });
+                        }
+
+                        // If parent has a spouse, sync the children with them too
+                        if (parent.marriedTo) {
+                            await syncChildrenWithSpouse(parentId, parent.marriedTo, updatedChildren);
                         }
                     }
                 }
@@ -2040,24 +2047,72 @@
                         }
                     }
                 }
+
+                // If this member has a spouse, sync children with them
+                if (member.marriedTo && childrenIds.length > 0) {
+                    await syncChildrenWithSpouse(memberId, member.marriedTo, childrenIds);
+                }
+
             } catch (error) {
                 console.error('Error updating bidirectional relationships:', error);
             }
         }
 
-        // Update bidirectional marriage relationships
+        // Sync children between married spouses
+        async function syncChildrenWithSpouse(parentId, spouseId, parentChildren) {
+            try {
+                const spouse = familyMembers.find(m => m.id === spouseId);
+                if (!spouse) return;
+
+                const spouseChildren = spouse.children || [];
+                const combinedChildren = [...new Set([...spouseChildren, ...parentChildren])];
+
+                // Only update if there's a difference
+                if (spouseChildren.length !== combinedChildren.length || !spouseChildren.every(id => combinedChildren.includes(id))) {
+                    await updateDoc(doc(db, 'family_members', spouseId), {
+                        children: combinedChildren
+                    });
+                    console.log(`Synced children with spouse ${spouse.firstName}: added ${combinedChildren.length - spouseChildren.length} children`);
+
+                    // Update the newly added children to have both parents
+                    const newChildren = combinedChildren.filter(childId => !spouseChildren.includes(childId));
+                    for (const childId of newChildren) {
+                        const child = familyMembers.find(m => m.id === childId);
+                        if (child) {
+                            const childParents = child.parents || [];
+                            if (!childParents.includes(spouseId)) {
+                                const updatedParents = [...childParents, spouseId];
+                                await updateDoc(doc(db, 'family_members', childId), {
+                                    parents: updatedParents
+                                });
+                                console.log(`Added spouse ${spouse.firstName} as parent to child ${child.firstName}`);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error syncing children with spouse:', error);
+            }
+        }
+
+        // Update bidirectional marriage relationships and synchronize children
         async function updateBidirectionalMarriage(memberId, oldSpouseId, newSpouseId) {
             try {
-                // If there was an old spouse, remove the marriage connection
+                const member = familyMembers.find(m => m.id === memberId);
+                if (!member) return;
+
+                // If there was an old spouse, remove the marriage connection and handle children
                 if (oldSpouseId && oldSpouseId !== newSpouseId) {
                     const oldSpouse = familyMembers.find(m => m.id === oldSpouseId);
                     if (oldSpouse) {
                         await updateDoc(doc(db, 'family_members', oldSpouseId), { marriedTo: null });
                         console.log(`Removed marriage connection for old spouse: ${oldSpouse.firstName} ${oldSpouse.lastName}`);
+                        
+                        // Note: We don't automatically remove children from divorced spouses as they may still be co-parents
                     }
                 }
 
-                // If there's a new spouse, set up the bidirectional marriage
+                // If there's a new spouse, set up the bidirectional marriage and sync children
                 if (newSpouseId && newSpouseId !== oldSpouseId) {
                     const newSpouse = familyMembers.find(m => m.id === newSpouseId);
                     if (newSpouse) {
@@ -2073,11 +2128,64 @@
                         // Set the new spouse's marriedTo field
                         await updateDoc(doc(db, 'family_members', newSpouseId), { marriedTo: memberId });
                         console.log(`Set bidirectional marriage between ${memberId} and ${newSpouseId}`);
+                        
+                        // Synchronize children between the married couple
+                        await synchronizeMarriedCoupleChildren(memberId, newSpouseId);
                     }
                 }
             } catch (error) {
                 console.error('Error updating bidirectional marriage:', error);
             }
+        }
+
+        // Synchronize children between married couples
+        async function synchronizeMarriedCoupleChildren(spouse1Id, spouse2Id) {
+            try {
+                const spouse1 = familyMembers.find(m => m.id === spouse1Id);
+                const spouse2 = familyMembers.find(m => m.id === spouse2Id);
+                
+                if (!spouse1 || !spouse2) return;
+
+                // Get all children from both spouses
+                const spouse1Children = spouse1.children || [];
+                const spouse2Children = spouse2.children || [];
+                
+                // Combine and deduplicate children
+                const allChildrenIds = [...new Set([...spouse1Children, ...spouse2Children])];
+                
+                console.log(`Synchronizing children for married couple: ${spouse1.firstName} & ${spouse2.firstName}`);
+                console.log(`Combined children:`, allChildrenIds);
+
+                // Update both spouses to have all children
+                if (spouse1Children.length !== allChildrenIds.length || !spouse1Children.every(id => allChildrenIds.includes(id))) {
+                    await updateDoc(doc(db, 'family_members', spouse1Id), { children: allChildrenIds });
+                    console.log(`Updated ${spouse1.firstName}'s children to:`, allChildrenIds);
+                }
+
+                if (spouse2Children.length !== allChildrenIds.length || !spouse2Children.every(id => allChildrenIds.includes(id))) {
+                    await updateDoc(doc(db, 'family_members', spouse2Id), { children: allChildrenIds });
+                    console.log(`Updated ${spouse2.firstName}'s children to:`, allChildrenIds);
+                }
+
+                // Update each child to have both parents
+                for (const childId of allChildrenIds) {
+                    const child = familyMembers.find(m => m.id === childId);
+                    if (child) {
+                        const currentParents = child.parents || [];
+                        const newParents = [...new Set([...currentParents, spouse1Id, spouse2Id])];
+                        
+                        if (currentParents.length !== newParents.length || !currentParents.every(id => newParents.includes(id))) {
+                            await updateDoc(doc(db, 'family_members', childId), { parents: newParents });
+                            console.log(`Updated ${child.firstName}'s parents to include both spouses`);
+                        }
+                    }
+                }
+
+                console.log(`Successfully synchronized children for married couple`);
+            } catch (error) {
+                console.error('Error synchronizing children for married couple:', error);
+            }
+        }
         }
 
         // Auto-generate family trees based on relationships
@@ -2986,6 +3094,8 @@
                 const spouseId = memberData.marriedTo;
                 if (spouseId) {
                     await updateBidirectionalMarriage(newMemberId, null, spouseId);
+                    // Synchronize children with spouse
+                    await synchronizeMarriedCoupleChildren(newMemberId, spouseId);
                 }
                 
                 // Update bidirectional parent/child relationships
@@ -3060,6 +3170,10 @@
             try {
                 const memberId = document.getElementById('editMemberId').value;
                 
+                // Get original member data to detect changes
+                const originalMember = familyMembers.find(m => m.id === memberId);
+                const originalSpouseId = originalMember ? originalMember.marriedTo : null;
+                
                 // Get selected children
                 const selectedChildren = [];
                 const childrenCheckboxes = document.querySelectorAll('#editChildrenSelection input[name="editChildren"]:checked');
@@ -3098,6 +3212,16 @@
                 };
 
                 await updateDoc(doc(db, 'family_members', memberId), memberData);
+                
+                // Handle marriage changes if applicable
+                const newSpouseId = memberData.marriedTo;
+                if (originalSpouseId !== newSpouseId) {
+                    await updateBidirectionalMarriage(memberId, originalSpouseId, newSpouseId);
+                    // Synchronize children with new spouse if married
+                    if (newSpouseId) {
+                        await synchronizeMarriedCoupleChildren(memberId, newSpouseId);
+                    }
+                }
                 
                 // Update bidirectional relationships
                 await updateBidirectionalRelationships(memberId, selectedParents, selectedChildren);
