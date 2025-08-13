@@ -3405,23 +3405,23 @@
         // Auto-generate family trees based on relationships - REWRITTEN FOR BETTER LOGIC
         function generateFamilyTrees() {
             const familyTrees = [];
-            const processedMembers = new Set(); // Track all processed members to avoid duplicates
+            const familyTreeHeads = new Set(); // Track which members have been used as family heads
 
-            // Step 1: Find all potential family heads (anyone with children or who could start a family)
+            // Step 1: Find all potential family heads (anyone with children OR patriarchs)
             const potentialHeads = familyMembers.filter(member => {
-                // Include members who have children OR are married OR have no parents (potential patriarchs)
+                // Include members who have children OR have no parents (potential patriarchs)
                 const hasChildren = member.children && member.children.length > 0;
-                const isMarried = member.marriedTo;
                 const hasParentsInSystem = member.parents && member.parents.length > 0 && 
                     member.parents.some(parentId => familyMembers.find(m => m.id === parentId));
                 
-                return hasChildren || (isMarried && !hasParentsInSystem);
+                // Must have children OR be a patriarch (no parents in system)
+                return hasChildren || !hasParentsInSystem;
             });
 
             // Step 2: Sort by age (oldest first) and create families
             potentialHeads.sort((a, b) => getAge(b) - getAge(a)).forEach(head => {
-                // Skip if this member is already part of another family tree
-                if (processedMembers.has(head.id)) return;
+                // Skip if this member is already used as a family head
+                if (familyTreeHeads.has(head.id)) return;
                 
                 // Check if spouse is also a potential head - if so, use the older one as primary
                 if (head.marriedTo) {
@@ -3432,15 +3432,28 @@
                     }
                 }
                 
+                // Create a new processedMembers set for each family tree
+                const processedMembers = new Set();
                 const familyTree = buildCompleteFamily(head, processedMembers);
                 if (familyTree && familyTree.generations.length > 0) {
                     familyTrees.push(familyTree);
+                    familyTreeHeads.add(head.id);
                 }
             });
 
-            // Step 3: Handle any remaining isolated members
-            const remainingMembers = familyMembers.filter(member => !processedMembers.has(member.id));
+            // Step 3: Handle any remaining isolated members (those not in any family tree)
+            const allProcessedMembers = new Set();
+            familyTrees.forEach(tree => {
+                tree.generations.forEach(gen => {
+                    gen.members.forEach(member => {
+                        allProcessedMembers.add(member.id);
+                    });
+                });
+            });
+
+            const remainingMembers = familyMembers.filter(member => !allProcessedMembers.has(member.id));
             remainingMembers.forEach(member => {
+                const processedMembers = new Set();
                 const isolatedTree = createIsolatedMemberTree(member, processedMembers);
                 if (isolatedTree) {
                     familyTrees.push(isolatedTree);
@@ -3554,10 +3567,11 @@
             childrenGeneration.forEach(child => {
                 if (child.marriedTo) {
                     const spouse = familyMembers.find(m => m.id === child.marriedTo);
-                    if (spouse && !seenSpouses.has(spouse.id) && !processedMembers.has(spouse.id)) {
+                    // Include spouse as in-law but DON'T mark as processed so they can be head of their own family
+                    if (spouse && !seenSpouses.has(spouse.id)) {
                         spousesMembers.push(spouse);
                         seenSpouses.add(spouse.id);
-                        processedMembers.add(spouse.id);
+                        // Note: NOT adding to processedMembers so spouse can still be a family head
                     }
                 }
             });
