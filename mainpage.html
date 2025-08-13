@@ -3353,11 +3353,11 @@
                         <div class="stat-label">Total Members</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${familyTrees.reduce((sum, tree) => sum + tree.generations.length, 0)}</div>
+                        <div class="stat-number">${familyTrees.reduce((sum, tree) => sum + (tree.generations ? tree.generations.length : 0), 0)}</div>
                         <div class="stat-label">Generations</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${Math.round(familyMembers.reduce((sum, m) => sum + getAge(m), 0) / familyMembers.length) || 0}</div>
+                        <div class="stat-number">${familyMembers.length > 0 ? Math.round(familyMembers.reduce((sum, m) => sum + (getAge(m) || 0), 0) / familyMembers.length) : 0}</div>
                         <div class="stat-label">Avg Age</div>
                     </div>
                 </div>
@@ -3392,12 +3392,18 @@
                     </div>
                 `;
             } else {
+                // Filter out any trees that might have issues
+                const validTrees = familyTrees.filter(tree => 
+                    tree && tree.generations && tree.generations.length > 0 && 
+                    tree.generations[0] && tree.generations[0].members && tree.generations[0].members.length > 0
+                );
+                
                 contentHtml = `
                     <div id="detailedViewContent" class="family-tree-grid">
-                        ${familyTrees.map(tree => renderModernFamilyCard(tree)).join('')}
+                        ${validTrees.map(tree => renderModernFamilyCard(tree)).join('')}
                     </div>
                     <div id="smallViewContent" class="small-view-modern" style="display: none;">
-                        ${familyTrees.map(tree => renderModernSmallCard(tree)).join('')}
+                        ${validTrees.map(tree => renderModernSmallCard(tree)).join('')}
                     </div>
                 `;
             }
@@ -3407,12 +3413,20 @@
 
         // Render modern detailed family card
         function renderModernFamilyCard(familyTree) {
-            const patriarch = familyMembers.find(m => m.id === familyTree.patriarch.id);
-            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + gen.members.length, 0);
+            // Find the patriarch from the first generation
+            const firstGeneration = familyTree.generations[0];
+            if (!firstGeneration || !firstGeneration.members || firstGeneration.members.length === 0) {
+                return ''; // Skip if no members
+            }
+            
+            const patriarch = firstGeneration.members[0]; // First member of first generation
+            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + (gen.members ? gen.members.length : 0), 0);
             
             let generationsHtml = '';
             
             familyTree.generations.forEach((generation, index) => {
+                if (!generation.members || generation.members.length === 0) return;
+                
                 const genIcon = getModernGenerationIcon(generation.type, index);
                 const genTitle = getGenerationLabel(generation.type, index);
                 
@@ -3468,8 +3482,14 @@
 
         // Render modern small view card
         function renderModernSmallCard(familyTree) {
-            const patriarch = familyMembers.find(m => m.id === familyTree.patriarch.id);
-            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + gen.members.length, 0);
+            // Find the patriarch from the first generation
+            const firstGeneration = familyTree.generations[0];
+            if (!firstGeneration || !firstGeneration.members || firstGeneration.members.length === 0) {
+                return ''; // Skip if no members
+            }
+            
+            const patriarch = firstGeneration.members[0]; // First member of first generation
+            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + (gen.members ? gen.members.length : 0), 0);
             const totalGenerations = familyTree.generations.length;
             
             return `
@@ -3793,10 +3813,20 @@
             const familyTrees = generateFamilyTrees();
             const familyTree = familyTrees.find(tree => tree.id === familyId);
             
-            if (!familyTree) return;
+            if (!familyTree || !familyTree.generations || familyTree.generations.length === 0) {
+                console.error('Family tree not found or empty for ID:', familyId);
+                return;
+            }
             
-            const patriarch = familyMembers.find(m => m.id === familyTree.patriarch.id);
-            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + gen.members.length, 0);
+            // Find the patriarch from the first generation
+            const firstGeneration = familyTree.generations[0];
+            if (!firstGeneration || !firstGeneration.members || firstGeneration.members.length === 0) {
+                console.error('No members found in first generation');
+                return;
+            }
+            
+            const patriarch = firstGeneration.members[0];
+            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + (gen.members ? gen.members.length : 0), 0);
             
             let modalContent = `
                 <div class="family-groups-header" style="margin-bottom: 2rem;">
@@ -3814,17 +3844,19 @@
                         <div class="stat-label">Generations</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${familyTree.generations.reduce((sum, gen) => sum + gen.members.filter(m => !m.deceased).length, 0)}</div>
+                        <div class="stat-number">${familyTree.generations.reduce((sum, gen) => sum + (gen.members ? gen.members.filter(m => !m.deceased).length : 0), 0)}</div>
                         <div class="stat-label">Living Members</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${Math.round(familyTree.generations.reduce((sum, gen) => sum + gen.members.reduce((genSum, m) => genSum + getAge(m), 0), 0) / totalMembers) || 0}</div>
+                        <div class="stat-number">${Math.round(familyTree.generations.reduce((sum, gen) => sum + (gen.members ? gen.members.reduce((genSum, m) => genSum + getAge(m), 0) : 0), 0) / totalMembers) || 0}</div>
                         <div class="stat-label">Average Age</div>
                     </div>
                 </div>
             `;
             
             familyTree.generations.forEach((generation, index) => {
+                if (!generation.members || generation.members.length === 0) return;
+                
                 const genIcon = getModernGenerationIcon(generation.type, index);
                 const genTitle = getGenerationLabel(generation.type, index);
                 
