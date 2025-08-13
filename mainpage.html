@@ -1348,6 +1348,12 @@
             color: #2d5a2d;
             border: 1px solid #b8e6b8;
         }
+        
+        /* Developer Test Popup Animations */
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -2519,6 +2525,13 @@
                 currentUser = JSON.parse(userData);
             }
             
+            // Special privileges for dfinn12 - the developer/owner account
+            if (currentUser.username === 'dfinn12') {
+                currentUser.isDeveloper = true;
+                currentUser.isAdmin = true;
+                console.log('🚀 Developer privileges activated for dfinn12');
+            }
+            
             document.getElementById('username').textContent = currentUser.username;
             
             if (currentUser.isAdmin) {
@@ -2527,6 +2540,11 @@
                 
                 // Start real-time monitoring for account requests
                 startRequestMonitoring();
+            }
+            
+            // Add developer test button for dfinn12 only
+            if (currentUser.isDeveloper) {
+                addDeveloperTestButton();
             }
 
             // Initialize the new relationship system
@@ -7701,6 +7719,144 @@
             } catch (error) {
                 console.error('Error deleting manual family tree:', error);
                 showMessage('Error deleting memorial family. Please try again.', 'error');
+            }
+        };
+
+        // Developer Functions (dfinn12 only)
+        function addDeveloperTestButton() {
+            const userInfo = document.querySelector('.user-info');
+            if (!userInfo) return;
+            
+            // Create developer test button
+            const testButton = document.createElement('button');
+            testButton.innerHTML = '🚀 Click to Test';
+            testButton.className = 'btn';
+            testButton.style.cssText = `
+                background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+                color: white;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            `;
+            
+            // Add hover effect
+            testButton.addEventListener('mouseenter', () => {
+                testButton.style.transform = 'translateY(-2px)';
+                testButton.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.4)';
+            });
+            
+            testButton.addEventListener('mouseleave', () => {
+                testButton.style.transform = 'translateY(0)';
+                testButton.style.boxShadow = '0 2px 8px rgba(255, 107, 107, 0.3)';
+            });
+            
+            // Add click handler
+            testButton.addEventListener('click', () => {
+                showDeveloperTestPopup();
+            });
+            
+            // Insert before the logout button
+            const logoutBtn = userInfo.querySelector('.logout-btn');
+            userInfo.insertBefore(testButton, logoutBtn);
+        }
+
+        // Show developer test popup
+        function showDeveloperTestPopup() {
+            // Create popup overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            // Create popup content
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                background: white;
+                padding: 3rem;
+                border-radius: 20px;
+                text-align: center;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                max-width: 400px;
+                width: 90%;
+                animation: popIn 0.3s ease;
+            `;
+            
+            popup.innerHTML = `
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+                <h2 style="color: #ff6b6b; margin-bottom: 1rem; font-size: 2rem;">It Worked!</h2>
+                <p style="color: #666; margin-bottom: 2rem; font-size: 1.1rem;">
+                    Congratulations! Your developer privileges are working perfectly.<br>
+                    <strong>Username:</strong> ${currentUser.username}<br>
+                    <strong>Status:</strong> Developer Access ✨
+                </p>
+                <button onclick="closeDeveloperPopup()" style="
+                    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+                    color: white;
+                    padding: 0.75rem 2rem;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                ">Awesome! Close</button>
+            `;
+            
+            // Add animations
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes popIn {
+                    from { opacity: 0; transform: scale(0.8) translateY(20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+            
+            // Store reference for closing
+            window.currentDeveloperPopup = overlay;
+            
+            // Close on overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeDeveloperPopup();
+                }
+            });
+        }
+
+        // Close developer popup
+        window.closeDeveloperPopup = function() {
+            const popup = window.currentDeveloperPopup;
+            if (popup) {
+                popup.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    if (popup.parentNode) {
+                        popup.parentNode.removeChild(popup);
+                    }
+                    window.currentDeveloperPopup = null;
+                }, 300);
             }
         };
 
