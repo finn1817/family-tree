@@ -1393,6 +1393,10 @@
                 <span class="tab-text">📋 Account Requests <span id="requestsBadge" class="requests-badge" style="display: none;">0</span></span>
                 <span class="tab-text-mobile">📋 Requests <span id="requestsBadgeMobile" class="requests-badge" style="display: none;">0</span></span>
             </div>
+            <div class="tab developer-only" onclick="switchTab('hidden')" style="display: none;">
+                <span class="tab-text">🙈 Hidden Families <span id="hiddenBadge" class="requests-badge" style="display: none;">0</span></span>
+                <span class="tab-text-mobile">🙈 Hidden <span id="hiddenBadgeMobile" class="requests-badge" style="display: none;">0</span></span>
+            </div>
         </div>
 
         <div class="tab-content">
@@ -1463,6 +1467,20 @@
                     <div id="requestsStats" style="margin: 1rem 0;"></div>
                 </div>
                 <div id="requestsGrid" class="family-grid"></div>
+            </div>
+
+            <!-- Hidden Families Section (Developer Only - dfinn12) -->
+            <div id="hidden" class="section">
+                <div class="controls">
+                    <h2 style="color: #e74c3c;">🙈 Hidden Families</h2>
+                    <p style="color: #666; margin: 1rem 0;">Families hidden from public view. Only you can see and manage them.</p>
+                </div>
+                <div id="hiddenFamiliesGrid" class="family-tree-grid"></div>
+                <div id="noHiddenFamilies" style="display: none; text-align: center; padding: 3rem; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">👁️</div>
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">No Hidden Families</h3>
+                    <p style="color: #666;">All family groups are currently visible to everyone.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -1998,6 +2016,56 @@
         </div>
     </div>
 
+    <!-- Create Family Group Modal (Developer Only) -->
+    <div id="createFamilyGroupModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 style="color: #667eea;">👨‍👩‍👧‍👦 Create Custom Family Group</h2>
+                <button class="btn" onclick="closeModal('createFamilyGroupModal')" style="background: #6c757d; color: white;">✕ Close</button>
+            </div>
+            <form id="createFamilyGroupForm" onsubmit="createCustomFamilyGroup(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customFamilyName">Family Group Name</label>
+                        <input type="text" id="customFamilyName" name="customFamilyName" required 
+                               placeholder="e.g., The Smith Family, Johnson-Williams Family">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="customFamilyDescription">Description (Optional)</label>
+                        <textarea id="customFamilyDescription" name="customFamilyDescription" rows="3" 
+                                placeholder="Brief description of this family group..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Parents/Heads of Family</label>
+                    <div class="family-members-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+                        <div id="customFamilyParentsContainer">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Children/Other Family Members</label>
+                    <div class="family-members-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+                        <div id="customFamilyChildrenContainer">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeModal('createFamilyGroupModal')" class="btn" style="background: #6c757d; color: white;">Cancel</button>
+                    <button type="submit" class="btn" style="background: #667eea; color: white;">👨‍👩‍👧‍👦 Create Family Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Load the new relationship system -->
     <!-- Consolidated: relationship-system.js and relationship-ui.js code is now inline below -->
 
@@ -2508,6 +2576,10 @@
         let messages = [];
         let accountRequests = [];
         let deniedAccounts = [];
+        
+        // Super Admin Features (dfinn12 only)
+        let hiddenFamilyIds = new Set(); // Track hidden family trees
+        let customFamilyGroups = []; // Custom created family groups
 
         // Initialize the app
         async function init() {
@@ -2542,9 +2614,12 @@
                 startRequestMonitoring();
             }
             
-            // Add developer test button for dfinn12 only
+            // Add developer features for dfinn12 only
             if (currentUser.isDeveloper) {
                 addDeveloperTestButton();
+                // Show developer-only tabs and features
+                document.querySelectorAll('.developer-only').forEach(el => el.style.display = 'block');
+                console.log('🔥 Super Admin features activated!');
             }
 
             // Initialize the new relationship system
@@ -2621,6 +2696,11 @@
             displayAccountRequests();
             displayUpcomingBirthdays();
             populateDropdowns();
+            
+            // Load and display hidden families for developers
+            if (currentUser?.isDeveloper) {
+                displayHiddenFamilies();
+            }
         }
 
         // Load family members
@@ -3581,6 +3661,17 @@
             // Generate family trees from relationships
             const familyTrees = generateFamilyTrees();
             
+            // Calculate visible stats (hide hidden families from non-developers)
+            let visibleAutoTrees = familyTrees;
+            let visibleManualTrees = manualFamilyTrees;
+            
+            if (!currentUser?.isDeveloper) {
+                visibleAutoTrees = familyTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
+                visibleManualTrees = manualFamilyTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
+            }
+            
+            const totalVisibleTrees = visibleAutoTrees.length + visibleManualTrees.length;
+            
             // Create modern header
             const headerHtml = `
                 <div class="family-groups-header">
@@ -3590,7 +3681,7 @@
                 
                 <div class="family-stats">
                     <div class="stat-card">
-                        <div class="stat-number">${familyTrees.length + manualFamilyTrees.length}</div>
+                        <div class="stat-number">${totalVisibleTrees}</div>
                         <div class="stat-label">Family Trees</div>
                     </div>
                     <div class="stat-card">
@@ -3598,11 +3689,11 @@
                         <div class="stat-label">Total Members</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${familyTrees.reduce((sum, tree) => sum + (tree.generations ? tree.generations.length : 0), 0)}</div>
+                        <div class="stat-number">${visibleAutoTrees.reduce((sum, tree) => sum + (tree.generations ? tree.generations.length : 0), 0)}</div>
                         <div class="stat-label">Generations</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${manualFamilyTrees.length}</div>
+                        <div class="stat-number">${visibleManualTrees.length}</div>
                         <div class="stat-label">Memorial Trees</div>
                     </div>
                 </div>
@@ -3623,6 +3714,12 @@
                         <span class="icon">🕊️</span>
                         Create Memorial Family
                     </button>
+                    ${currentUser?.isDeveloper ? `
+                        <button class="view-btn" onclick="openCreateFamilyGroupModal()" style="background: #667eea; color: white; margin-left: 0.5rem;">
+                            <span class="icon">👨‍👩‍👧‍👦</span>
+                            Create Family Group
+                        </button>
+                    ` : ''}
                 </div>
             `;
 
@@ -3642,14 +3739,24 @@
                 `;
             } else {
                 // Filter out any trees that might have issues
-                const validTrees = familyTrees.filter(tree => 
+                let validTrees = familyTrees.filter(tree => 
                     tree && tree.generations && tree.generations.length > 0 && 
                     tree.generations[0] && tree.generations[0].members && tree.generations[0].members.length > 0
                 );
                 
+                // Filter out hidden families for non-developers
+                if (!currentUser?.isDeveloper) {
+                    validTrees = validTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
+                }
+                
                 // Render manual family trees as well
-                const manualTreesHtml = manualFamilyTrees.map(manualTree => renderManualFamilyCard(manualTree)).join('');
-                const manualTreesSmallHtml = manualFamilyTrees.map(manualTree => renderManualFamilySmallCard(manualTree)).join('');
+                let visibleManualTrees = manualFamilyTrees;
+                if (!currentUser?.isDeveloper) {
+                    visibleManualTrees = manualFamilyTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
+                }
+                
+                const manualTreesHtml = visibleManualTrees.map(manualTree => renderManualFamilyCard(manualTree)).join('');
+                const manualTreesSmallHtml = visibleManualTrees.map(manualTree => renderManualFamilySmallCard(manualTree)).join('');
                 
                 contentHtml = `
                     <div id="detailedViewContent" class="family-tree-grid">
@@ -3730,6 +3837,13 @@
                             <span style="margin-right: 0.5rem;">➕</span>
                             Add Member
                         </button>
+                        ${currentUser?.isDeveloper ? `
+                            <button class="action-btn" onclick="hideFamilyGroup('${familyTree.id}')" 
+                                    style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
+                                <span style="margin-right: 0.5rem;">🙈</span>
+                                Hide
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -3824,6 +3938,13 @@
                             <span style="margin-right: 0.5rem;">🗑️</span>
                             Delete
                         </button>
+                        ${currentUser?.isDeveloper ? `
+                            <button class="action-btn" onclick="hideFamilyGroup('${manualTree.id}')" 
+                                    style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
+                                <span style="margin-right: 0.5rem;">🙈</span>
+                                Hide
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -7719,6 +7840,221 @@
             } catch (error) {
                 console.error('Error deleting manual family tree:', error);
                 showMessage('Error deleting memorial family. Please try again.', 'error');
+            }
+        };
+
+        // Super Admin Functions (dfinn12 only) - Hide/Show Family Groups
+        window.hideFamilyGroup = async function(familyId) {
+            if (!currentUser?.isDeveloper) return;
+            
+            try {
+                // Add to hidden families set
+                hiddenFamilyIds.add(familyId);
+                
+                // Save to localStorage for persistence
+                localStorage.setItem('hiddenFamilyIds', JSON.stringify([...hiddenFamilyIds]));
+                
+                // Find the family name for the message
+                const family = familyTrees.find(f => f.id === familyId) || 
+                              manualFamilyTrees.find(f => f.id === familyId);
+                const familyName = family ? family.name : 'Family';
+                
+                showMessage(`${familyName} has been hidden from public view`, 'success');
+                
+                // Refresh the display
+                displayBranches();
+                displayHiddenFamilies();
+                
+            } catch (error) {
+                console.error('Error hiding family:', error);
+                showMessage('Error hiding family. Please try again.', 'error');
+            }
+        };
+
+        window.unhideFamilyGroup = async function(familyId) {
+            if (!currentUser?.isDeveloper) return;
+            
+            try {
+                // Remove from hidden families set
+                hiddenFamilyIds.delete(familyId);
+                
+                // Save to localStorage for persistence
+                localStorage.setItem('hiddenFamilyIds', JSON.stringify([...hiddenFamilyIds]));
+                
+                // Find the family name for the message
+                const family = familyTrees.find(f => f.id === familyId) || 
+                              manualFamilyTrees.find(f => f.id === familyId);
+                const familyName = family ? family.name : 'Family';
+                
+                showMessage(`${familyName} is now visible to all users`, 'success');
+                
+                // Refresh the display
+                displayBranches();
+                displayHiddenFamilies();
+                
+            } catch (error) {
+                console.error('Error unhiding family:', error);
+                showMessage('Error unhiding family. Please try again.', 'error');
+            }
+        };
+
+        function displayHiddenFamilies() {
+            if (!currentUser?.isDeveloper) return;
+            
+            const hiddenContainer = document.getElementById('hiddenFamiliesContainer');
+            if (!hiddenContainer) return;
+            
+            // Get all hidden families (both auto and manual)
+            const hiddenAuto = familyTrees.filter(f => hiddenFamilyIds.has(f.id));
+            const hiddenManual = manualFamilyTrees.filter(f => hiddenFamilyIds.has(f.id));
+            const allHidden = [...hiddenAuto, ...hiddenManual];
+            
+            if (allHidden.length === 0) {
+                hiddenContainer.innerHTML = '<div class="no-families">No families are currently hidden</div>';
+                return;
+            }
+            
+            hiddenContainer.innerHTML = allHidden.map(family => `
+                <div class="family-card small" style="border: 2px solid #e74c3c; background: #fdf2f2;">
+                    <div class="family-header">
+                        <h3>${family.name}</h3>
+                        <span class="hidden-badge" style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">HIDDEN</span>
+                    </div>
+                    <div class="family-meta">
+                        <span>Type: ${family.isManual ? 'Memorial' : 'Auto-Generated'}</span>
+                        <span>Members: ${family.isManual ? family.members?.length || 0 : family.members?.length || 0}</span>
+                    </div>
+                    <div class="family-actions">
+                        <button class="action-btn" onclick="unhideFamilyGroup('${family.id}')" 
+                                style="background: #27ae60; color: white; border: 1px solid #27ae60;">
+                            <span style="margin-right: 0.5rem;">👁️</span>
+                            Show
+                        </button>
+                        <button class="action-btn secondary" onclick="viewFamilyDetail('${family.id}')">
+                            <span style="margin-right: 0.5rem;">📋</span>
+                            Details
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Custom Family Group Functions (Developer Only)
+        window.openCreateFamilyGroupModal = function() {
+            if (!currentUser?.isDeveloper) return;
+            
+            // Populate the member selection containers
+            populateCustomFamilyMemberSelections();
+            
+            // Open the modal
+            document.getElementById('createFamilyGroupModal').classList.add('active');
+        };
+
+        function populateCustomFamilyMemberSelections() {
+            const parentsContainer = document.getElementById('customFamilyParentsContainer');
+            const childrenContainer = document.getElementById('customFamilyChildrenContainer');
+            
+            if (!parentsContainer || !childrenContainer) return;
+            
+            // Get all family members who are not already in auto-generated families or deceased
+            const availableMembers = familyMembers.filter(member => !member.deceased);
+            
+            const createMemberCheckbox = (member, container, type) => {
+                const div = document.createElement('div');
+                div.className = 'member-checkbox';
+                div.style.cssText = 'display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `${type}_${member.id}`;
+                checkbox.value = member.id;
+                checkbox.style.marginRight = '0.5rem';
+                
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.textContent = `${member.firstName} ${member.lastName}`;
+                label.style.cursor = 'pointer';
+                
+                // Add age and relationship info if available
+                const age = getAge(member);
+                if (age) {
+                    const ageSpan = document.createElement('span');
+                    ageSpan.textContent = ` (Age ${age})`;
+                    ageSpan.style.color = '#666';
+                    ageSpan.style.fontSize = '0.9rem';
+                    label.appendChild(ageSpan);
+                }
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            };
+            
+            // Clear existing content
+            parentsContainer.innerHTML = '';
+            childrenContainer.innerHTML = '';
+            
+            // Add instruction text
+            parentsContainer.innerHTML = '<p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Select the parents or main heads of this family group:</p>';
+            childrenContainer.innerHTML = '<p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Select children and other family members:</p>';
+            
+            // Populate both containers with all available members
+            availableMembers.forEach(member => {
+                createMemberCheckbox(member, parentsContainer, 'parent');
+                createMemberCheckbox(member, childrenContainer, 'child');
+            });
+        }
+
+        window.createCustomFamilyGroup = async function(event) {
+            event.preventDefault();
+            
+            if (!currentUser?.isDeveloper) return;
+            
+            try {
+                const formData = new FormData(event.target);
+                const familyName = formData.get('customFamilyName').trim();
+                const description = formData.get('customFamilyDescription').trim();
+                
+                // Get selected parents and children
+                const selectedParents = Array.from(document.querySelectorAll('#customFamilyParentsContainer input[type="checkbox"]:checked'))
+                    .map(cb => cb.value);
+                const selectedChildren = Array.from(document.querySelectorAll('#customFamilyChildrenContainer input[type="checkbox"]:checked'))
+                    .map(cb => cb.value);
+                
+                // Validate at least one member is selected
+                if (selectedParents.length === 0 && selectedChildren.length === 0) {
+                    showMessage('Please select at least one family member.', 'error');
+                    return;
+                }
+                
+                // Create the custom family group object
+                const customFamilyGroup = {
+                    name: familyName,
+                    description: description,
+                    parentIds: selectedParents,
+                    childrenIds: selectedChildren,
+                    isCustom: true,
+                    createdBy: currentUser.username,
+                    createdAt: new Date(),
+                    id: `custom_family_${Date.now()}`
+                };
+                
+                // Store in Firebase (using manual_family_trees collection but marked as custom)
+                await addDoc(collection(db, 'manual_family_trees'), customFamilyGroup);
+                
+                // Add to local array
+                manualFamilyTrees.push(customFamilyGroup);
+                
+                showMessage(`Custom family group "${familyName}" created successfully!`, 'success');
+                
+                // Close modal and refresh display
+                closeModal('createFamilyGroupModal');
+                document.getElementById('createFamilyGroupForm').reset();
+                displayBranches();
+                
+            } catch (error) {
+                console.error('Error creating custom family group:', error);
+                showMessage('Error creating custom family group. Please try again.', 'error');
             }
         };
 
