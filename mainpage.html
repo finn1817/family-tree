@@ -3054,47 +3054,59 @@
                 }
             });
 
-            // Compact grid layout for family members
-            grid.innerHTML = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1rem;">
-                    ${filtered.map(member => {
-                        const age = getAge(member);
-                        const nextBirthday = getNextBirthday(member);
-                        const daysUntilBirthday = Math.ceil((nextBirthday - new Date()) / (1000 * 60 * 60 * 24));
-                        const deceasedStyle = member.deceased ? 'border-left: 4px solid #e74c3c;' : 'border-left: 4px solid #667eea;';
-                        const deceasedIcon = member.deceased ? '🕊️ ' : '';
-                        
-                        return `
-                        <div class="family-card" style="${deceasedStyle} height: auto; min-height: unset;">
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
-                                <div>
-                                    <h3 style="color: ${member.deceased ? '#e74c3c' : '#667eea'}; margin: 0 0 0.25rem 0; font-size: 1.1rem;">${deceasedIcon}${member.firstName || ''} ${member.lastName || ''}</h3>
-                                    <p style="color: #666; font-size: 0.85rem; margin: 0;">Age: ${age} | ${member.familyBranch || 'No group'}</p>
-                                    ${member.deceased ? '<p style="color: #e74c3c; font-size: 0.75rem; font-style: italic; margin: 0.25rem 0 0 0;">🕊️ Deceased</p>' : ''}
-                                </div>
-                                ${daysUntilBirthday <= 30 && !member.deceased ? `
-                                    <span style="background: #e74c3c20; color: #e74c3c; padding: 0.2rem 0.4rem; border-radius: 8px; font-size: 0.7rem; white-space: nowrap;">
-                                        🎂 ${daysUntilBirthday}d
-                                    </span>
-                                ` : ''}
-                            </div>
-
-                            <!-- Compact relationship info -->
-                            <div style="margin-bottom: 0.75rem; font-size: 0.8rem; color: #555;">
-                                ${member.marriedTo && member.marriedTo.length > 0 ? `<div style="margin-bottom: 0.25rem;">💍 ${getSpousesNames(member.marriedTo)}</div>` : ''}
-                                ${member.children && member.children.length > 0 ? `<div style="margin-bottom: 0.25rem;">👶 ${member.children.length} child${member.children.length > 1 ? 'ren' : ''}</div>` : ''}
-                            </div>
-
-                            <div style="display: flex; gap: 0.4rem; font-size: 0.75rem;">
-                                <button class="btn btn-primary" onclick="openEditMemberModal('${member.id}')" style="flex: 1; padding: 0.4rem;">✏️ Edit</button>
-                                <button class="btn" onclick="viewFamilyTree('${member.id}')" style="background: #28a745; color: white; flex: 1; padding: 0.4rem;">🌳 Tree</button>
-                                <button class="btn btn-danger" onclick="deleteFamilyMember('${member.id}')" style="flex: 1; padding: 0.4rem;">🗑️</button>
-                            </div>
+            grid.innerHTML = filtered.map(member => {
+                const age = getAge(member);
+                const nextBirthday = getNextBirthday(member);
+                const daysUntilBirthday = Math.ceil((nextBirthday - new Date()) / (1000 * 60 * 60 * 24));
+                const deceasedStyle = member.deceased ? 'border: 3px solid #e74c3c; box-shadow: 0 0 10px rgba(231, 76, 60, 0.3);' : '';
+                const deceasedIcon = member.deceased ? '🕊️ ' : '';
+                
+                return `
+                <div class="family-card" style="${deceasedStyle}">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <h3 style="color: ${member.deceased ? '#e74c3c' : '#667eea'}; margin-bottom: 0.5rem;">${deceasedIcon}${member.firstName || ''} ${member.lastName || ''}</h3>
+                            <p style="color: #666; font-size: 0.9rem;">Age: ${age} | Birthday: ${member.birthMonth || 'N/A'} ${member.birthDay || 'N/A'}, ${member.birthYear || 'N/A'}</p>
+                            ${member.deceased ? '<p style="color: #e74c3c; font-size: 0.8rem; font-style: italic;">🕊️ Deceased</p>' : ''}
                         </div>
-                        `;
-                    }).join('')}
+                        ${daysUntilBirthday <= 30 && !member.deceased ? `
+                            <span style="background: #e74c3c20; color: #e74c3c; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem;">
+                                🎂 ${daysUntilBirthday} days
+                            </span>
+                        ` : ''}
+                    </div>
+
+
+
+                    <!-- Basic Info -->
+                    <div class="family-info" style="margin-bottom: 1rem;">
+                        <div><strong>Family Group:</strong> ${member.familyBranch || 'No group assigned'}</div>
+                        ${member.marriedTo && member.marriedTo.length > 0 ? `<div><strong>💍 Currently Married To:</strong> ${getSpousesNames(member.marriedTo)}</div>` : ''}
+                        ${member.marriageHistory && member.marriageHistory.length > 0 ? `
+                            <div><strong>📚 Marriage History:</strong>
+                                ${member.marriageHistory.map(marriage => {
+                                    const spouseName = getSpouseName(marriage.spouseId);
+                                    const statusEmoji = marriage.status === 'widowed' ? '🕊️' : marriage.status === 'divorced' ? '💔' : '💍';
+                                    const duration = marriage.startYear && marriage.endYear ? ` (${marriage.startYear}-${marriage.endYear})` : '';
+                                    return `<div style="margin-left: 1rem;">${statusEmoji} ${marriage.status}: ${spouseName}${duration}</div>`;
+                                }).join('')}
+                            </div>
+                        ` : ''}
+                        ${member.parents && member.parents.length > 0 ? `<div><strong>👫 Parents:</strong> ${getParentsNames(member.parents)}</div>` : ''}
+                        ${member.children && member.children.length > 0 ? `<div><strong>👶 Children:</strong> ${getChildrenNames(member.children)}</div>` : ''}
+                        <div><strong>Mobile:</strong> ${member.mobilePhone || 'Not provided'}</div>
+                        <div><strong>Email:</strong> ${member.email || 'Not provided'}</div>
+                        <div><strong>Address:</strong> ${member.address ? `${member.address}, ${member.city || ''} ${member.state || ''}` : 'Not provided'}</div>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; font-size: 0.85rem;">
+                        <button class="btn btn-primary" onclick="openEditMemberModal('${member.id}')" style="flex: 1;">✏️ Edit</button>
+                        <button class="btn" onclick="viewFamilyTree('${member.id}')" style="background: #28a745; color: white; flex: 1;">🌳 Family Tree</button>
+                        <button class="btn btn-danger" onclick="deleteFamilyMember('${member.id}')" style="flex: 1;">🗑️ Delete</button>
+                    </div>
                 </div>
             `;
+            }).join('');
         }
 
         // Helper function to get spouse name
@@ -9226,6 +9238,7 @@
         // Initialize the app
         init();
         initializeModals();
+        // force to push
     </script>
 </body>
 </html>
