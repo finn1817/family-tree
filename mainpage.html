@@ -8120,14 +8120,21 @@
             showVirtualFamilyDetailModal(virtualFamily);
         };
 
-        // Direct Firebase query for single virtual family
+        // Direct Firebase query for single virtual family - FIXED TO USE CORRECT COLLECTION
         async function loadSingleVirtualFamily(virtualFamilyId) {
             try {
-                const doc = await getDoc(doc(db, 'virtual_family_groups', virtualFamilyId));
-                if (doc.exists()) {
-                    const virtualFamily = { id: doc.id, ...doc.data() };
+                // Virtual families are stored in manual_family_trees collection
+                const docRef = doc(db, 'manual_family_trees', virtualFamilyId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const virtualFamily = { id: docSnap.id, ...docSnap.data() };
                     console.log('✅ Found virtual family via direct query:', virtualFamily);
-                    showVirtualFamilyDetailModal(virtualFamily);
+                    if (virtualFamily.isVirtual) {
+                        showVirtualFamilyDetailModal(virtualFamily);
+                    } else {
+                        console.error('❌ Document exists but is not a virtual family');
+                        alert('This is not a virtual family group.');
+                    }
                 } else {
                     console.error('❌ Virtual family document does not exist');
                     alert('Virtual family group not found. It may have been deleted.');
@@ -8490,17 +8497,19 @@
         let selectedVirtualChildren = new Set();
         let virtualFamilyGroups = []; // Store virtual family groups separately
 
-        // Load virtual family groups from Firebase - SEPARATE COLLECTION
+        // Load virtual family groups from Firebase - FIXED TO USE CORRECT COLLECTION
         async function loadVirtualFamilyGroups() {
             try {
-                const querySnapshot = await getDocs(collection(db, 'virtual_family_groups'));
+                // Virtual families are stored in manual_family_trees with isVirtual: true
+                const querySnapshot = await getDocs(query(collection(db, 'manual_family_trees'), where('isVirtual', '==', true)));
                 virtualFamilyGroups = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
-                console.log(`Loaded ${virtualFamilyGroups.length} virtual family groups`);
+                console.log(`✅ Loaded ${virtualFamilyGroups.length} virtual family groups from manual_family_trees collection`);
+                console.log('📋 Virtual families:', virtualFamilyGroups.map(f => ({ id: f.id, name: f.name })));
             } catch (error) {
-                console.error('Error loading virtual family groups:', error);
+                console.error('❌ Error loading virtual family groups:', error);
             }
         }
 
@@ -8837,8 +8846,8 @@
                     isVirtual: true
                 };
                 
-                // Save to separate Firebase collection
-                const docRef = await addDoc(collection(db, 'virtual_family_groups'), virtualGroup);
+                // Save to manual_family_trees collection with isVirtual flag
+                const docRef = await addDoc(collection(db, 'manual_family_trees'), virtualGroup);
                 virtualGroup.id = docRef.id;
                 
                 // Add to local array
