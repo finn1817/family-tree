@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Tree - Dashboard</title>
-    <!-- SheetJS library for Excel file processing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -444,101 +442,6 @@
             color: #666;
         }
         
-        .bulk-import {
-            background: #f8f9ff;
-            border: 2px dashed #667eea;
-            border-radius: 15px;
-            padding: 2rem;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        
-        .import-area {
-            width: 100%;
-            min-height: 200px;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 1rem;
-            font-family: monospace;
-            margin: 1rem 0;
-        }
-        
-        .file-upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 15px;
-            padding: 2rem;
-            margin: 1rem 0;
-            background: white;
-            transition: all 0.3s;
-        }
-        
-        .file-upload-area:hover {
-            border-color: #4a5fd8;
-            background: #f8f9ff;
-        }
-        
-        .file-upload-area.dragover {
-            border-color: #4a5fd8;
-            background: #f0f4ff;
-            transform: scale(1.02);
-        }
-        
-        .file-input {
-            display: none;
-        }
-        
-        .file-upload-btn {
-            display: inline-block;
-            padding: 1rem 2rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            margin: 1rem;
-        }
-        
-        .file-upload-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        
-        .file-info {
-            margin: 1rem 0;
-            padding: 1rem;
-            background: #e8f4fd;
-            border-radius: 10px;
-            display: none;
-        }
-        
-        .preview-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .preview-table th,
-        .preview-table td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .preview-table th {
-            background: #667eea;
-            color: white;
-            font-weight: 600;
-        }
-        
-        .preview-table tr:hover {
-            background: #f8f9ff;
-        }
-        
         /* New Relationship System Styles */
         .relationship-section {
             display: none;
@@ -605,6 +508,390 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Enhanced Mobile and iOS Optimization Styles */
+        @media screen and (max-width: 768px) {
+            /* Navigation improvements for mobile */
+            .nav-tabs {
+                flex-wrap: wrap;
+                border-bottom: 1px solid #dee2e6;
+                margin-bottom: 15px;
+            }
+            
+            .nav-tabs .nav-item {
+                flex: 1;
+                min-width: 100px;
+            }
+            
+            .nav-tabs .nav-link {
+                padding: 10px 8px;
+                font-size: 13px;
+                text-align: center;
+                border-radius: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            /* Container and layout adjustments */
+            .container-fluid {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            
+            .row {
+                margin-left: -5px;
+                margin-right: -5px;
+            }
+            
+            .col-md-6, .col-md-4, .col-md-8, .col-12 {
+                padding-left: 5px;
+                padding-right: 5px;
+            }
+            
+            /* Family member cards for mobile */
+            .family-member-card {
+                margin-bottom: 12px;
+                font-size: 14px;
+                padding: 12px;
+            }
+            
+            .family-member-card h5 {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+            
+            .family-member-card p {
+                margin-bottom: 4px;
+                font-size: 13px;
+            }
+            
+            /* Button improvements for touch */
+            .btn {
+                min-height: 44px;
+                margin-bottom: 8px;
+                font-size: 14px;
+                padding: 10px 15px;
+                border-radius: 8px;
+            }
+            
+            .btn-sm {
+                min-height: 36px;
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            
+            /* Form improvements for mobile */
+            .form-control {
+                min-height: 44px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 10px 12px;
+                border-radius: 8px;
+            }
+            
+            .form-control-sm {
+                min-height: 36px;
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+            
+            /* Modal improvements for mobile */
+            .modal-dialog {
+                margin: 10px;
+                max-width: calc(100% - 20px);
+            }
+            
+            .modal-content {
+                border-radius: 12px;
+                border: none;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            
+            .modal-header {
+                padding: 15px 20px;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .modal-body {
+                padding: 20px;
+                max-height: calc(100vh - 200px);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .modal-footer {
+                padding: 15px 20px;
+                border-top: 1px solid #e9ecef;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .modal-footer .btn {
+                margin: 0;
+                flex: 1;
+                min-width: 120px;
+            }
+            
+            /* Family tree improvements for mobile */
+            .family-tree-container {
+                padding: 10px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .generation {
+                margin-bottom: 20px;
+            }
+            
+            .generation h4 {
+                font-size: 16px;
+                margin-bottom: 10px;
+                padding: 8px 12px;
+                background: #f8f9fa;
+                border-radius: 6px;
+            }
+            
+            .member-card {
+                margin-bottom: 10px;
+                padding: 12px;
+                font-size: 13px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            /* Small view optimizations */
+            .small-view-container {
+                padding: 8px;
+            }
+            
+            .family-group-card {
+                margin-bottom: 10px;
+                padding: 12px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            
+            .family-group-header {
+                font-size: 15px;
+                margin-bottom: 8px;
+                font-weight: 600;
+            }
+            
+            .member-count {
+                font-size: 12px;
+                opacity: 0.8;
+            }
+            
+            /* Search and filter improvements */
+            .search-container {
+                margin-bottom: 15px;
+            }
+            
+            .search-container input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            /* Table improvements for mobile */
+            .table-responsive {
+                border: none;
+                font-size: 13px;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            
+            .table td, .table th {
+                padding: 10px 8px;
+                vertical-align: middle;
+                font-size: 13px;
+            }
+            
+            .table th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+            }
+            
+            /* Checkbox and radio improvements */
+            .form-check-input {
+                width: 20px;
+                height: 20px;
+                margin-top: 2px;
+            }
+            
+            .form-check-label {
+                font-size: 14px;
+                margin-left: 8px;
+                line-height: 1.4;
+            }
+            
+            /* Badge and alert improvements */
+            .badge {
+                font-size: 11px;
+                padding: 4px 8px;
+                border-radius: 12px;
+            }
+            
+            .alert {
+                margin-bottom: 15px;
+                padding: 12px;
+                font-size: 14px;
+                border-radius: 8px;
+            }
+            
+            /* Loading indicators */
+            .spinner-border-sm {
+                width: 1.2rem;
+                height: 1.2rem;
+            }
+            
+            /* Prevent zoom on input focus for iOS */
+            input[type="text"], input[type="email"], input[type="password"], 
+            input[type="number"], input[type="tel"], input[type="url"], 
+            textarea, select {
+                font-size: 16px !important;
+                -webkit-appearance: none;
+            }
+            
+            /* Touch-friendly dropdown improvements */
+            .dropdown-menu {
+                font-size: 14px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: none;
+            }
+            
+            .dropdown-item {
+                padding: 12px 16px;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            
+            .dropdown-item:hover, .dropdown-item:focus {
+                background-color: #f8f9fa;
+            }
+            
+            /* Header improvements for mobile */
+            .header {
+                padding: 15px 10px;
+                text-align: center;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+            
+            /* Improved spacing for mobile layout */
+            .mb-3 {
+                margin-bottom: 15px !important;
+            }
+            
+            .mt-3 {
+                margin-top: 15px !important;
+            }
+            
+            .p-3 {
+                padding: 15px !important;
+            }
+            
+            /* Tab content improvements */
+            .tab-content {
+                padding: 15px 0;
+            }
+            
+            .tab-pane {
+                min-height: 200px;
+            }
+        }
+        
+        /* iOS specific optimizations */
+        @supports (-webkit-touch-callout: none) {
+            .form-control, .btn {
+                -webkit-appearance: none;
+                border-radius: 8px;
+            }
+            
+            .modal-content {
+                -webkit-transform: translate3d(0,0,0);
+            }
+            
+            /* Fix iOS scroll issues */
+            .modal-body {
+                -webkit-overflow-scrolling: touch;
+                overflow-y: scroll;
+            }
+        }
+        
+        /* Landscape orientation adjustments for mobile */
+        @media screen and (max-width: 768px) and (orientation: landscape) {
+            .modal-body {
+                max-height: calc(100vh - 140px);
+            }
+            
+            .nav-tabs .nav-link {
+                padding: 8px 6px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+        }
+        
+        /* Very small screens (iPhone SE, older devices) */
+        @media screen and (max-width: 375px) {
+            .container-fluid {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            
+            .btn {
+                font-size: 13px;
+                padding: 8px 12px;
+                min-height: 40px;
+            }
+            
+            .modal-dialog {
+                margin: 8px;
+                max-width: calc(100% - 16px);
+            }
+            
+            .table td, .table th {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
+            
+            .nav-tabs .nav-link {
+                font-size: 11px;
+                padding: 8px 4px;
+            }
+            
+            .family-member-card {
+                padding: 10px;
+                font-size: 13px;
+            }
+        }
+        
+        /* Extra large screens - optimize for desktop */
+        @media screen and (min-width: 1200px) {
+            .family-tree-container {
+                padding: 20px;
+            }
+            
+            .member-card {
+                margin-bottom: 15px;
+                padding: 15px;
+            }
+            
+            .modal-dialog {
+                max-width: 800px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -632,7 +919,6 @@
                 📋 Account Requests
                 <span id="requestsBadge" class="requests-badge" style="display: none;">0</span>
             </div>
-            <div class="tab admin-only" onclick="switchTab('import')" style="display: none;">📋 Bulk Import</div>
         </div>
 
         <div class="tab-content">
@@ -712,65 +998,6 @@
                     <div id="requestsStats" style="margin: 1rem 0;"></div>
                 </div>
                 <div id="requestsGrid" class="family-grid"></div>
-            </div>
-
-            <!-- Bulk Import Section (Admin Only) -->
-            <div id="import" class="section">
-                <div class="bulk-import">
-                    <h3>📋 Bulk Import Family Data</h3>
-                    <p>Upload your Excel file (.xlsx, .xls) to automatically import family member data:</p>
-                    
-                    <div class="file-upload-area" id="fileUploadArea">
-                        <div class="file-upload-content">
-                            <h4>📎 Drop Excel file here or click to browse</h4>
-                            <p>Supported formats: .xlsx, .xls</p>
-                            <label for="excelFile" class="file-upload-btn">Choose Excel File</label>
-                            <input type="file" id="excelFile" class="file-input" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
-                        </div>
-                    </div>
-                    
-                    <div id="fileInfo" class="file-info">
-                        <p><strong>File:</strong> <span id="fileName"></span></p>
-                        <p><strong>Size:</strong> <span id="fileSize"></span></p>
-                        <p><strong>Rows found:</strong> <span id="rowCount"></span></p>
-                    </div>
-                    
-                    <div id="previewContainer" style="display: none;">
-                        <h4>Preview Data (First 5 rows):</h4>
-                        <div style="overflow-x: auto;">
-                            <table id="previewTable" class="preview-table">
-                                <thead>
-                                    <tr>
-                                        <th>First Name</th>
-                                        <th>Last Name</th>
-                                        <th>Month</th>
-                                        <th>Day</th>
-                                        <th>Year</th>
-                                        <th>Column G (Ignored)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="previewBody">
-                                </tbody>
-                            </table>
-                        </div>
-                        <button class="btn btn-success" onclick="confirmImport()" id="importBtn" style="margin-top: 1rem;">Import All Data</button>
-                        <button class="btn btn-primary" onclick="clearFile()" style="margin-top: 1rem; margin-left: 0.5rem;">Choose Different File</button>
-                        <button class="btn" onclick="testDatabase()" style="margin-top: 1rem; margin-left: 0.5rem; background: #ffc107; color: #000;">Test Database</button>
-                    </div>
-                    
-                    <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 10px; text-align: left;">
-                        <h4>📝 Excel File Format Requirements:</h4>
-                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                            <li><strong>Column A:</strong> First Name</li>
-                            <li><strong>Column B:</strong> Last Name</li>
-                            <li><strong>Column C:</strong> Birth Month (e.g., "January", "February")</li>
-                            <li><strong>Column D:</strong> Birth Day (1-31)</li>
-                            <li><strong>Column E:</strong> Birth Year (e.g., 1990)</li>
-                            <li><strong>Column G:</strong> Will be ignored during import</li>
-                        </ul>
-                        <p><em>Note: Family branches will be empty after import - organize into families later using the Family Branches tab</em></p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -4059,301 +4286,6 @@
                 alert('Message posted successfully!');
             } catch (error) {
                 alert('Error posting message: ' + error.message);
-            }
-        }
-
-        // Bulk import
-        let selectedFileData = null;
-
-        // File upload handling
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                processExcelFile(file);
-            }
-        }
-
-        // Drag and drop handling
-        const fileUploadArea = document.getElementById('fileUploadArea');
-        fileUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.add('dragover');
-        });
-
-        fileUploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.remove('dragover');
-        });
-
-        fileUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                processExcelFile(files[0]);
-            }
-        });
-
-        function processExcelFile(file) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // Get the first worksheet
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // Convert to JSON (array of arrays)
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    // Filter out empty rows
-                    const filteredData = jsonData.filter(row => 
-                        row.length > 0 && row.some(cell => cell && cell.toString().trim())
-                    );
-                    
-                    if (filteredData.length === 0) {
-                        alert('No data found in the Excel file');
-                        return;
-                    }
-                    
-                    selectedFileData = filteredData;
-                    displayFileInfo(file, filteredData.length);
-                    displayPreview(filteredData);
-                    
-                } catch (error) {
-                    alert('Error reading Excel file: ' + error.message);
-                }
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-
-        function displayFileInfo(file, rowCount) {
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
-            document.getElementById('rowCount').textContent = rowCount;
-            document.getElementById('fileInfo').style.display = 'block';
-        }
-
-        function displayPreview(data) {
-            const previewBody = document.getElementById('previewBody');
-            previewBody.innerHTML = '';
-            
-            // Show first 5 rows (skip header if it exists)
-            const startRow = (data[0] && typeof data[0][0] === 'string' && data[0][0].toLowerCase().includes('name')) ? 1 : 0;
-            const previewRows = data.slice(startRow, startRow + 5);
-            
-            previewRows.forEach(row => {
-                const tr = document.createElement('tr');
-                
-                // Map columns: A, B, C, D, E, skip F, G
-                const firstName = row[0] || '';
-                const lastName = row[1] || '';
-                const month = row[2] || '';
-                const day = row[3] || '';
-                const year = row[4] || '';
-                const columnG = row[6] || ''; // Column G (shows what's there but won't be imported)
-                
-                tr.innerHTML = `
-                    <td>${firstName}</td>
-                    <td>${lastName}</td>
-                    <td>${month}</td>
-                    <td>${day}</td>
-                    <td>${year}</td>
-                    <td style="opacity: 0.5; font-style: italic;">${columnG}<br><small>(ignored)</small></td>
-                `;
-                previewBody.appendChild(tr);
-            });
-            
-            document.getElementById('previewContainer').style.display = 'block';
-        }
-
-        async function confirmImport() {
-            console.log('confirmImport called');
-            
-            if (!currentUser.isAdmin) {
-                alert('Only admin users can import data');
-                return;
-            }
-            
-            if (!selectedFileData) {
-                alert('No file data selected');
-                return;
-            }
-
-            console.log('Selected file data length:', selectedFileData.length);
-
-            const confirmMessage = `Are you sure you want to import ${selectedFileData.length} records? This will add all valid entries to the database.`;
-            if (!confirm(confirmMessage)) return;
-
-            // Show loading message
-            const importBtn = document.getElementById('importBtn');
-            const originalText = importBtn.textContent;
-            importBtn.textContent = 'Importing...';
-            importBtn.disabled = true;
-
-            try {
-                let imported = 0;
-                let skipped = 0;
-                
-                // Skip header row if it exists
-                const startRow = (selectedFileData[0] && typeof selectedFileData[0][0] === 'string' && 
-                                selectedFileData[0][0].toLowerCase().includes('name')) ? 1 : 0;
-                
-                const dataRows = selectedFileData.slice(startRow);
-                console.log('Processing', dataRows.length, 'rows');
-                
-                for (const row of dataRows) {
-                    try {
-                        // Map columns: A, B, C, D, E, skip F, G
-                        const firstName = row[0]?.toString().trim() || '';
-                        const lastName = row[1]?.toString().trim() || '';
-                        const month = row[2]?.toString().trim() || '';
-                        const day = parseInt(row[3]) || 1;
-                        const year = parseInt(row[4]) || new Date().getFullYear();
-                        // Note: Column G in your data appears to be birthday dates, not family branches
-                        // We'll leave familyBranch empty for now and you can organize families later
-                        
-                        // Only import if we have at least first and last name
-                        if (firstName && lastName) {
-                            const memberData = {
-                                firstName: firstName,
-                                lastName: lastName,
-                                birthMonth: month,
-                                birthDay: day,
-                                birthYear: year,
-                                familyBranch: '', // Leave empty - you'll organize into families later
-                                relationship: '', // Can be updated later
-                                relatedTo: '',
-                                mobilePhone: '',
-                                homePhone: '',
-                                workPhone: '',
-                                address: '',
-                                city: '',
-                                state: '',
-                                zipCode: '',
-                                anniversaryDate: '',
-                                notes: '',
-                                createdAt: new Date(),
-                                createdBy: currentUser.username
-                            };
-
-                            console.log('Adding member:', firstName, lastName);
-                            await addDoc(collection(db, 'family_members'), memberData);
-                            imported++;
-                        } else {
-                            console.log('Skipping row - missing name:', firstName, lastName);
-                            skipped++;
-                        }
-                    } catch (rowError) {
-                        console.error('Error processing row:', row, rowError);
-                        skipped++;
-                    }
-                }
-
-                console.log('Import completed. Imported:', imported, 'Skipped:', skipped);
-
-                // Clear the file selection
-                clearFile();
-                
-                // Refresh the display
-                await loadFamilyMembers();
-                displayFamilyMembers();
-                displayUpcomingBirthdays();
-                
-                alert(`Import completed!\nImported: ${imported} family members\nSkipped: ${skipped} incomplete records`);
-                
-            } catch (error) {
-                console.error('Import error:', error);
-                alert('Error importing data: ' + error.message);
-            } finally {
-                // Restore button
-                importBtn.textContent = originalText;
-                importBtn.disabled = false;
-            }
-        }
-
-        // Make sure the function is globally accessible
-        window.confirmImport = confirmImport;
-
-        function clearFile() {
-            selectedFileData = null;
-            document.getElementById('excelFile').value = '';
-            document.getElementById('fileInfo').style.display = 'none';
-            document.getElementById('previewContainer').style.display = 'none';
-        }
-
-        // Make sure functions are globally accessible
-        window.handleFileSelect = handleFileSelect;
-        window.clearFile = clearFile;
-        
-        // Test function to verify database connectivity
-        window.testDatabase = async function() {
-            try {
-                console.log('Testing database connection...');
-                
-                // Just try to read from the users collection (which we know exists)
-                const usersSnapshot = await getDocs(collection(db, 'users'));
-                console.log('Successfully connected to database. Found', usersSnapshot.size, 'users');
-                
-                // Try to read from family_members collection (might not exist yet)
-                const familySnapshot = await getDocs(collection(db, 'family_members'));
-                console.log('Family members collection exists. Found', familySnapshot.size, 'members');
-                
-                alert(`Database connection successful!\nUsers: ${usersSnapshot.size}\nFamily Members: ${familySnapshot.size}`);
-                
-            } catch (error) {
-                console.error('Database test failed:', error);
-                alert('Database test failed: ' + error.message + '\n\nThis might be a Firestore security rules issue.');
-            }
-        };
-
-        // Legacy bulk import function (keeping for backward compatibility)
-        async function bulkImport() {
-            if (!currentUser.isAdmin) return;
-
-            const data = document.getElementById('importData').value;
-            if (!data.trim()) {
-                alert('Please paste data to import');
-                return;
-            }
-
-            try {
-                const lines = data.split('\n').filter(line => line.trim());
-                let imported = 0;
-
-                for (const line of lines) {
-                    const fields = line.split('\t');
-                    if (fields.length >= 5) {
-                        const memberData = {
-                            firstName: fields[0]?.trim() || '',
-                            lastName: fields[1]?.trim() || '',
-                            birthMonth: fields[2]?.trim() || '',
-                            birthDay: parseInt(fields[3]?.trim()) || 1,
-                            birthYear: parseInt(fields[4]?.trim()) || new Date().getFullYear(),
-                            familyBranch: fields[5]?.trim() || '',
-                            relationship: fields[6]?.trim() || '',
-                            createdAt: new Date(),
-                            createdBy: currentUser.username
-                        };
-
-                        if (memberData.firstName && memberData.lastName) {
-                            await addDoc(collection(db, 'family_members'), memberData);
-                            imported++;
-                        }
-                    }
-                }
-
-                document.getElementById('importData').value = '';
-                await loadFamilyMembers();
-                displayFamilyMembers();
-                displayUpcomingBirthdays();
-                alert(`Successfully imported ${imported} family members!`);
-            } catch (error) {
-                alert('Error importing data: ' + error.message);
             }
         }
 
