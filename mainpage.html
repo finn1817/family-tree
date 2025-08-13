@@ -8092,20 +8092,59 @@
 
         // View virtual family detail - NEW FUNCTION FOR VIRTUAL FAMILIES
         window.viewVirtualFamilyDetail = function(virtualFamilyId) {
+            console.log('🔍 viewVirtualFamilyDetail called with ID:', virtualFamilyId);
+            console.log('📊 Available virtual family groups:', virtualFamilyGroups);
+            console.log('📊 Virtual family groups count:', virtualFamilyGroups.length);
+            
             const virtualFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
             if (!virtualFamily) {
-                console.error('Virtual family not found:', virtualFamilyId);
+                console.error('❌ Virtual family not found:', virtualFamilyId);
+                console.log('🔍 Available IDs:', virtualFamilyGroups.map(f => f.id));
+                
+                // Try to reload virtual families and retry
+                console.log('🔄 Attempting to reload virtual families...');
+                loadVirtualFamilyGroups().then(() => {
+                    console.log('✅ Reloaded virtual families, retrying...');
+                    const retryFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
+                    if (retryFamily) {
+                        console.log('✅ Found virtual family after reload:', retryFamily);
+                        viewVirtualFamilyDetailCore(retryFamily);
+                    } else {
+                        console.error('❌ Still not found after reload');
+                        alert('Error: Virtual family group not found. Please refresh the page and try again.');
+                    }
+                }).catch(error => {
+                    console.error('❌ Error reloading virtual families:', error);
+                    alert('Error loading virtual family data. Please refresh the page.');
+                });
                 return;
             }
+            
+            console.log('✅ Found virtual family:', virtualFamily);
+            viewVirtualFamilyDetailCore(virtualFamily);
+        };
+
+        // Core function to display virtual family details
+        function viewVirtualFamilyDetailCore(virtualFamily) {
+            console.log('📋 Displaying virtual family details for:', virtualFamily.name);
             
             // Get all members (parents + children)
             const parentIds = virtualFamily.parentIds || [];
             const childrenIds = virtualFamily.childrenIds || [];
             const allMemberIds = [...parentIds, ...childrenIds];
             
+            console.log('👥 Parent IDs:', parentIds);
+            console.log('👶 Children IDs:', childrenIds);
+            console.log('📊 All member IDs:', allMemberIds);
+            console.log('📊 Available family members:', familyMembers.length);
+            
             const allMembers = allMemberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             const parents = parentIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             const children = childrenIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            
+            console.log('✅ Found members:', allMembers.length);
+            console.log('✅ Found parents:', parents.length);
+            console.log('✅ Found children:', children.length);
             
             const deceasedMembers = allMembers.filter(m => m.deceased);
             const livingMembers = allMembers.filter(m => !m.deceased);
@@ -8194,7 +8233,8 @@
                 ${modalContent}
             `;
             document.getElementById('familyDetailModal').classList.add('active');
-        };
+            console.log('✅ Modal displayed successfully');
+        }
 
         // Edit manual family
         window.editManualFamily = function(manualFamilyId) {
