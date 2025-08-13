@@ -8331,31 +8331,70 @@
         }
 
         window.openCreateFamilyGroupModal = function() {
-            if (!currentUser?.isDeveloper) return;
+            console.log('openCreateFamilyGroupModal called');
+            console.log('Current user:', currentUser);
+            console.log('Is developer?', currentUser?.isDeveloper);
             
-            // Reset selections
-            selectedVirtualParents.clear();
-            selectedVirtualChildren.clear();
+            if (!currentUser?.isDeveloper) {
+                console.log('Access denied - not a developer');
+                showMessage('Access denied: Only developers can create virtual family groups', 'error');
+                return;
+            }
             
-            // Clear form
-            document.getElementById('virtualGroupName').value = '';
-            document.getElementById('virtualGroupDescription').value = '';
-            document.getElementById('virtualGroupType').value = 'memorial';
-            
-            // Hide preview sections
-            document.getElementById('selectedParentsPreview').style.display = 'none';
-            document.getElementById('selectedChildrenPreview').style.display = 'none';
-            
-            // Populate the member lists
-            populateVirtualFamilyMembers();
-            
-            // Open the modal
-            document.getElementById('createFamilyGroupModal').classList.add('active');
+            try {
+                console.log('Resetting selections...');
+                // Reset selections
+                selectedVirtualParents.clear();
+                selectedVirtualChildren.clear();
+                
+                console.log('Clearing form fields...');
+                // Clear form
+                const nameField = document.getElementById('virtualGroupName');
+                const descField = document.getElementById('virtualGroupDescription');
+                const typeField = document.getElementById('virtualGroupType');
+                
+                if (nameField) nameField.value = '';
+                if (descField) descField.value = '';
+                if (typeField) typeField.value = 'memorial';
+                
+                console.log('Hiding preview sections...');
+                // Hide preview sections
+                const parentsPreview = document.getElementById('selectedParentsPreview');
+                const childrenPreview = document.getElementById('selectedChildrenPreview');
+                
+                if (parentsPreview) parentsPreview.style.display = 'none';
+                if (childrenPreview) childrenPreview.style.display = 'none';
+                
+                console.log('Populating member lists...');
+                // Populate the member lists
+                populateVirtualFamilyMembers();
+                
+                console.log('Opening modal...');
+                // Open the modal
+                const modal = document.getElementById('createFamilyGroupModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    console.log('Modal opened successfully');
+                } else {
+                    console.error('Modal element not found!');
+                }
+            } catch (error) {
+                console.error('Error in openCreateFamilyGroupModal:', error);
+                showMessage('Error opening family group modal. Please try again.', 'error');
+            }
         };
 
         function populateVirtualFamilyMembers() {
-            populateVirtualParentsList();
-            populateVirtualChildrenList();
+            console.log('populateVirtualFamilyMembers called');
+            console.log('Family members count:', familyMembers.length);
+            
+            try {
+                populateVirtualParentsList();
+                populateVirtualChildrenList();
+                console.log('Virtual family members populated successfully');
+            } catch (error) {
+                console.error('Error populating virtual family members:', error);
+            }
         }
 
         function populateVirtualParentsList() {
