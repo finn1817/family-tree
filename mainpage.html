@@ -4264,14 +4264,16 @@
                             <span style="margin-right: 0.5rem;">👁️</span>
                             ${isVirtual ? 'View Enhanced Group' : 'View Memorial'}
                         </button>
-                        <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')">
-                            <span style="margin-right: 0.5rem;">✏️</span>
-                            Edit
-                        </button>
-                        <button class="action-btn secondary" onclick="deleteManualFamily('${manualTree.id}')" style="background: #dc3545; color: white;">
-                            <span style="margin-right: 0.5rem;">🗑️</span>
-                            Delete
-                        </button>
+                        ${currentUser?.username === 'dfinn12' ? `
+                            <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')">
+                                <span style="margin-right: 0.5rem;">✏️</span>
+                                Edit
+                            </button>
+                            <button class="action-btn secondary" onclick="deleteManualFamily('${manualTree.id}')" style="background: #dc3545; color: white;">
+                                <span style="margin-right: 0.5rem;">🗑️</span>
+                                Delete
+                            </button>
+                        ` : ''}
                         ${currentUser?.username === 'dfinn12' ? `
                             ${hiddenFamilyIds.has(manualTree.id) ? `
                                 <button class="action-btn" onclick="unhideFamilyGroup('${manualTree.id}')" 
@@ -8275,6 +8277,12 @@
 
         // Edit manual family - UPDATED TO HANDLE VIRTUAL FAMILIES
         window.editManualFamily = function(manualFamilyId) {
+            // Admin permission check
+            if (currentUser?.username !== 'dfinn12') {
+                showMessage('Access denied. Only administrators can edit family trees.', 'error');
+                return;
+            }
+            
             // First try to find in manual families
             let manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
             let isVirtual = false;
@@ -8346,7 +8354,6 @@
                 const isVirtual = virtualFamilyGroups.some(f => f.id === manualFamilyId);
                 
                 let updatedFamily;
-                let targetArray;
                 
                 if (isVirtual) {
                     // Virtual family structure - split members into parents and children
@@ -8361,7 +8368,6 @@
                         updatedAt: new Date().toISOString(),
                         isVirtual: true
                     };
-                    targetArray = virtualFamilyGroups;
                 } else {
                     // Regular manual family structure
                     updatedFamily = {
@@ -8370,16 +8376,22 @@
                         memberIds: Array.from(selectedManualMembers),
                         updatedAt: new Date().toISOString()
                     };
-                    targetArray = manualFamilyTrees;
                 }
                 
                 // Update in Firebase
                 await updateDoc(doc(db, 'manual_family_trees', manualFamilyId), updatedFamily);
                 
                 // Update local array
-                const index = targetArray.findIndex(f => f.id === manualFamilyId);
-                if (index !== -1) {
-                    targetArray[index] = { ...targetArray[index], ...updatedFamily };
+                if (isVirtual) {
+                    const index = virtualFamilyGroups.findIndex(f => f.id === manualFamilyId);
+                    if (index !== -1) {
+                        virtualFamilyGroups[index] = { ...virtualFamilyGroups[index], ...updatedFamily };
+                    }
+                } else {
+                    const index = manualFamilyTrees.findIndex(f => f.id === manualFamilyId);
+                    if (index !== -1) {
+                        manualFamilyTrees[index] = { ...manualFamilyTrees[index], ...updatedFamily };
+                    }
                 }
                 
                 const familyType = isVirtual ? 'Enhanced family group' : 'Memorial family';
@@ -8413,6 +8425,12 @@
 
         // Delete manual family
         window.deleteManualFamily = async function(manualFamilyId) {
+            // Admin permission check
+            if (currentUser?.username !== 'dfinn12') {
+                showMessage('Access denied. Only administrators can delete family trees.', 'error');
+                return;
+            }
+            
             const manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
             if (!manualFamily) return;
             
