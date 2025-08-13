@@ -451,14 +451,21 @@
         }
         
         .member-name {
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            line-height: 1.2;
         }
         
         .member-age {
-            font-size: 0.75rem;
-            opacity: 0.7;
+            font-size: 0.8rem;
+            font-weight: 600;
+            opacity: 0.9;
+            background: rgba(255, 255, 255, 0.3);
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.3rem;
+            margin-top: 0.25rem;
+            display: inline-block;
         }
         
         .family-actions {
@@ -3423,12 +3430,15 @@
                 // Skip if this member is already used as a family head
                 if (familyTreeHeads.has(head.id)) return;
                 
-                // Check if spouse is also a potential head - if so, use the older one as primary
+                // Check if spouse is also a potential head - prevent both spouses from creating families
                 if (head.marriedTo) {
                     const spouse = familyMembers.find(m => m.id === head.marriedTo);
                     if (spouse && potentialHeads.includes(spouse)) {
-                        // If spouse is older, skip this one (spouse will create the family)
-                        if (getAge(spouse) > getAge(head)) return;
+                        // If spouse is older OR if spouse already created a family, skip this one
+                        if (getAge(spouse) > getAge(head) || familyTreeHeads.has(spouse.id)) return;
+                        
+                        // Mark spouse as used so they don't create their own family
+                        familyTreeHeads.add(spouse.id);
                     }
                 }
                 
@@ -3465,9 +3475,24 @@
 
         // Build a complete family starting from a family head
         function buildCompleteFamily(familyHead, processedMembers) {
+            // Create family name with both spouses if married
+            let familyName = `${familyHead.firstName} ${familyHead.lastName} Family`;
+            
+            if (familyHead.marriedTo) {
+                const spouse = familyMembers.find(m => m.id === familyHead.marriedTo);
+                if (spouse) {
+                    // Determine who is the father (for the family last name)
+                    const isFamilyHeadMale = familyHead.gender === 'Male';
+                    const father = isFamilyHeadMale ? familyHead : spouse;
+                    const mother = isFamilyHeadMale ? spouse : familyHead;
+                    
+                    familyName = `${father.firstName} & ${mother.firstName} ${father.lastName} Family`;
+                }
+            }
+            
             const familyTree = {
                 id: `family_${familyHead.id}`,
-                name: `${familyHead.firstName} ${familyHead.lastName} Family`,
+                name: familyName,
                 generations: []
             };
 
