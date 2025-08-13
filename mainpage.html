@@ -3872,7 +3872,7 @@
             // Calculate visible stats (hide hidden families from non-developers)
             let visibleAutoTrees = familyTrees;
             let visibleManualTrees = manualFamilyTrees;
-            let visibleVirtualFamilies = virtualFamilyGroups;
+            let visibleVirtualFamilies = virtualFamilyGroups || [];
             
             // Debug logging
             console.log('Current user:', currentUser);
@@ -3993,8 +3993,10 @@
                 const manualTreesSmallHtml = visibleManualTrees.map(manualTree => renderManualFamilySmallCard(manualTree)).join('');
                 
                 // Render visible virtual family groups
-                const virtualFamilyHtml = visibleVirtualFamilies.map(virtualFamily => renderManualFamilyCard(virtualFamily)).join('');
-                const virtualFamilySmallHtml = visibleVirtualFamilies.map(virtualFamily => renderManualFamilySmallCard(virtualFamily)).join('');
+                const virtualFamilyHtml = (visibleVirtualFamilies && visibleVirtualFamilies.length > 0) ? 
+                    visibleVirtualFamilies.map(virtualFamily => renderManualFamilyCard(virtualFamily)).join('') : '';
+                const virtualFamilySmallHtml = (visibleVirtualFamilies && visibleVirtualFamilies.length > 0) ? 
+                    visibleVirtualFamilies.map(virtualFamily => renderManualFamilySmallCard(virtualFamily)).join('') : '';
                 
                 contentHtml = `
                     <div id="detailedViewContent" class="family-tree-grid">
@@ -4292,18 +4294,29 @@
 
         // Render manual family small card
         function renderManualFamilySmallCard(manualTree) {
-            const members = manualTree.memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            // Handle both virtual and manual families
+            const isVirtual = manualTree.isVirtual;
+            const memberIds = manualTree.memberIds || [...(manualTree.parentIds || []), ...(manualTree.childrenIds || [])];
+            const members = memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             
             if (members.length === 0) return '';
             
             const totalMembers = members.length;
             const deceasedCount = members.filter(m => m.deceased).length;
             
+            // Different styling for virtual vs manual families
+            const cardStyle = isVirtual ? 
+                'border: 2px solid #9c27b0; background: linear-gradient(135deg, #f3e5f5 0%, #fff 50%);' :
+                'border: 2px solid #e74c3c; background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);';
+            const iconColor = isVirtual ? '#9c27b0' : '#e74c3c';
+            const icon = isVirtual ? '🌟' : '🌹';
+            const namePrefix = isVirtual ? '🌟' : '🕊️';
+            
             return `
                 <div class="small-family-card" onclick="viewManualFamilyDetail('${manualTree.id}')" 
-                     style="border: 2px solid #e74c3c; background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);">
-                    <div class="small-family-icon" style="color: #e74c3c;">🌹</div>
-                    <div class="small-family-name">🕊️ ${manualTree.name}</div>
+                     style="${cardStyle}">
+                    <div class="small-family-icon" style="color: ${iconColor};">${icon}</div>
+                    <div class="small-family-name">${namePrefix} ${manualTree.name}</div>
                     <div class="small-family-stats">
                         <div class="small-stat">
                             <div class="small-stat-number">${totalMembers}</div>
