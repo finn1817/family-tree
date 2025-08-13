@@ -116,6 +116,22 @@
             margin-top: 0.25rem;
         }
         
+        .password-match {
+            color: #27ae60;
+        }
+        
+        .password-no-match {
+            color: #e74c3c;
+        }
+        
+        .input-valid {
+            border-color: #27ae60 !important;
+        }
+        
+        .input-invalid {
+            border-color: #e74c3c !important;
+        }
+        
         .waiting-view {
             display: none;
             text-align: center;
@@ -194,6 +210,11 @@
                 <label for="reqPassword">Password</label>
                 <input type="password" id="reqPassword" required minlength="6">
                 <div class="password-requirements">Must be 6+ characters with 1 capital letter and 1 number</div>
+            </div>
+            <div class="form-group">
+                <label for="reqConfirmPassword">Confirm Password</label>
+                <input type="password" id="reqConfirmPassword" required minlength="6">
+                <div class="password-requirements">Must match the password above</div>
             </div>
             <div class="form-group">
                 <label for="reqFirstName">First Name</label>
@@ -347,6 +368,7 @@
             
             const username = document.getElementById('reqUsername').value;
             const password = document.getElementById('reqPassword').value;
+            const confirmPassword = document.getElementById('reqConfirmPassword').value;
             const firstName = document.getElementById('reqFirstName').value;
             const lastName = document.getElementById('reqLastName').value;
             const errorDiv = document.getElementById('requestError');
@@ -360,6 +382,13 @@
             // Validate password
             if (!validatePassword(password)) {
                 errorDiv.textContent = 'Password must be 6+ characters with 1 capital letter and 1 number';
+                loadingDiv.style.display = 'none';
+                return;
+            }
+            
+            // Validate password confirmation
+            if (password !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match';
                 loadingDiv.style.display = 'none';
                 return;
             }
@@ -488,6 +517,43 @@
                 errorDiv.textContent = 'Login error: ' + error.message;
             } finally {
                 loadingDiv.style.display = 'none';
+            }
+        });
+
+        // Real-time password confirmation validation
+        function updatePasswordMatchIndicator() {
+            const password = document.getElementById('reqPassword').value;
+            const confirmPassword = document.getElementById('reqConfirmPassword').value;
+            const confirmPasswordField = document.getElementById('reqConfirmPassword');
+            const confirmPasswordRequirements = confirmPasswordField.nextElementSibling;
+            
+            if (confirmPassword.length > 0) {
+                if (password === confirmPassword) {
+                    confirmPasswordField.classList.add('input-valid');
+                    confirmPasswordField.classList.remove('input-invalid');
+                    confirmPasswordRequirements.textContent = '✓ Passwords match';
+                    confirmPasswordRequirements.className = 'password-requirements password-match';
+                } else {
+                    confirmPasswordField.classList.add('input-invalid');
+                    confirmPasswordField.classList.remove('input-valid');
+                    confirmPasswordRequirements.textContent = '✗ Passwords do not match';
+                    confirmPasswordRequirements.className = 'password-requirements password-no-match';
+                }
+            } else {
+                confirmPasswordField.classList.remove('input-valid', 'input-invalid');
+                confirmPasswordRequirements.textContent = 'Must match the password above';
+                confirmPasswordRequirements.className = 'password-requirements';
+            }
+        }
+
+        // Add event listeners for real-time validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordField = document.getElementById('reqPassword');
+            const confirmPasswordField = document.getElementById('reqConfirmPassword');
+            
+            if (passwordField && confirmPasswordField) {
+                passwordField.addEventListener('input', updatePasswordMatchIndicator);
+                confirmPasswordField.addEventListener('input', updatePasswordMatchIndicator);
             }
         });
     </script>
