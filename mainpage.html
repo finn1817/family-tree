@@ -3520,11 +3520,8 @@
                 
                 familyTree.generations.push(childrenGeneration);
                 
-                // Add spouses of children as separate generation if they exist
-                const spousesGeneration = buildSpousesGeneration(childrenGeneration.members, processedMembers);
-                if (spousesGeneration.members.length > 0) {
-                    familyTree.generations.push(spousesGeneration);
-                }
+                // Don't add spouses as separate generation - they should be integrated as in-laws
+                // within the children's generation in the display logic
                 
                 currentGeneration = childrenGeneration.members;
                 generationLevel++;
@@ -4065,7 +4062,25 @@
             }
             
             const patriarch = firstGeneration.members[0]; // First member of first generation
-            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + (gen.members ? gen.members.length : 0), 0);
+            
+            // Calculate total members including in-laws
+            let totalMembers = 0;
+            const allInLaws = new Set();
+            
+            familyTree.generations.forEach(generation => {
+                totalMembers += (generation.members ? generation.members.length : 0);
+                
+                // Count unique in-laws
+                generation.members.forEach(member => {
+                    if (member.marriedTo) {
+                        const spouse = familyMembers.find(m => m.id === member.marriedTo);
+                        if (spouse && !generation.members.find(m => m.id === spouse.id) && !allInLaws.has(spouse.id)) {
+                            allInLaws.add(spouse.id);
+                            totalMembers++;
+                        }
+                    }
+                });
+            });
             
             let generationsHtml = '';
             
@@ -4075,11 +4090,35 @@
                 const genIcon = getModernGenerationIcon(generation.type, index);
                 const genTitle = getGenerationLabel(generation.type, index);
                 
+                // Build main generation members
                 const membersHtml = generation.members.map(member => {
                     const age = getAge(member);
                     return `
                         <div class="member-pill" onclick="openEditMemberModal('${member.id}')">
                             <div class="member-name">${member.firstName} ${member.lastName}</div>
+                            <div class="member-age">${age ? `Age ${age}` : 'Age unknown'}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                // Build in-laws (spouses of generation members)
+                const inLaws = [];
+                const seenSpouses = new Set();
+                generation.members.forEach(member => {
+                    if (member.marriedTo) {
+                        const spouse = familyMembers.find(m => m.id === member.marriedTo);
+                        if (spouse && !seenSpouses.has(spouse.id) && !generation.members.find(m => m.id === spouse.id)) {
+                            inLaws.push(spouse);
+                            seenSpouses.add(spouse.id);
+                        }
+                    }
+                });
+                
+                const inLawsHtml = inLaws.map(inLaw => {
+                    const age = getAge(inLaw);
+                    return `
+                        <div class="member-pill" onclick="openEditMemberModal('${inLaw.id}')">
+                            <div class="member-name">${inLaw.firstName} ${inLaw.lastName}</div>
                             <div class="member-age">${age ? `Age ${age}` : 'Age unknown'}</div>
                         </div>
                     `;
@@ -4095,6 +4134,16 @@
                         <div class="members-grid">
                             ${membersHtml}
                         </div>
+                        ${inLaws.length > 0 ? `
+                            <div class="generation-header" style="margin-top: 1rem;">
+                                <span class="generation-icon">💍</span>
+                                <h4 class="generation-title">In-Laws</h4>
+                                <span class="generation-count">${inLaws.length}</span>
+                            </div>
+                            <div class="members-grid">
+                                ${inLawsHtml}
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             });
