@@ -2577,19 +2577,20 @@
         let accountRequests = [];
         let deniedAccounts = [];
         
-        // Super Admin Features (dfinn12 only)
+        // Super Admin Functions (dfinn12 only)
         let hiddenFamilyIds = new Set(); // Track hidden family trees
         let customFamilyGroups = []; // Custom created family groups
 
-        // Load hidden families from localStorage
-        try {
-            const savedHiddenFamilies = localStorage.getItem('hiddenFamilyIds');
-            if (savedHiddenFamilies) {
-                hiddenFamilyIds = new Set(JSON.parse(savedHiddenFamilies));
-                console.log('Loaded hidden families from localStorage:', hiddenFamilyIds);
+        // Load hidden families from Firebase (shared across all users)
+        async function loadHiddenFamilies() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'hidden_families'));
+                const hiddenIds = querySnapshot.docs.map(doc => doc.data().familyId);
+                hiddenFamilyIds = new Set(hiddenIds);
+                console.log('Loaded hidden families from Firebase:', hiddenFamilyIds);
+            } catch (error) {
+                console.error('Error loading hidden families from Firebase:', error);
             }
-        } catch (error) {
-            console.error('Error loading hidden families from localStorage:', error);
         }
 
         // Initialize the app
@@ -2697,7 +2698,8 @@
                 loadUsers(),
                 loadMessages(),
                 loadAccountRequests(),
-                loadDeniedAccounts()
+                loadDeniedAccounts(),
+                loadHiddenFamilies() // Load hidden families from Firebase
             ]);
             
             displayFamilyMembers();
@@ -3683,8 +3685,14 @@
             console.log('Total auto trees:', familyTrees.length);
             console.log('Total manual trees:', manualFamilyTrees.length);
             
-            // Only show hidden families to dfinn12 specifically
-            if (currentUser?.username !== 'dfinn12') {
+            // Filter families based on visibility
+            if (currentUser?.username === 'dfinn12') {
+                // dfinn12 sees all families (both hidden and visible)
+                visibleAutoTrees = familyTrees;
+                visibleManualTrees = manualFamilyTrees;
+                console.log('dfinn12 - showing all families including hidden ones');
+            } else {
+                // All other users only see non-hidden families
                 visibleAutoTrees = familyTrees.filter(tree => {
                     const isHidden = hiddenFamilyIds.has(tree.id);
                     console.log(`Auto tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
@@ -3695,6 +3703,7 @@
                     console.log(`Manual tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
                     return !isHidden;
                 });
+                console.log('Non-developer - hiding hidden families from view');
             }
             
             console.log('Visible auto trees:', visibleAutoTrees.length);
@@ -7890,8 +7899,12 @@
                 // Add to hidden families set
                 hiddenFamilyIds.add(familyId);
                 
-                // Save to localStorage for persistence
-                localStorage.setItem('hiddenFamilyIds', JSON.stringify([...hiddenFamilyIds]));
+                // Save to Firebase for persistence across all users
+                await addDoc(collection(db, 'hidden_families'), {
+                    familyId: familyId,
+                    hiddenBy: currentUser.username,
+                    hiddenAt: new Date().toISOString()
+                });
                 
                 // Generate current family trees to find the family name
                 const currentFamilyTrees = generateFamilyTrees();
@@ -7922,8 +7935,12 @@
                 // Remove from hidden families set
                 hiddenFamilyIds.delete(familyId);
                 
-                // Save to localStorage for persistence
-                localStorage.setItem('hiddenFamilyIds', JSON.stringify([...hiddenFamilyIds]));
+                // Remove from Firebase
+                const q = query(collection(db, 'hidden_families'), where('familyId', '==', familyId));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(async (docToDelete) => {
+                    await deleteDoc(doc(db, 'hidden_families', docToDelete.id));
+                });
                 
                 // Generate current family trees to find the family name
                 const currentFamilyTrees = generateFamilyTrees();
