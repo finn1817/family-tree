@@ -1354,6 +1354,112 @@
             from { opacity: 1; }
             to { opacity: 0; }
         }
+        
+        /* Virtual Family Group Modal Styles */
+        .status-filter-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .status-filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .status-filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .virtual-person-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: white;
+        }
+        
+        .virtual-person-item:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+        }
+        
+        .virtual-person-item.selected {
+            border-color: #4caf50;
+            background: #e8f5e8;
+        }
+        
+        .virtual-person-checkbox {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+        
+        .virtual-person-info {
+            flex: 1;
+        }
+        
+        .virtual-person-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+        
+        .virtual-person-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .virtual-person-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-living {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .status-deceased {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .selected-person-tag {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid #bbdefb;
+        }
+        
+        .remove-tag {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            color: #f44336;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -2018,49 +2124,137 @@
 
     <!-- Create Family Group Modal (Developer Only) -->
     <div id="createFamilyGroupModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2 style="color: #667eea;">👨‍👩‍👧‍👦 Create Custom Family Group</h2>
-                <button class="btn" onclick="closeModal('createFamilyGroupModal')" style="background: #6c757d; color: white;">✕ Close</button>
+        <div class="modal-content" style="max-width: 900px; max-height: 95vh;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #f0f0f0;">
+                <div>
+                    <h2 style="margin: 0; color: #667eea; font-size: 1.8rem;">🌟 Create Virtual Family Group</h2>
+                    <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 1rem;">Create memorial or alternative family groupings without affecting actual relationship data</p>
+                </div>
+                <button type="button" onclick="closeModal('createFamilyGroupModal')" style="background: none; border: none; font-size: 2rem; color: #999; cursor: pointer; padding: 0.5rem;">×</button>
             </div>
-            <form id="createFamilyGroupForm" onsubmit="createCustomFamilyGroup(event)">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="customFamilyName">Family Group Name</label>
-                        <input type="text" id="customFamilyName" name="customFamilyName" required 
-                               placeholder="e.g., The Smith Family, Johnson-Williams Family">
-                    </div>
+            
+            <div style="background: #fff8e1; border: 1px solid #ffcc02; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <span style="font-size: 2rem;">⚠️</span>
+                    <h3 style="margin: 0; color: #e65100;">Virtual Family Groups</h3>
                 </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="customFamilyDescription">Description (Optional)</label>
-                        <textarea id="customFamilyDescription" name="customFamilyDescription" rows="3" 
-                                placeholder="Brief description of this family group..."></textarea>
-                    </div>
-                </div>
+                <p style="margin: 0; color: #bf360c; line-height: 1.5;">
+                    <strong>Important:</strong> This creates a separate family view that won't change anyone's actual relationship data. 
+                    Perfect for memorial families, alternative arrangements, or "what if" scenarios.
+                </p>
+            </div>
 
-                <div class="form-group">
-                    <label>Select Parents/Heads of Family</label>
-                    <div class="family-members-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
-                        <div id="customFamilyParentsContainer">
-                            <!-- Will be populated by JavaScript -->
+            <form id="createFamilyGroupForm" onsubmit="createCustomFamilyGroup(event)" style="display: flex; flex-direction: column; gap: 2rem;">
+                <!-- Basic Info Section -->
+                <div style="background: #f8f9ff; border-radius: 16px; padding: 2rem;">
+                    <h3 style="margin: 0 0 1.5rem 0; color: #667eea; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📝</span> Basic Information
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; color: #333; margin-bottom: 0.5rem;">Group Name *</label>
+                            <input type="text" id="virtualGroupName" required 
+                                   placeholder="e.g., Uncle Tommy & Aunt Sarah Memorial Family"
+                                   style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem; transition: border-color 0.3s;">
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; font-weight: 600; color: #333; margin-bottom: 0.5rem;">Group Type</label>
+                            <select id="virtualGroupType" style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem;">
+                                <option value="memorial">Memorial Family</option>
+                                <option value="alternative">Alternative Arrangement</option>
+                                <option value="historical">Historical Family</option>
+                                <option value="custom">Custom Group</option>
+                            </select>
                         </div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Select Children/Other Family Members</label>
-                    <div class="family-members-selection" style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
-                        <div id="customFamilyChildrenContainer">
-                            <!-- Will be populated by JavaScript -->
-                        </div>
+                    
+                    <div style="margin-top: 1.5rem;">
+                        <label style="display: block; font-weight: 600; color: #333; margin-bottom: 0.5rem;">Description (Optional)</label>
+                        <textarea id="virtualGroupDescription" rows="3" 
+                                  placeholder="Brief description of this virtual family group..."
+                                  style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem; resize: vertical;"></textarea>
                     </div>
                 </div>
 
-                <div class="form-actions">
-                    <button type="button" onclick="closeModal('createFamilyGroupModal')" class="btn" style="background: #6c757d; color: white;">Cancel</button>
-                    <button type="submit" class="btn" style="background: #667eea; color: white;">👨‍👩‍👧‍👦 Create Family Group</button>
+                <!-- Parents Section -->
+                <div style="background: #fff3e0; border-radius: 16px; padding: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0; color: #f57c00; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>👫</span> Parents/Heads of Family
+                        </h3>
+                        <span style="background: #ffcc02; color: #333; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                            Virtual Relationship Only
+                        </span>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <input type="text" id="parentSearch" placeholder="🔍 Search parents by name..." 
+                               oninput="filterVirtualParents()" 
+                               style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button type="button" onclick="filterParentsByStatus('all')" class="status-filter-btn active" data-status="all">All People</button>
+                        <button type="button" onclick="filterParentsByStatus('living')" class="status-filter-btn" data-status="living">Living Only</button>
+                        <button type="button" onclick="filterParentsByStatus('deceased')" class="status-filter-btn" data-status="deceased">Deceased Only</button>
+                    </div>
+                    
+                    <div id="virtualParentsList" style="max-height: 300px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 12px; padding: 1rem; background: white;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    
+                    <div id="selectedParentsPreview" style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 12px; display: none;">
+                        <strong style="color: #2e7d32;">Selected Parents:</strong>
+                        <div id="selectedParentsList" style="margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Children Section -->
+                <div style="background: #f3e5f5; border-radius: 16px; padding: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h3 style="margin: 0; color: #7b1fa2; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>👶</span> Children/Family Members
+                        </h3>
+                        <span style="background: #ce93d8; color: #fff; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                            Optional
+                        </span>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <input type="text" id="childrenSearch" placeholder="🔍 Search children by name..." 
+                               oninput="filterVirtualChildren()" 
+                               style="width: 100%; padding: 1rem; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem;">
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button type="button" onclick="filterChildrenByStatus('all')" class="status-filter-btn active" data-status="all">All People</button>
+                        <button type="button" onclick="filterChildrenByStatus('living')" class="status-filter-btn" data-status="living">Living Only</button>
+                        <button type="button" onclick="filterChildrenByStatus('deceased')" class="status-filter-btn" data-status="deceased">Deceased Only</button>
+                    </div>
+                    
+                    <div id="virtualChildrenList" style="max-height: 300px; overflow-y: auto; border: 2px solid #e0e0e0; border-radius: 12px; padding: 1rem; background: white;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    
+                    <div id="selectedChildrenPreview" style="margin-top: 1rem; padding: 1rem; background: #e8f5e8; border-radius: 12px; display: none;">
+                        <strong style="color: #2e7d32;">Selected Children:</strong>
+                        <div id="selectedChildrenList" style="margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 2px solid #f0f0f0;">
+                    <button type="button" onclick="closeModal('createFamilyGroupModal')" 
+                            style="padding: 1rem 2rem; background: #f5f5f5; color: #666; border: 2px solid #ddd; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                        Cancel
+                    </button>
+                    
+                    <button type="submit" 
+                            style="padding: 1rem 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                        🌟 Create Virtual Family Group
+                    </button>
                 </div>
             </form>
         </div>
@@ -3916,15 +4110,25 @@
             `;
         }
 
-        // Render manual (memorial) family card
+        // Render manual (memorial) family card - Updated to support virtual families
         function renderManualFamilyCard(manualTree) {
+            // Handle both virtual and manual families
+            const isVirtual = manualTree.isVirtual;
+            const isCustom = manualTree.isCustom;
+            const memberIds = manualTree.memberIds || [...(manualTree.parentIds || []), ...(manualTree.childrenIds || [])];
+            
             // Get the actual member objects
-            const members = manualTree.memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            const members = memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             
             if (members.length === 0) return '';
             
             const totalMembers = members.length;
             const deceasedCount = members.filter(m => m.deceased).length;
+            const livingCount = totalMembers - deceasedCount;
+            
+            // Get parents and children for virtual families
+            const parents = isVirtual ? (manualTree.parentIds || []).map(id => familyMembers.find(m => m.id === id)).filter(m => m) : [];
+            const children = isVirtual ? (manualTree.childrenIds || []).map(id => familyMembers.find(m => m.id === id)).filter(m => m) : [];
             
             const membersHtml = members.map(member => {
                 const age = getAge(member);
@@ -3940,32 +4144,106 @@
                 `;
             }).join('');
 
+            // Virtual family styling
+            const virtualStyle = isVirtual ? 'border: 3px solid #9c27b0; background: linear-gradient(135deg, #f3e5f5 0%, #fff 50%);' : 'border: 3px solid #e74c3c; background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);';
+            const virtualIcon = isVirtual ? '🌟' : '🌹';
+            const virtualColor = isVirtual ? '#9c27b0' : '#e74c3c';
+            const familyTypeText = isVirtual ? `Virtual ${manualTree.type || 'Family'} Group` : 'Memorial Family';
+
+            // Generate sections for virtual families
+            let sectionsHtml = '';
+            if (isVirtual && parents.length > 0) {
+                const parentsHtml = parents.map(parent => {
+                    const age = getAge(parent);
+                    const isDeceased = parent.deceased;
+                    const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #e8f5e8; color: #2d5a2d; border: 1px solid #b8e6b8;';
+                    const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                    
+                    return `
+                        <div class="member-pill" onclick="openEditMemberModal('${parent.id}')" style="${deceasedStyle}">
+                            <div class="member-name">${deceasedIcon}${parent.firstName} ${parent.lastName}</div>
+                            <div class="member-age">${age ? `Age ${age}` : 'Age unknown'}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                sectionsHtml += `
+                    <div class="generation-section">
+                        <div class="generation-header">
+                            <span class="generation-icon">👫</span>
+                            <h4 class="generation-title">Parents/Heads of Family</h4>
+                            <span class="generation-count">${parents.length}</span>
+                        </div>
+                        <div class="members-grid">
+                            ${parentsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (isVirtual && children.length > 0) {
+                const childrenHtml = children.map(child => {
+                    const age = getAge(child);
+                    const isDeceased = child.deceased;
+                    const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #e8f5e8; color: #2d5a2d; border: 1px solid #b8e6b8;';
+                    const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                    
+                    return `
+                        <div class="member-pill" onclick="openEditMemberModal('${child.id}')" style="${deceasedStyle}">
+                            <div class="member-name">${deceasedIcon}${child.firstName} ${child.lastName}</div>
+                            <div class="member-age">${age ? `Age ${age}` : 'Age unknown'}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                sectionsHtml += `
+                    <div class="generation-section">
+                        <div class="generation-header">
+                            <span class="generation-icon">👶</span>
+                            <h4 class="generation-title">Children/Family Members</h4>
+                            <span class="generation-count">${children.length}</span>
+                        </div>
+                        <div class="members-grid">
+                            ${childrenHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // For non-virtual families, show all members in one section
+            if (!isVirtual) {
+                sectionsHtml = `
+                    <div class="generation-section">
+                        <div class="generation-header">
+                            <span class="generation-icon">👥</span>
+                            <h4 class="generation-title">Family Members</h4>
+                            <span class="generation-count">${totalMembers}</span>
+                        </div>
+                        <div class="members-grid">
+                            ${membersHtml}
+                        </div>
+                    </div>
+                `;
+            }
+
             return `
-                <div class="modern-family-card" style="border: 3px solid #e74c3c; background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);">
+                <div class="modern-family-card" style="${virtualStyle}">
                     <div class="family-header">
                         <div>
-                            <h3 class="family-title" style="color: #e74c3c;">🕊️ ${manualTree.name}</h3>
-                            <p class="family-subtitle">${totalMembers} members • ${deceasedCount} deceased • Memorial Family</p>
+                            <h3 class="family-title" style="color: ${virtualColor};">${isVirtual ? '🌟' : '🕊️'} ${manualTree.name}</h3>
+                            <p class="family-subtitle">${totalMembers} members • ${deceasedCount} deceased, ${livingCount} living • ${familyTypeText}</p>
                             ${manualTree.description ? `<p style="font-style: italic; color: #666; font-size: 0.9rem; margin-top: 0.5rem;">${manualTree.description}</p>` : ''}
+                            ${isVirtual ? `<div style="background: #fff8e1; border: 1px solid #ffcc02; border-radius: 8px; padding: 0.75rem; margin-top: 1rem; font-size: 0.85rem; color: #e65100;"><strong>⚠️ Virtual Family:</strong> This grouping doesn't affect actual relationship data.</div>` : ''}
                         </div>
-                        <div class="family-icon" style="color: #e74c3c;">🌹</div>
+                        <div class="family-icon" style="color: ${virtualColor};">${virtualIcon}</div>
                     </div>
                     <div class="family-body">
-                        <div class="generation-section">
-                            <div class="generation-header">
-                                <span class="generation-icon">👥</span>
-                                <h4 class="generation-title">Family Members</h4>
-                                <span class="generation-count">${totalMembers}</span>
-                            </div>
-                            <div class="members-grid">
-                                ${membersHtml}
-                            </div>
-                        </div>
+                        ${sectionsHtml}
                     </div>
                     <div class="family-actions">
-                        <button class="action-btn" onclick="viewManualFamilyDetail('${manualTree.id}')" style="background: #e74c3c; color: white;">
+                        <button class="action-btn" onclick="viewManualFamilyDetail('${manualTree.id}')" style="background: ${virtualColor}; color: white;">
                             <span style="margin-right: 0.5rem;">👁️</span>
-                            View Memorial
+                            ${isVirtual ? 'View Virtual Group' : 'View Memorial'}
                         </button>
                         <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')">
                             <span style="margin-right: 0.5rem;">✏️</span>
@@ -8003,124 +8281,287 @@
             `).join('');
         }
 
-        // Custom Family Group Functions (Developer Only)
+        // Virtual Family Group Functions (Developer Only) - COMPLETELY REDESIGNED
+        let selectedVirtualParents = new Set();
+        let selectedVirtualChildren = new Set();
+        let virtualFamilyGroups = []; // Store virtual family groups separately
+
         window.openCreateFamilyGroupModal = function() {
             if (!currentUser?.isDeveloper) return;
             
-            // Populate the member selection containers
-            populateCustomFamilyMemberSelections();
+            // Reset selections
+            selectedVirtualParents.clear();
+            selectedVirtualChildren.clear();
+            
+            // Clear form
+            document.getElementById('virtualGroupName').value = '';
+            document.getElementById('virtualGroupDescription').value = '';
+            document.getElementById('virtualGroupType').value = 'memorial';
+            
+            // Populate the member lists
+            populateVirtualFamilyMembers();
             
             // Open the modal
             document.getElementById('createFamilyGroupModal').classList.add('active');
         };
 
-        function populateCustomFamilyMemberSelections() {
-            const parentsContainer = document.getElementById('customFamilyParentsContainer');
-            const childrenContainer = document.getElementById('customFamilyChildrenContainer');
+        function populateVirtualFamilyMembers() {
+            populateVirtualParentsList();
+            populateVirtualChildrenList();
+        }
+
+        function populateVirtualParentsList() {
+            const container = document.getElementById('virtualParentsList');
+            if (!container) return;
             
-            if (!parentsContainer || !childrenContainer) return;
+            container.innerHTML = '';
             
-            // Get all family members who are not already in auto-generated families or deceased
-            const availableMembers = familyMembers.filter(member => !member.deceased);
-            
-            const createMemberCheckbox = (member, container, type) => {
-                const div = document.createElement('div');
-                div.className = 'member-checkbox';
-                div.style.cssText = 'display: flex; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;';
-                
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.id = `${type}_${member.id}`;
-                checkbox.value = member.id;
-                checkbox.style.marginRight = '0.5rem';
-                
-                const label = document.createElement('label');
-                label.htmlFor = checkbox.id;
-                label.textContent = `${member.firstName} ${member.lastName}`;
-                label.style.cursor = 'pointer';
-                
-                // Add age and relationship info if available
-                const age = getAge(member);
-                if (age) {
-                    const ageSpan = document.createElement('span');
-                    ageSpan.textContent = ` (Age ${age})`;
-                    ageSpan.style.color = '#666';
-                    ageSpan.style.fontSize = '0.9rem';
-                    label.appendChild(ageSpan);
-                }
-                
-                div.appendChild(checkbox);
-                div.appendChild(label);
-                container.appendChild(div);
-            };
-            
-            // Clear existing content
-            parentsContainer.innerHTML = '';
-            childrenContainer.innerHTML = '';
-            
-            // Add instruction text
-            parentsContainer.innerHTML = '<p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Select the parents or main heads of this family group:</p>';
-            childrenContainer.innerHTML = '<p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Select children and other family members:</p>';
-            
-            // Populate both containers with all available members
-            availableMembers.forEach(member => {
-                createMemberCheckbox(member, parentsContainer, 'parent');
-                createMemberCheckbox(member, childrenContainer, 'child');
+            familyMembers.forEach(member => {
+                const personItem = createVirtualPersonItem(member, 'parent');
+                container.appendChild(personItem);
             });
         }
 
+        function populateVirtualChildrenList() {
+            const container = document.getElementById('virtualChildrenList');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            familyMembers.forEach(member => {
+                const personItem = createVirtualPersonItem(member, 'child');
+                container.appendChild(personItem);
+            });
+        }
+
+        function createVirtualPersonItem(member, type) {
+            const div = document.createElement('div');
+            div.className = 'virtual-person-item';
+            div.dataset.memberId = member.id;
+            div.dataset.memberName = `${member.firstName} ${member.lastName}`.toLowerCase();
+            div.dataset.status = member.deceased ? 'deceased' : 'living';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'virtual-person-checkbox';
+            checkbox.value = member.id;
+            checkbox.addEventListener('change', () => toggleVirtualPersonSelection(member.id, type, checkbox.checked));
+            
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'virtual-person-info';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'virtual-person-name';
+            nameDiv.textContent = `${member.firstName} ${member.lastName}`;
+            
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'virtual-person-details';
+            const age = getAge(member);
+            const ageText = age ? `Age ${age}` : 'Age unknown';
+            const statusText = member.deceased ? 'Deceased' : 'Living';
+            detailsDiv.textContent = `${ageText} • ${member.branch || 'No branch'}`;
+            
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `virtual-person-status ${member.deceased ? 'status-deceased' : 'status-living'}`;
+            statusSpan.textContent = statusText;
+            
+            infoDiv.appendChild(nameDiv);
+            infoDiv.appendChild(detailsDiv);
+            
+            div.appendChild(checkbox);
+            div.appendChild(infoDiv);
+            div.appendChild(statusSpan);
+            
+            // Add click handler for the entire item
+            div.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            return div;
+        }
+
+        function toggleVirtualPersonSelection(memberId, type, isSelected) {
+            const targetSet = type === 'parent' ? selectedVirtualParents : selectedVirtualChildren;
+            const item = document.querySelector(`[data-member-id="${memberId}"]`);
+            
+            if (isSelected) {
+                targetSet.add(memberId);
+                if (item) item.classList.add('selected');
+            } else {
+                targetSet.delete(memberId);
+                if (item) item.classList.remove('selected');
+            }
+            
+            updateVirtualSelectionPreview(type);
+        }
+
+        function updateVirtualSelectionPreview(type) {
+            const isParent = type === 'parent';
+            const selectedSet = isParent ? selectedVirtualParents : selectedVirtualChildren;
+            const previewContainer = document.getElementById(isParent ? 'selectedParentsPreview' : 'selectedChildrenPreview');
+            const listContainer = document.getElementById(isParent ? 'selectedParentsList' : 'selectedChildrenList');
+            
+            if (selectedSet.size === 0) {
+                previewContainer.style.display = 'none';
+                return;
+            }
+            
+            previewContainer.style.display = 'block';
+            listContainer.innerHTML = '';
+            
+            selectedSet.forEach(memberId => {
+                const member = familyMembers.find(m => m.id === memberId);
+                if (member) {
+                    const tag = document.createElement('span');
+                    tag.className = 'selected-person-tag';
+                    tag.innerHTML = `${member.firstName} ${member.lastName} <span class="remove-tag" onclick="removeVirtualSelection('${memberId}', '${type}')"">×</span>`;
+                    listContainer.appendChild(tag);
+                }
+            });
+        }
+
+        window.removeVirtualSelection = function(memberId, type) {
+            const targetSet = type === 'parent' ? selectedVirtualParents : selectedVirtualChildren;
+            const checkbox = document.querySelector(`[data-member-id="${memberId}"] input[type="checkbox"]`);
+            
+            targetSet.delete(memberId);
+            if (checkbox) {
+                checkbox.checked = false;
+                checkbox.closest('.virtual-person-item').classList.remove('selected');
+            }
+            
+            updateVirtualSelectionPreview(type);
+        };
+
+        // Filter functions
+        window.filterVirtualParents = function() {
+            const searchTerm = document.getElementById('parentSearch').value.toLowerCase();
+            filterVirtualPersonList('virtualParentsList', searchTerm);
+        };
+
+        window.filterVirtualChildren = function() {
+            const searchTerm = document.getElementById('childrenSearch').value.toLowerCase();
+            filterVirtualPersonList('virtualChildrenList', searchTerm);
+        };
+
+        function filterVirtualPersonList(containerId, searchTerm) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const items = container.querySelectorAll('.virtual-person-item');
+            items.forEach(item => {
+                const name = item.dataset.memberName;
+                const isVisible = name.includes(searchTerm);
+                item.style.display = isVisible ? 'flex' : 'none';
+            });
+        }
+
+        // Status filter functions
+        window.filterParentsByStatus = function(status) {
+            filterByStatus('virtualParentsList', status, 'parent');
+            updateStatusFilterButtons('parent', status);
+        };
+
+        window.filterChildrenByStatus = function(status) {
+            filterByStatus('virtualChildrenList', status, 'child');
+            updateStatusFilterButtons('child', status);
+        };
+
+        function filterByStatus(containerId, status, type) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const items = container.querySelectorAll('.virtual-person-item');
+            items.forEach(item => {
+                const itemStatus = item.dataset.status;
+                let isVisible = true;
+                
+                if (status === 'living') {
+                    isVisible = itemStatus === 'living';
+                } else if (status === 'deceased') {
+                    isVisible = itemStatus === 'deceased';
+                }
+                
+                item.style.display = isVisible ? 'flex' : 'none';
+            });
+        }
+
+        function updateStatusFilterButtons(type, activeStatus) {
+            const isParent = type === 'parent';
+            const container = isParent ? 
+                document.getElementById('virtualParentsList').closest('div[style*="background: #fff3e0"]') : 
+                document.getElementById('virtualChildrenList').closest('div[style*="background: #f3e5f5"]');
+            
+            const buttons = container.querySelectorAll('.status-filter-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.status === activeStatus) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Create virtual family group
         window.createCustomFamilyGroup = async function(event) {
             event.preventDefault();
             
-            if (!currentUser?.isDeveloper) return;
+            if (!currentUser?.isDeveloper) {
+                showMessage('Access denied: Only developers can create virtual family groups', 'error');
+                return;
+            }
             
             try {
-                const formData = new FormData(event.target);
-                const familyName = formData.get('customFamilyName').trim();
-                const description = formData.get('customFamilyDescription').trim();
+                const groupName = document.getElementById('virtualGroupName').value.trim();
+                const groupType = document.getElementById('virtualGroupType').value;
+                const description = document.getElementById('virtualGroupDescription').value.trim();
                 
-                // Get selected parents and children
-                const selectedParents = Array.from(document.querySelectorAll('#customFamilyParentsContainer input[type="checkbox"]:checked'))
-                    .map(cb => cb.value);
-                const selectedChildren = Array.from(document.querySelectorAll('#customFamilyChildrenContainer input[type="checkbox"]:checked'))
-                    .map(cb => cb.value);
-                
-                // Validate at least one member is selected
-                if (selectedParents.length === 0 && selectedChildren.length === 0) {
-                    showMessage('Please select at least one family member.', 'error');
+                if (!groupName) {
+                    showMessage('Please enter a group name', 'error');
                     return;
                 }
                 
-                // Create the custom family group object
-                const customFamilyGroup = {
-                    name: familyName,
+                if (selectedVirtualParents.size === 0) {
+                    showMessage('Please select at least one parent/head of family', 'error');
+                    return;
+                }
+                
+                const virtualGroup = {
+                    id: 'virtual_' + Date.now(),
+                    name: groupName,
+                    type: groupType,
                     description: description,
-                    parentIds: selectedParents,
-                    childrenIds: selectedChildren,
-                    isCustom: true,
+                    parentIds: [...selectedVirtualParents], // Keep consistent with manual family trees
+                    childrenIds: [...selectedVirtualChildren],
                     createdBy: currentUser.username,
-                    createdAt: new Date(),
-                    id: `custom_family_${Date.now()}`
+                    createdAt: new Date().toISOString(),
+                    isVirtual: true // Flag to identify this as virtual
                 };
                 
-                // Store in Firebase (using manual_family_trees collection but marked as custom)
-                await addDoc(collection(db, 'manual_family_trees'), customFamilyGroup);
+                // Save to Firebase using manual_family_trees collection but with virtual flag
+                await addDoc(collection(db, 'manual_family_trees'), virtualGroup);
                 
                 // Add to local array
-                manualFamilyTrees.push(customFamilyGroup);
+                manualFamilyTrees.push(virtualGroup);
                 
-                showMessage(`Custom family group "${familyName}" created successfully!`, 'success');
-                
-                // Close modal and refresh display
+                showMessage(`Virtual family group "${groupName}" created successfully!`, 'success');
                 closeModal('createFamilyGroupModal');
-                document.getElementById('createFamilyGroupForm').reset();
+                
+                // Refresh the branches display to show the new virtual group
                 displayBranches();
                 
             } catch (error) {
-                console.error('Error creating custom family group:', error);
-                showMessage('Error creating custom family group. Please try again.', 'error');
+                console.error('Error creating virtual family group:', error);
+                showMessage('Error creating virtual family group. Please try again.', 'error');
             }
         };
+
+        // Legacy function for backward compatibility
+        function populateCustomFamilyMemberSelections() {
+            populateVirtualFamilyMembers();
+        }
 
         // Developer Functions (dfinn12 only)
         function addDeveloperTestButton() {
