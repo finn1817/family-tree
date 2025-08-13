@@ -2581,6 +2581,17 @@
         let hiddenFamilyIds = new Set(); // Track hidden family trees
         let customFamilyGroups = []; // Custom created family groups
 
+        // Load hidden families from localStorage
+        try {
+            const savedHiddenFamilies = localStorage.getItem('hiddenFamilyIds');
+            if (savedHiddenFamilies) {
+                hiddenFamilyIds = new Set(JSON.parse(savedHiddenFamilies));
+                console.log('Loaded hidden families from localStorage:', hiddenFamilyIds);
+            }
+        } catch (error) {
+            console.error('Error loading hidden families from localStorage:', error);
+        }
+
         // Initialize the app
         async function init() {
             // Check if user is logged in
@@ -3725,7 +3736,7 @@
 
             let contentHtml = '';
 
-            if (familyTrees.length === 0) {
+            if (visibleAutoTrees.length === 0 && visibleManualTrees.length === 0) {
                 contentHtml = `
                     <div style="text-align: center; padding: 3rem; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                         <div style="font-size: 4rem; margin-bottom: 1rem;">🌱</div>
@@ -3738,23 +3749,13 @@
                     </div>
                 `;
             } else {
-                // Filter out any trees that might have issues
-                let validTrees = familyTrees.filter(tree => 
+                // Filter out any trees that might have issues from visible trees
+                const validTrees = visibleAutoTrees.filter(tree => 
                     tree && tree.generations && tree.generations.length > 0 && 
                     tree.generations[0] && tree.generations[0].members && tree.generations[0].members.length > 0
                 );
                 
-                // Filter out hidden families for non-developers
-                if (!currentUser?.isDeveloper) {
-                    validTrees = validTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
-                }
-                
-                // Render manual family trees as well
-                let visibleManualTrees = manualFamilyTrees;
-                if (!currentUser?.isDeveloper) {
-                    visibleManualTrees = manualFamilyTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
-                }
-                
+                // Render visible manual family trees
                 const manualTreesHtml = visibleManualTrees.map(manualTree => renderManualFamilyCard(manualTree)).join('');
                 const manualTreesSmallHtml = visibleManualTrees.map(manualTree => renderManualFamilySmallCard(manualTree)).join('');
                 
@@ -3838,11 +3839,19 @@
                             Add Member
                         </button>
                         ${currentUser?.isDeveloper ? `
-                            <button class="action-btn" onclick="hideFamilyGroup('${familyTree.id}')" 
-                                    style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
-                                <span style="margin-right: 0.5rem;">🙈</span>
-                                Hide
-                            </button>
+                            ${hiddenFamilyIds.has(familyTree.id) ? `
+                                <button class="action-btn" onclick="unhideFamilyGroup('${familyTree.id}')" 
+                                        style="background: #27ae60; color: white; border: 1px solid #27ae60;">
+                                    <span style="margin-right: 0.5rem;">👁️</span>
+                                    Show
+                                </button>
+                            ` : `
+                                <button class="action-btn" onclick="hideFamilyGroup('${familyTree.id}')" 
+                                        style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
+                                    <span style="margin-right: 0.5rem;">🙈</span>
+                                    Hide
+                                </button>
+                            `}
                         ` : ''}
                     </div>
                 </div>
@@ -3939,11 +3948,19 @@
                             Delete
                         </button>
                         ${currentUser?.isDeveloper ? `
-                            <button class="action-btn" onclick="hideFamilyGroup('${manualTree.id}')" 
-                                    style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
-                                <span style="margin-right: 0.5rem;">🙈</span>
-                                Hide
-                            </button>
+                            ${hiddenFamilyIds.has(manualTree.id) ? `
+                                <button class="action-btn" onclick="unhideFamilyGroup('${manualTree.id}')" 
+                                        style="background: #27ae60; color: white; border: 1px solid #27ae60;">
+                                    <span style="margin-right: 0.5rem;">👁️</span>
+                                    Show
+                                </button>
+                            ` : `
+                                <button class="action-btn" onclick="hideFamilyGroup('${manualTree.id}')" 
+                                        style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
+                                    <span style="margin-right: 0.5rem;">🙈</span>
+                                    Hide
+                                </button>
+                            `}
                         ` : ''}
                     </div>
                 </div>
