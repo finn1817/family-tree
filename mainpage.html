@@ -2770,6 +2770,8 @@
         let messages = [];
         let accountRequests = [];
         let deniedAccounts = [];
+        let manualFamilyTrees = []; // Store manual family trees separately
+        let virtualFamilyGroups = []; // Store virtual family groups separately
         
         // Super Admin Functions (dfinn12 only)
         let hiddenFamilyIds = new Set(); // Track hidden family trees
@@ -7832,7 +7834,6 @@
         }
 
         // Manual Family Card Functions
-        let manualFamilyTrees = []; // Store manual family trees separately
         let selectedManualMembers = new Set(); // Track selected members
 
         // Open manual family card modal
@@ -8574,7 +8575,6 @@
         // Virtual Family Group Functions (Developer Only) - COMPLETELY REDESIGNED
         let selectedVirtualParents = new Set();
         let selectedVirtualChildren = new Set();
-        let virtualFamilyGroups = []; // Store virtual family groups separately
 
         // Load virtual family groups from Firebase - FIXED TO USE CORRECT COLLECTION
         async function loadVirtualFamilyGroups() {
