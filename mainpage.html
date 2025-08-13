@@ -4260,9 +4260,9 @@
                         ${sectionsHtml}
                     </div>
                     <div class="family-actions">
-                        <button class="action-btn" onclick="viewManualFamilyDetail('${manualTree.id}')" style="background: ${virtualColor}; color: white;">
+                        <button class="action-btn" onclick="${isVirtual ? 'viewVirtualFamilyDetail' : 'viewManualFamilyDetail'}('${manualTree.id}')" style="background: ${virtualColor}; color: white;">
                             <span style="margin-right: 0.5rem;">👁️</span>
-                            ${isVirtual ? 'View Virtual Group' : 'View Memorial'}
+                            ${isVirtual ? 'View Enhanced Group' : 'View Memorial'}
                         </button>
                         <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')">
                             <span style="margin-right: 0.5rem;">✏️</span>
@@ -4313,7 +4313,7 @@
             const namePrefix = isVirtual ? '🌟' : '🕊️';
             
             return `
-                <div class="small-family-card" onclick="viewManualFamilyDetail('${manualTree.id}')" 
+                <div class="small-family-card" onclick="${isVirtual ? 'viewVirtualFamilyDetail' : 'viewManualFamilyDetail'}('${manualTree.id}')" 
                      style="${cardStyle}">
                     <div class="small-family-icon" style="color: ${iconColor};">${icon}</div>
                     <div class="small-family-name">${namePrefix} ${manualTree.name}</div>
@@ -8083,6 +8083,112 @@
             document.getElementById('familyDetailModal').querySelector('.modal-content').innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="color: #e74c3c;">Memorial Family Details</h2>
+                    <button class="btn" onclick="closeModal('familyDetailModal')" style="background: #6c757d; color: white;">✕ Close</button>
+                </div>
+                ${modalContent}
+            `;
+            document.getElementById('familyDetailModal').classList.add('active');
+        };
+
+        // View virtual family detail - NEW FUNCTION FOR VIRTUAL FAMILIES
+        window.viewVirtualFamilyDetail = function(virtualFamilyId) {
+            const virtualFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
+            if (!virtualFamily) {
+                console.error('Virtual family not found:', virtualFamilyId);
+                return;
+            }
+            
+            // Get all members (parents + children)
+            const parentIds = virtualFamily.parentIds || [];
+            const childrenIds = virtualFamily.childrenIds || [];
+            const allMemberIds = [...parentIds, ...childrenIds];
+            
+            const allMembers = allMemberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            const parents = parentIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            const children = childrenIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            
+            const deceasedMembers = allMembers.filter(m => m.deceased);
+            const livingMembers = allMembers.filter(m => !m.deceased);
+            
+            const modalContent = `
+                <div style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; padding: 2rem; border-radius: 15px; margin-bottom: 2rem;">
+                    <h2 style="margin: 0; font-size: 2rem;">🌟 ${virtualFamily.name}</h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Enhanced Family Group - ${virtualFamily.type || 'Custom'}</p>
+                    ${virtualFamily.description ? `<p style="margin: 1rem 0 0 0; font-style: italic;">${virtualFamily.description}</p>` : ''}
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                        <strong>⚠️ Virtual Group:</strong> This grouping doesn't affect actual relationship data.
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #9c27b0; margin-bottom: 0.5rem;">${allMembers.length}</div>
+                        <div style="color: #666;">Total Members</div>
+                    </div>
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #e74c3c; margin-bottom: 0.5rem;">${deceasedMembers.length}</div>
+                        <div style="color: #666;">Deceased</div>
+                    </div>
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #27ae60; margin-bottom: 0.5rem;">${livingMembers.length}</div>
+                        <div style="color: #666;">Living</div>
+                    </div>
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #ff9800; margin-bottom: 0.5rem;">${parents.length}</div>
+                        <div style="color: #666;">Parents/Heads</div>
+                    </div>
+                </div>
+                
+                ${parents.length > 0 ? `
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+                        <h3 style="color: #ff9800; margin-bottom: 1rem;">👫 Parents/Heads of Family</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${parents.map(member => {
+                                const age = getAge(member);
+                                const isDeceased = member.deceased;
+                                const cardStyle = isDeceased ? 
+                                    'background: #ffebee; border: 2px solid #e74c3c; color: #c62828;' :
+                                    'background: #e8f5e8; border: 2px solid #27ae60; color: #2d5a2d;';
+                                const icon = isDeceased ? '🕊️' : '💚';
+                                return `
+                                    <div style="${cardStyle} border-radius: 8px; padding: 1rem; cursor: pointer;" onclick="openEditMemberModal('${member.id}')">
+                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">${icon} ${member.firstName} ${member.lastName}</div>
+                                        <div style="opacity: 0.8; font-size: 0.9rem;">${age ? `Age ${age}` : 'Age unknown'}</div>
+                                        <div style="opacity: 0.7; font-size: 0.85rem;">${isDeceased ? 'Deceased' : 'Living'}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${children.length > 0 ? `
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="color: #9c27b0; margin-bottom: 1rem;">👶 Children/Family Members</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${children.map(member => {
+                                const age = getAge(member);
+                                const isDeceased = member.deceased;
+                                const cardStyle = isDeceased ? 
+                                    'background: #ffebee; border: 2px solid #e74c3c; color: #c62828;' :
+                                    'background: #e8f5e8; border: 2px solid #27ae60; color: #2d5a2d;';
+                                const icon = isDeceased ? '🕊️' : '💚';
+                                return `
+                                    <div style="${cardStyle} border-radius: 8px; padding: 1rem; cursor: pointer;" onclick="openEditMemberModal('${member.id}')">
+                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">${icon} ${member.firstName} ${member.lastName}</div>
+                                        <div style="opacity: 0.8; font-size: 0.9rem;">${age ? `Age ${age}` : 'Age unknown'}</div>
+                                        <div style="opacity: 0.7; font-size: 0.85rem;">${isDeceased ? 'Deceased' : 'Living'}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('familyDetailModal').querySelector('.modal-content').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="color: #9c27b0;">Enhanced Family Group Details</h2>
                     <button class="btn" onclick="closeModal('familyDetailModal')" style="background: #6c757d; color: white;">✕ Close</button>
                 </div>
                 ${modalContent}
