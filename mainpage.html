@@ -3676,10 +3676,29 @@
             let visibleAutoTrees = familyTrees;
             let visibleManualTrees = manualFamilyTrees;
             
-            if (!currentUser?.isDeveloper) {
-                visibleAutoTrees = familyTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
-                visibleManualTrees = manualFamilyTrees.filter(tree => !hiddenFamilyIds.has(tree.id));
+            // Debug logging
+            console.log('Current user:', currentUser);
+            console.log('Is developer?', currentUser?.isDeveloper);
+            console.log('Hidden family IDs:', [...hiddenFamilyIds]);
+            console.log('Total auto trees:', familyTrees.length);
+            console.log('Total manual trees:', manualFamilyTrees.length);
+            
+            // Only show hidden families to dfinn12 specifically
+            if (currentUser?.username !== 'dfinn12') {
+                visibleAutoTrees = familyTrees.filter(tree => {
+                    const isHidden = hiddenFamilyIds.has(tree.id);
+                    console.log(`Auto tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
+                    return !isHidden;
+                });
+                visibleManualTrees = manualFamilyTrees.filter(tree => {
+                    const isHidden = hiddenFamilyIds.has(tree.id);
+                    console.log(`Manual tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
+                    return !isHidden;
+                });
             }
+            
+            console.log('Visible auto trees:', visibleAutoTrees.length);
+            console.log('Visible manual trees:', visibleManualTrees.length);
             
             const totalVisibleTrees = visibleAutoTrees.length + visibleManualTrees.length;
             
@@ -3725,7 +3744,7 @@
                         <span class="icon">🕊️</span>
                         Create Memorial Family
                     </button>
-                    ${currentUser?.isDeveloper ? `
+                    ${currentUser?.username === 'dfinn12' ? `
                         <button class="view-btn" onclick="openCreateFamilyGroupModal()" style="background: #667eea; color: white; margin-left: 0.5rem;">
                             <span class="icon">👨‍👩‍👧‍👦</span>
                             Create Family Group
@@ -3838,7 +3857,7 @@
                             <span style="margin-right: 0.5rem;">➕</span>
                             Add Member
                         </button>
-                        ${currentUser?.isDeveloper ? `
+                        ${currentUser?.username === 'dfinn12' ? `
                             ${hiddenFamilyIds.has(familyTree.id) ? `
                                 <button class="action-btn" onclick="unhideFamilyGroup('${familyTree.id}')" 
                                         style="background: #27ae60; color: white; border: 1px solid #27ae60;">
@@ -3947,7 +3966,7 @@
                             <span style="margin-right: 0.5rem;">🗑️</span>
                             Delete
                         </button>
-                        ${currentUser?.isDeveloper ? `
+                        ${currentUser?.username === 'dfinn12' ? `
                             ${hiddenFamilyIds.has(manualTree.id) ? `
                                 <button class="action-btn" onclick="unhideFamilyGroup('${manualTree.id}')" 
                                         style="background: #27ae60; color: white; border: 1px solid #27ae60;">
@@ -7862,7 +7881,10 @@
 
         // Super Admin Functions (dfinn12 only) - Hide/Show Family Groups
         window.hideFamilyGroup = async function(familyId) {
-            if (!currentUser?.isDeveloper) return;
+            if (currentUser?.username !== 'dfinn12') {
+                console.log('Access denied: Only dfinn12 can hide families');
+                return;
+            }
             
             try {
                 // Add to hidden families set
@@ -7877,6 +7899,7 @@
                               manualFamilyTrees.find(f => f.id === familyId);
                 const familyName = family ? family.name : 'Family';
                 
+                console.log(`Hidden family: ${familyName} (${familyId})`);
                 showMessage(`${familyName} has been hidden from public view`, 'success');
                 
                 // Refresh the display
@@ -7890,7 +7913,10 @@
         };
 
         window.unhideFamilyGroup = async function(familyId) {
-            if (!currentUser?.isDeveloper) return;
+            if (currentUser?.username !== 'dfinn12') {
+                console.log('Access denied: Only dfinn12 can unhide families');
+                return;
+            }
             
             try {
                 // Remove from hidden families set
@@ -7905,6 +7931,7 @@
                               manualFamilyTrees.find(f => f.id === familyId);
                 const familyName = family ? family.name : 'Family';
                 
+                console.log(`Unhidden family: ${familyName} (${familyId})`);
                 showMessage(`${familyName} is now visible to all users`, 'success');
                 
                 // Refresh the display
@@ -7918,7 +7945,7 @@
         };
 
         function displayHiddenFamilies() {
-            if (!currentUser?.isDeveloper) return;
+            if (currentUser?.username !== 'dfinn12') return;
             
             const hiddenContainer = document.getElementById('hiddenFamiliesContainer');
             if (!hiddenContainer) return;
