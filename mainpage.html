@@ -1307,6 +1307,47 @@
                 max-width: 800px;
             }
         }
+        
+        /* Manual Family Card Styles */
+        .member-selection-item {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .member-selection-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        
+        .member-selection-item.selected {
+            border-color: #27ae60 !important;
+            background: #e8f5e8 !important;
+        }
+        
+        .selection-checkbox {
+            transition: all 0.3s ease;
+        }
+        
+        .memorial-family-card {
+            background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);
+            border: 3px solid #e74c3c;
+        }
+        
+        .memorial-family-card .family-title {
+            color: #e74c3c !important;
+        }
+        
+        .memorial-member-pill {
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #e74c3c;
+        }
+        
+        .living-member-pill {
+            background: #e8f5e8;
+            color: #2d5a2d;
+            border: 1px solid #b8e6b8;
+        }
     </style>
 </head>
 <body>
@@ -1891,6 +1932,63 @@
             <div id="familyDetailContent">
                 <!-- Family detail content will be populated here -->
             </div>
+        </div>
+    </div>
+
+    <!-- Manual Family Card Creation Modal -->
+    <div id="manualFamilyCardModal" class="modal">
+        <div class="modal-content" style="max-width: 90%; width: 800px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="color: #e74c3c;">🕊️ Create Memorial Family Tree</h2>
+                <button class="btn" onclick="closeModal('manualFamilyCardModal')" style="background: #6c757d; color: white;">✕ Close</button>
+            </div>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <p style="margin: 0; color: #856404;">
+                    <strong>📝 Memorial Family Trees:</strong> Create special family cards to honor deceased family members and preserve their family connections. 
+                    This allows you to document complete family structures without affecting automatic family tree generation.
+                </p>
+            </div>
+
+            <form id="manualFamilyForm" onsubmit="createManualFamilyCard(event)">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Family Name</label>
+                        <input type="text" id="manualFamilyName" placeholder="e.g., Keith Roberts Memorial Family" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Family Description</label>
+                        <textarea id="manualFamilyDescription" rows="3" placeholder="Brief description of this memorial family tree..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Select Family Members</label>
+                        <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 1rem; max-height: 300px; overflow-y: auto;">
+                            <div style="margin-bottom: 1rem;">
+                                <input type="text" id="memberSearchInput" placeholder="Search family members..." 
+                                       style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;"
+                                       oninput="filterManualFamilyMembers()">
+                            </div>
+                            <div id="memberSelectionGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.5rem;">
+                                <!-- Members will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Selected Members Preview</label>
+                        <div id="selectedMembersPreview" style="background: #e8f5e8; border: 1px solid #b8e6b8; border-radius: 8px; padding: 1rem; min-height: 60px;">
+                            <p style="color: #666; font-style: italic; margin: 0;">No members selected yet...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" onclick="closeModal('manualFamilyCardModal')" class="btn" style="background: #6c757d; color: white;">Cancel</button>
+                    <button type="submit" class="btn btn-danger">🕊️ Create Memorial Family</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -2491,6 +2589,7 @@
                 loadFamilyMembers(),
                 loadFamilyBranches(),
                 loadFamilyUnits(),  // New: Load family units
+                loadManualFamilyTrees(), // Load manual family trees
                 loadUsers(),
                 loadMessages(),
                 loadAccountRequests(),
@@ -3473,7 +3572,7 @@
                 
                 <div class="family-stats">
                     <div class="stat-card">
-                        <div class="stat-number">${familyTrees.length}</div>
+                        <div class="stat-number">${familyTrees.length + manualFamilyTrees.length}</div>
                         <div class="stat-label">Family Trees</div>
                     </div>
                     <div class="stat-card">
@@ -3485,8 +3584,8 @@
                         <div class="stat-label">Generations</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number">${familyMembers.length > 0 ? Math.round(familyMembers.reduce((sum, m) => sum + (getAge(m) || 0), 0) / familyMembers.length) : 0}</div>
-                        <div class="stat-label">Avg Age</div>
+                        <div class="stat-number">${manualFamilyTrees.length}</div>
+                        <div class="stat-label">Memorial Trees</div>
                     </div>
                 </div>
             `;
@@ -3501,6 +3600,10 @@
                     <button class="view-btn" onclick="toggleModernSmallView()">
                         <span class="icon">🔍</span>
                         Quick View
+                    </button>
+                    <button class="view-btn" onclick="openManualFamilyCardModal()" style="background: #e74c3c; color: white; margin-left: 1rem;">
+                        <span class="icon">🕊️</span>
+                        Create Memorial Family
                     </button>
                 </div>
             `;
@@ -3526,12 +3629,18 @@
                     tree.generations[0] && tree.generations[0].members && tree.generations[0].members.length > 0
                 );
                 
+                // Render manual family trees as well
+                const manualTreesHtml = manualFamilyTrees.map(manualTree => renderManualFamilyCard(manualTree)).join('');
+                const manualTreesSmallHtml = manualFamilyTrees.map(manualTree => renderManualFamilySmallCard(manualTree)).join('');
+                
                 contentHtml = `
                     <div id="detailedViewContent" class="family-tree-grid">
                         ${validTrees.map(tree => renderModernFamilyCard(tree)).join('')}
+                        ${manualTreesHtml}
                     </div>
                     <div id="smallViewContent" class="small-view-modern" style="display: none;">
                         ${validTrees.map(tree => renderModernSmallCard(tree)).join('')}
+                        ${manualTreesSmallHtml}
                     </div>
                 `;
             }
@@ -3632,6 +3741,98 @@
                         <div class="small-stat">
                             <div class="small-stat-number">${totalGenerations}</div>
                             <div class="small-stat-label">Generations</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render manual (memorial) family card
+        function renderManualFamilyCard(manualTree) {
+            // Get the actual member objects
+            const members = manualTree.memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            
+            if (members.length === 0) return '';
+            
+            const totalMembers = members.length;
+            const deceasedCount = members.filter(m => m.deceased).length;
+            
+            const membersHtml = members.map(member => {
+                const age = getAge(member);
+                const isDeceased = member.deceased;
+                const deceasedStyle = isDeceased ? 'background: #ffebee; color: #c62828; border: 2px solid #e74c3c;' : 'background: #e8f5e8; color: #2d5a2d; border: 1px solid #b8e6b8;';
+                const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                
+                return `
+                    <div class="member-pill" onclick="openEditMemberModal('${member.id}')" style="${deceasedStyle}">
+                        <div class="member-name">${deceasedIcon}${member.firstName} ${member.lastName}</div>
+                        <div class="member-age">${age ? `Age ${age}` : 'Age unknown'}</div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="modern-family-card" style="border: 3px solid #e74c3c; background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);">
+                    <div class="family-header">
+                        <div>
+                            <h3 class="family-title" style="color: #e74c3c;">🕊️ ${manualTree.name}</h3>
+                            <p class="family-subtitle">${totalMembers} members • ${deceasedCount} deceased • Memorial Family</p>
+                            ${manualTree.description ? `<p style="font-style: italic; color: #666; font-size: 0.9rem; margin-top: 0.5rem;">${manualTree.description}</p>` : ''}
+                        </div>
+                        <div class="family-icon" style="color: #e74c3c;">🌹</div>
+                    </div>
+                    <div class="family-body">
+                        <div class="generation-section">
+                            <div class="generation-header">
+                                <span class="generation-icon">👥</span>
+                                <h4 class="generation-title">Family Members</h4>
+                                <span class="generation-count">${totalMembers}</span>
+                            </div>
+                            <div class="members-grid">
+                                ${membersHtml}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="family-actions">
+                        <button class="action-btn" onclick="viewManualFamilyDetail('${manualTree.id}')" style="background: #e74c3c; color: white;">
+                            <span style="margin-right: 0.5rem;">👁️</span>
+                            View Memorial
+                        </button>
+                        <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')">
+                            <span style="margin-right: 0.5rem;">✏️</span>
+                            Edit
+                        </button>
+                        <button class="action-btn secondary" onclick="deleteManualFamily('${manualTree.id}')" style="background: #dc3545; color: white;">
+                            <span style="margin-right: 0.5rem;">🗑️</span>
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render manual family small card
+        function renderManualFamilySmallCard(manualTree) {
+            const members = manualTree.memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            
+            if (members.length === 0) return '';
+            
+            const totalMembers = members.length;
+            const deceasedCount = members.filter(m => m.deceased).length;
+            
+            return `
+                <div class="small-family-card" onclick="viewManualFamilyDetail('${manualTree.id}')" 
+                     style="border: 2px solid #e74c3c; background: linear-gradient(135deg, #ffe6e6 0%, #fff 50%);">
+                    <div class="small-family-icon" style="color: #e74c3c;">🌹</div>
+                    <div class="small-family-name">🕊️ ${manualTree.name}</div>
+                    <div class="small-family-stats">
+                        <div class="small-stat">
+                            <div class="small-stat-number">${totalMembers}</div>
+                            <div class="small-stat-label">Members</div>
+                        </div>
+                        <div class="small-stat">
+                            <div class="small-stat-number">${deceasedCount}</div>
+                            <div class="small-stat-label">Deceased</div>
                         </div>
                     </div>
                 </div>
@@ -7135,6 +7336,373 @@
                 console.error('Error initializing relationship display:', error);
             }
         }
+
+        // Manual Family Card Functions
+        let manualFamilyTrees = []; // Store manual family trees separately
+        let selectedManualMembers = new Set(); // Track selected members
+
+        // Open manual family card modal
+        window.openManualFamilyCardModal = function() {
+            const modal = document.getElementById('manualFamilyCardModal');
+            if (!modal) return;
+            
+            // Reset form
+            document.getElementById('manualFamilyName').value = '';
+            document.getElementById('manualFamilyDescription').value = '';
+            selectedManualMembers.clear();
+            
+            // Populate member selection grid
+            populateManualFamilyMembers();
+            updateSelectedMembersPreview();
+            
+            modal.classList.add('active');
+        };
+
+        // Populate family members for selection
+        function populateManualFamilyMembers() {
+            const grid = document.getElementById('memberSelectionGrid');
+            if (!grid) return;
+            
+            grid.innerHTML = familyMembers.map(member => {
+                const age = getAge(member);
+                const isDeceased = member.deceased;
+                const deceasedStyle = isDeceased ? 'background: #ffebee; border: 2px solid #e74c3c;' : 'background: #f8f9ff; border: 1px solid #e0e6ed;';
+                const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                
+                return `
+                    <div class="member-selection-item" data-member-id="${member.id}" 
+                         style="${deceasedStyle} padding: 0.75rem; border-radius: 8px; cursor: pointer; transition: all 0.3s;"
+                         onclick="toggleManualMemberSelection('${member.id}')">
+                        <div style="font-weight: 600; color: ${isDeceased ? '#c62828' : '#667eea'};">
+                            ${deceasedIcon}${member.firstName} ${member.lastName}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 0.25rem;">
+                            ${age ? `Age ${age}` : 'Age unknown'}
+                            ${member.spouse ? ` • Spouse: ${getSpouseName(member.spouse)}` : ''}
+                        </div>
+                        <div class="selection-checkbox" style="position: absolute; top: 0.5rem; right: 0.5rem; 
+                             width: 20px; height: 20px; border: 2px solid #ddd; border-radius: 4px; background: white;">
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle member selection
+        window.toggleManualMemberSelection = function(memberId) {
+            const memberItem = document.querySelector(`[data-member-id="${memberId}"]`);
+            const checkbox = memberItem.querySelector('.selection-checkbox');
+            
+            if (selectedManualMembers.has(memberId)) {
+                selectedManualMembers.delete(memberId);
+                checkbox.style.background = 'white';
+                checkbox.innerHTML = '';
+                memberItem.style.transform = 'scale(1)';
+            } else {
+                selectedManualMembers.add(memberId);
+                checkbox.style.background = '#27ae60';
+                checkbox.innerHTML = '<span style="color: white; font-size: 12px;">✓</span>';
+                memberItem.style.transform = 'scale(1.02)';
+            }
+            
+            updateSelectedMembersPreview();
+        };
+
+        // Filter family members in manual selection
+        window.filterManualFamilyMembers = function() {
+            const searchTerm = document.getElementById('memberSearchInput').value.toLowerCase();
+            const memberItems = document.querySelectorAll('.member-selection-item');
+            
+            memberItems.forEach(item => {
+                const memberId = item.getAttribute('data-member-id');
+                const member = familyMembers.find(m => m.id === memberId);
+                const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
+                
+                if (fullName.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        };
+
+        // Update selected members preview
+        function updateSelectedMembersPreview() {
+            const preview = document.getElementById('selectedMembersPreview');
+            if (!preview) return;
+            
+            if (selectedManualMembers.size === 0) {
+                preview.innerHTML = '<p style="color: #666; font-style: italic; margin: 0;">No members selected yet...</p>';
+                return;
+            }
+            
+            const selectedMembersList = Array.from(selectedManualMembers).map(memberId => {
+                const member = familyMembers.find(m => m.id === memberId);
+                const age = getAge(member);
+                const isDeceased = member.deceased;
+                const deceasedIcon = isDeceased ? '🕊️ ' : '';
+                
+                return `
+                    <span style="display: inline-block; margin: 0.25rem; padding: 0.5rem; background: ${isDeceased ? '#ffebee' : '#e8f5e8'}; 
+                          border: 1px solid ${isDeceased ? '#e74c3c' : '#b8e6b8'}; border-radius: 12px; font-size: 0.85rem;">
+                        ${deceasedIcon}${member.firstName} ${member.lastName} ${age ? `(${age})` : ''}
+                        <button onclick="toggleManualMemberSelection('${member.id}')" 
+                                style="margin-left: 0.5rem; background: none; border: none; color: #e74c3c; cursor: pointer;">✕</button>
+                    </span>
+                `;
+            }).join('');
+            
+            preview.innerHTML = `
+                <div style="margin-bottom: 0.5rem; font-weight: 600; color: #333;">
+                    Selected Members (${selectedManualMembers.size}):
+                </div>
+                ${selectedMembersList}
+            `;
+        }
+
+        // Create manual family card
+        window.createManualFamilyCard = async function(event) {
+            event.preventDefault();
+            
+            const familyName = document.getElementById('manualFamilyName').value.trim();
+            const familyDescription = document.getElementById('manualFamilyDescription').value.trim();
+            
+            if (!familyName) {
+                showMessage('Please enter a family name', 'error');
+                return;
+            }
+            
+            if (selectedManualMembers.size === 0) {
+                showMessage('Please select at least one family member', 'error');
+                return;
+            }
+            
+            try {
+                // Create manual family tree object
+                const manualFamily = {
+                    id: 'manual_' + Date.now(),
+                    name: familyName,
+                    description: familyDescription,
+                    memberIds: Array.from(selectedManualMembers),
+                    type: 'manual',
+                    createdAt: new Date().toISOString(),
+                    isMemorial: true
+                };
+                
+                // Store in Firebase (optional - can be stored locally for now)
+                await addDoc(collection(db, 'manual_family_trees'), manualFamily);
+                
+                // Add to local array
+                manualFamilyTrees.push(manualFamily);
+                
+                showMessage(`Memorial family "${familyName}" created successfully!`, 'success');
+                closeModal('manualFamilyCardModal');
+                
+                // Refresh the family groups display
+                displayBranches();
+                
+            } catch (error) {
+                console.error('Error creating manual family tree:', error);
+                showMessage('Error creating memorial family. Please try again.', 'error');
+            }
+        };
+
+        // Load manual family trees from Firebase
+        async function loadManualFamilyTrees() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'manual_family_trees'));
+                manualFamilyTrees = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+            } catch (error) {
+                console.error('Error loading manual family trees:', error);
+            }
+        }
+
+        // View manual family detail
+        window.viewManualFamilyDetail = function(manualFamilyId) {
+            const manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
+            if (!manualFamily) return;
+            
+            const members = manualFamily.memberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
+            const deceasedMembers = members.filter(m => m.deceased);
+            const livingMembers = members.filter(m => !m.deceased);
+            
+            const modalContent = `
+                <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; padding: 2rem; border-radius: 15px; margin-bottom: 2rem;">
+                    <h2 style="margin: 0; font-size: 2rem;">🕊️ ${manualFamily.name}</h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Memorial Family Tree</p>
+                    ${manualFamily.description ? `<p style="margin: 1rem 0 0 0; font-style: italic;">${manualFamily.description}</p>` : ''}
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #e74c3c; margin-bottom: 0.5rem;">${members.length}</div>
+                        <div style="color: #666;">Total Members</div>
+                    </div>
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #e74c3c; margin-bottom: 0.5rem;">${deceasedMembers.length}</div>
+                        <div style="color: #666;">Deceased</div>
+                    </div>
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 2rem; color: #27ae60; margin-bottom: 0.5rem;">${livingMembers.length}</div>
+                        <div style="color: #666;">Living</div>
+                    </div>
+                </div>
+                
+                ${deceasedMembers.length > 0 ? `
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
+                        <h3 style="color: #e74c3c; margin-bottom: 1rem;">🕊️ In Loving Memory</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${deceasedMembers.map(member => {
+                                const age = getAge(member);
+                                return `
+                                    <div style="background: #ffebee; border: 2px solid #e74c3c; border-radius: 8px; padding: 1rem;">
+                                        <div style="font-weight: 600; color: #c62828; margin-bottom: 0.5rem;">🕊️ ${member.firstName} ${member.lastName}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">${age ? `Age ${age}` : 'Age unknown'}</div>
+                                        ${member.spouse ? `<div style="color: #666; font-size: 0.9rem;">Spouse: ${getSpouseName(member.spouse)}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${livingMembers.length > 0 ? `
+                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="color: #27ae60; margin-bottom: 1rem;">💚 Living Family Members</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                            ${livingMembers.map(member => {
+                                const age = getAge(member);
+                                return `
+                                    <div style="background: #e8f5e8; border: 2px solid #27ae60; border-radius: 8px; padding: 1rem; cursor: pointer;" onclick="openEditMemberModal('${member.id}')">
+                                        <div style="font-weight: 600; color: #2d5a2d; margin-bottom: 0.5rem;">${member.firstName} ${member.lastName}</div>
+                                        <div style="color: #666; font-size: 0.9rem;">${age ? `Age ${age}` : 'Age unknown'}</div>
+                                        ${member.spouse ? `<div style="color: #666; font-size: 0.9rem;">Spouse: ${getSpouseName(member.spouse)}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('familyDetailModal').querySelector('.modal-content').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="color: #e74c3c;">Memorial Family Details</h2>
+                    <button class="btn" onclick="closeModal('familyDetailModal')" style="background: #6c757d; color: white;">✕ Close</button>
+                </div>
+                ${modalContent}
+            `;
+            document.getElementById('familyDetailModal').classList.add('active');
+        };
+
+        // Edit manual family
+        window.editManualFamily = function(manualFamilyId) {
+            const manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
+            if (!manualFamily) return;
+            
+            // Pre-populate the form with existing data
+            selectedManualMembers.clear();
+            manualFamily.memberIds.forEach(id => selectedManualMembers.add(id));
+            
+            document.getElementById('manualFamilyName').value = manualFamily.name;
+            document.getElementById('manualFamilyDescription').value = manualFamily.description || '';
+            
+            populateManualFamilyMembers();
+            updateSelectedMembersPreview();
+            
+            // Update the form to edit mode
+            document.getElementById('manualFamilyForm').onsubmit = function(event) {
+                updateManualFamilyCard(event, manualFamilyId);
+            };
+            
+            document.querySelector('#manualFamilyCardModal h2').textContent = '✏️ Edit Memorial Family Tree';
+            document.querySelector('#manualFamilyCardModal .btn-danger').innerHTML = '💾 Update Memorial Family';
+            
+            document.getElementById('manualFamilyCardModal').classList.add('active');
+        };
+
+        // Update manual family card
+        window.updateManualFamilyCard = async function(event, manualFamilyId) {
+            event.preventDefault();
+            
+            const familyName = document.getElementById('manualFamilyName').value.trim();
+            const familyDescription = document.getElementById('manualFamilyDescription').value.trim();
+            
+            if (!familyName) {
+                showMessage('Please enter a family name', 'error');
+                return;
+            }
+            
+            if (selectedManualMembers.size === 0) {
+                showMessage('Please select at least one family member', 'error');
+                return;
+            }
+            
+            try {
+                const updatedFamily = {
+                    name: familyName,
+                    description: familyDescription,
+                    memberIds: Array.from(selectedManualMembers),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                // Update in Firebase
+                await updateDoc(doc(db, 'manual_family_trees', manualFamilyId), updatedFamily);
+                
+                // Update local array
+                const index = manualFamilyTrees.findIndex(f => f.id === manualFamilyId);
+                if (index !== -1) {
+                    manualFamilyTrees[index] = { ...manualFamilyTrees[index], ...updatedFamily };
+                }
+                
+                showMessage(`Memorial family "${familyName}" updated successfully!`, 'success');
+                closeModal('manualFamilyCardModal');
+                
+                // Reset form
+                document.getElementById('manualFamilyForm').onsubmit = function(event) {
+                    createManualFamilyCard(event);
+                };
+                document.querySelector('#manualFamilyCardModal h2').textContent = '🕊️ Create Memorial Family Tree';
+                document.querySelector('#manualFamilyCardModal .btn-danger').innerHTML = '🕊️ Create Memorial Family';
+                
+                // Refresh the family groups display
+                displayBranches();
+                
+            } catch (error) {
+                console.error('Error updating manual family tree:', error);
+                showMessage('Error updating memorial family. Please try again.', 'error');
+            }
+        };
+
+        // Delete manual family
+        window.deleteManualFamily = async function(manualFamilyId) {
+            const manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
+            if (!manualFamily) return;
+            
+            if (!confirm(`Are you sure you want to delete the memorial family "${manualFamily.name}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                // Delete from Firebase
+                await deleteDoc(doc(db, 'manual_family_trees', manualFamilyId));
+                
+                // Remove from local array
+                manualFamilyTrees = manualFamilyTrees.filter(f => f.id !== manualFamilyId);
+                
+                showMessage(`Memorial family "${manualFamily.name}" deleted successfully!`, 'success');
+                
+                // Refresh the family groups display
+                displayBranches();
+                
+            } catch (error) {
+                console.error('Error deleting manual family tree:', error);
+                showMessage('Error deleting memorial family. Please try again.', 'error');
+            }
+        };
 
         // Logout function
         window.logout = function() {
