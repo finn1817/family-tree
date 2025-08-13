@@ -8273,14 +8273,35 @@
             console.log('✅ Virtual family modal displayed successfully');
         }
 
-        // Edit manual family
+        // Edit manual family - UPDATED TO HANDLE VIRTUAL FAMILIES
         window.editManualFamily = function(manualFamilyId) {
-            const manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
-            if (!manualFamily) return;
+            // First try to find in manual families
+            let manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
+            let isVirtual = false;
+            
+            // If not found, try virtual families
+            if (!manualFamily) {
+                manualFamily = virtualFamilyGroups.find(f => f.id === manualFamilyId);
+                isVirtual = true;
+            }
+            
+            if (!manualFamily) {
+                console.error('Family not found:', manualFamilyId);
+                alert('Family not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            console.log('📝 Editing family:', manualFamily.name, 'Virtual:', isVirtual);
             
             // Pre-populate the form with existing data
             selectedManualMembers.clear();
-            manualFamily.memberIds.forEach(id => selectedManualMembers.add(id));
+            
+            // Handle different data structures for virtual vs manual families
+            const memberIds = isVirtual ? 
+                [...(manualFamily.parentIds || []), ...(manualFamily.childrenIds || [])] : 
+                (manualFamily.memberIds || []);
+                
+            memberIds.forEach(id => selectedManualMembers.add(id));
             
             document.getElementById('manualFamilyName').value = manualFamily.name;
             document.getElementById('manualFamilyDescription').value = manualFamily.description || '';
@@ -8293,13 +8314,17 @@
                 updateManualFamilyCard(event, manualFamilyId);
             };
             
-            document.querySelector('#manualFamilyCardModal h2').textContent = '✏️ Edit Memorial Family Tree';
-            document.querySelector('#manualFamilyCardModal .btn-danger').innerHTML = '💾 Update Memorial Family';
+            // Update modal title based on family type
+            const modalTitle = isVirtual ? '✏️ Edit Enhanced Family Group' : '✏️ Edit Memorial Family Tree';
+            const buttonText = isVirtual ? '💾 Update Enhanced Group' : '💾 Update Memorial Family';
+            
+            document.querySelector('#manualFamilyCardModal h2').textContent = modalTitle;
+            document.querySelector('#manualFamilyCardModal .btn-danger').innerHTML = buttonText;
             
             document.getElementById('manualFamilyCardModal').classList.add('active');
         };
 
-        // Update manual family card
+        // Update manual family card - UPDATED TO HANDLE VIRTUAL FAMILIES
         window.updateManualFamilyCard = async function(event, manualFamilyId) {
             event.preventDefault();
             
@@ -8317,23 +8342,48 @@
             }
             
             try {
-                const updatedFamily = {
-                    name: familyName,
-                    description: familyDescription,
-                    memberIds: Array.from(selectedManualMembers),
-                    updatedAt: new Date().toISOString()
-                };
+                // Check if this is a virtual family
+                const isVirtual = virtualFamilyGroups.some(f => f.id === manualFamilyId);
+                
+                let updatedFamily;
+                let targetArray;
+                
+                if (isVirtual) {
+                    // Virtual family structure - split members into parents and children
+                    const allMemberIds = Array.from(selectedManualMembers);
+                    
+                    // For simplicity, treat all selected members as mixed (could be enhanced later)
+                    updatedFamily = {
+                        name: familyName,
+                        description: familyDescription,
+                        parentIds: allMemberIds, // For now, put all in parents (can be refined)
+                        childrenIds: [],
+                        updatedAt: new Date().toISOString(),
+                        isVirtual: true
+                    };
+                    targetArray = virtualFamilyGroups;
+                } else {
+                    // Regular manual family structure
+                    updatedFamily = {
+                        name: familyName,
+                        description: familyDescription,
+                        memberIds: Array.from(selectedManualMembers),
+                        updatedAt: new Date().toISOString()
+                    };
+                    targetArray = manualFamilyTrees;
+                }
                 
                 // Update in Firebase
                 await updateDoc(doc(db, 'manual_family_trees', manualFamilyId), updatedFamily);
                 
                 // Update local array
-                const index = manualFamilyTrees.findIndex(f => f.id === manualFamilyId);
+                const index = targetArray.findIndex(f => f.id === manualFamilyId);
                 if (index !== -1) {
-                    manualFamilyTrees[index] = { ...manualFamilyTrees[index], ...updatedFamily };
+                    targetArray[index] = { ...targetArray[index], ...updatedFamily };
                 }
                 
-                showMessage(`Memorial family "${familyName}" updated successfully!`, 'success');
+                const familyType = isVirtual ? 'Enhanced family group' : 'Memorial family';
+                showMessage(`${familyType} "${familyName}" updated successfully!`, 'success');
                 closeModal('manualFamilyCardModal');
                 
                 // Reset form
@@ -8342,6 +8392,15 @@
                 };
                 document.querySelector('#manualFamilyCardModal h2').textContent = '🕊️ Create Memorial Family Tree';
                 document.querySelector('#manualFamilyCardModal .btn-danger').innerHTML = '🕊️ Create Memorial Family';
+                
+                // Refresh the display
+                displayBranches();
+                
+            } catch (error) {
+                console.error('Error updating family:', error);
+                showMessage('Error updating family. Please try again.', 'error');
+            }
+        };
                 
                 // Refresh the family groups display
                 displayBranches();
