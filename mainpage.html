@@ -3641,7 +3641,7 @@
         // Get modern generation icons
         function getModernGenerationIcon(type, index) {
             if (type === 'patriarch' || type === 'matriarch') return '👑';
-            if (type === 'spouse') return '💑';
+            if (type === 'spouse' || type.includes('spouse') || type.includes('spouses')) return '�';
             if (type === 'children') return '👶';
             if (type === 'grandchildren') return '🧒';
             if (type === 'great-grandchildren') return '👦';
@@ -3824,11 +3824,12 @@
                 'patriarch': 'Patriarch/Matriarch',
                 'parents': index === 0 ? 'Parents' : 'Ancestors',
                 'children': 'Children',
-                'children-spouses': 'Children\'s Spouses',
+                'children-spouses': 'In-Laws',
                 'grandchildren': 'Grandchildren',
-                'grandchildren-spouses': 'Grandchildren\'s Spouses',
+                'grandchildren-spouses': 'In-Laws',
                 'great-grandchildren': 'Great-Grandchildren',
-                'great-grandchildren-spouses': 'Great-Grandchildren\'s Spouses',
+                'great-grandchildren-spouses': 'In-Laws',
+                'spouse': 'In-Laws',
                 'individual': 'Individual'
             };
             
@@ -3836,12 +3837,16 @@
             if (type.startsWith('generation-')) {
                 const parts = type.split('-');
                 if (parts.length > 2 && parts[2] === 'spouses') {
-                    const genNum = parseInt(parts[1]);
-                    return `Generation ${genNum} Spouses`;
+                    return 'In-Laws';
                 } else {
                     const genNum = parseInt(parts[1]);
                     return `Generation ${genNum}`;
                 }
+            }
+            
+            // Handle any spouse-related types
+            if (type.includes('spouse') || type.includes('spouses')) {
+                return 'In-Laws';
             }
             
             return labels[type] || `Generation ${index + 1}`;
