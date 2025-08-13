@@ -2742,7 +2742,7 @@
     <script type="module">
         // Import Firebase using the correct v9+ modular syntax
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
@@ -8090,141 +8090,168 @@
             document.getElementById('familyDetailModal').classList.add('active');
         };
 
-        // View virtual family detail - NEW FUNCTION FOR VIRTUAL FAMILIES
+        // View virtual family detail - SIMPLIFIED TO MATCH NORMAL FAMILY VIEW
         window.viewVirtualFamilyDetail = function(virtualFamilyId) {
             console.log('🔍 viewVirtualFamilyDetail called with ID:', virtualFamilyId);
-            console.log('📊 Available virtual family groups:', virtualFamilyGroups);
-            console.log('📊 Virtual family groups count:', virtualFamilyGroups.length);
             
-            const virtualFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
+            // First, try to find the virtual family in the loaded array
+            let virtualFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
+            
             if (!virtualFamily) {
-                console.error('❌ Virtual family not found:', virtualFamilyId);
-                console.log('🔍 Available IDs:', virtualFamilyGroups.map(f => f.id));
+                console.log('❌ Virtual family not found in memory, reloading...');
+                console.log('� Available virtual family groups:', virtualFamilyGroups.length);
                 
-                // Try to reload virtual families and retry
-                console.log('🔄 Attempting to reload virtual families...');
+                // Reload virtual families and try again
                 loadVirtualFamilyGroups().then(() => {
                     console.log('✅ Reloaded virtual families, retrying...');
-                    const retryFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
-                    if (retryFamily) {
-                        console.log('✅ Found virtual family after reload:', retryFamily);
-                        viewVirtualFamilyDetailCore(retryFamily);
+                    virtualFamily = virtualFamilyGroups.find(f => f.id === virtualFamilyId);
+                    if (virtualFamily) {
+                        showVirtualFamilyDetailModal(virtualFamily);
                     } else {
                         console.error('❌ Still not found after reload');
-                        alert('Error: Virtual family group not found. Please refresh the page and try again.');
+                        // Try direct Firebase query as last resort
+                        loadSingleVirtualFamily(virtualFamilyId);
                     }
-                }).catch(error => {
-                    console.error('❌ Error reloading virtual families:', error);
-                    alert('Error loading virtual family data. Please refresh the page.');
                 });
                 return;
             }
             
             console.log('✅ Found virtual family:', virtualFamily);
-            viewVirtualFamilyDetailCore(virtualFamily);
+            showVirtualFamilyDetailModal(virtualFamily);
         };
 
-        // Core function to display virtual family details
-        function viewVirtualFamilyDetailCore(virtualFamily) {
-            console.log('📋 Displaying virtual family details for:', virtualFamily.name);
+        // Direct Firebase query for single virtual family
+        async function loadSingleVirtualFamily(virtualFamilyId) {
+            try {
+                const doc = await getDoc(doc(db, 'virtual_family_groups', virtualFamilyId));
+                if (doc.exists()) {
+                    const virtualFamily = { id: doc.id, ...doc.data() };
+                    console.log('✅ Found virtual family via direct query:', virtualFamily);
+                    showVirtualFamilyDetailModal(virtualFamily);
+                } else {
+                    console.error('❌ Virtual family document does not exist');
+                    alert('Virtual family group not found. It may have been deleted.');
+                }
+            } catch (error) {
+                console.error('❌ Error loading virtual family:', error);
+                alert('Error loading virtual family data. Please try again.');
+            }
+        }
+
+        // Show virtual family detail modal - MATCHES NORMAL FAMILY VIEW EXACTLY
+        function showVirtualFamilyDetailModal(virtualFamily) {
+            console.log('📋 Displaying virtual family modal for:', virtualFamily.name);
             
             // Get all members (parents + children)
             const parentIds = virtualFamily.parentIds || [];
             const childrenIds = virtualFamily.childrenIds || [];
             const allMemberIds = [...parentIds, ...childrenIds];
             
-            console.log('👥 Parent IDs:', parentIds);
-            console.log('👶 Children IDs:', childrenIds);
-            console.log('📊 All member IDs:', allMemberIds);
-            console.log('📊 Available family members:', familyMembers.length);
-            
             const allMembers = allMemberIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             const parents = parentIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             const children = childrenIds.map(id => familyMembers.find(m => m.id === id)).filter(m => m);
             
-            console.log('✅ Found members:', allMembers.length);
-            console.log('✅ Found parents:', parents.length);
-            console.log('✅ Found children:', children.length);
-            
-            const deceasedMembers = allMembers.filter(m => m.deceased);
+            const totalMembers = allMembers.length;
             const livingMembers = allMembers.filter(m => !m.deceased);
-            
-            const modalContent = `
-                <div style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; padding: 2rem; border-radius: 15px; margin-bottom: 2rem;">
-                    <h2 style="margin: 0; font-size: 2rem;">🌟 ${virtualFamily.name}</h2>
-                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Enhanced Family Group - ${virtualFamily.type || 'Custom'}</p>
-                    ${virtualFamily.description ? `<p style="margin: 1rem 0 0 0; font-style: italic;">${virtualFamily.description}</p>` : ''}
-                    <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+            const deceasedMembers = allMembers.filter(m => m.deceased);
+            const avgAge = totalMembers > 0 ? Math.round(allMembers.reduce((sum, m) => sum + getAge(m), 0) / totalMembers) : 0;
+
+            let modalContent = `
+                <div class="family-groups-header" style="margin-bottom: 2rem;">
+                    <h2>🌟 ${virtualFamily.name}</h2>
+                    <p>${totalMembers} members • Enhanced Family Group</p>
+                    <div style="background: rgba(156, 39, 176, 0.1); border: 2px solid #9c27b0; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
                         <strong>⚠️ Virtual Group:</strong> This grouping doesn't affect actual relationship data.
                     </div>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
-                        <div style="font-size: 2rem; color: #9c27b0; margin-bottom: 0.5rem;">${allMembers.length}</div>
-                        <div style="color: #666;">Total Members</div>
+                <div class="family-stats" style="margin-bottom: 2rem;">
+                    <div class="stat-card">
+                        <div class="stat-number">${totalMembers}</div>
+                        <div class="stat-label">Total Members</div>
                     </div>
-                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
-                        <div style="font-size: 2rem; color: #e74c3c; margin-bottom: 0.5rem;">${deceasedMembers.length}</div>
-                        <div style="color: #666;">Deceased</div>
+                    <div class="stat-card">
+                        <div class="stat-number">${parents.length}</div>
+                        <div class="stat-label">Parents/Heads</div>
                     </div>
-                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
-                        <div style="font-size: 2rem; color: #27ae60; margin-bottom: 0.5rem;">${livingMembers.length}</div>
-                        <div style="color: #666;">Living</div>
+                    <div class="stat-card">
+                        <div class="stat-number">${livingMembers.length}</div>
+                        <div class="stat-label">Living Members</div>
                     </div>
-                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
-                        <div style="font-size: 2rem; color: #ff9800; margin-bottom: 0.5rem;">${parents.length}</div>
-                        <div style="color: #666;">Parents/Heads</div>
+                    <div class="stat-card">
+                        <div class="stat-number">${avgAge}</div>
+                        <div class="stat-label">Average Age</div>
                     </div>
                 </div>
-                
-                ${parents.length > 0 ? `
-                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem;">
-                        <h3 style="color: #ff9800; margin-bottom: 1rem;">👫 Parents/Heads of Family</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+            `;
+
+            // Parents/Heads section
+            if (parents.length > 0) {
+                modalContent += `
+                    <div class="generation-section" style="margin-bottom: 2rem;">
+                        <div class="generation-header">
+                            <span class="generation-icon">👫</span>
+                            <h4 class="generation-title">Parents/Heads of Family</h4>
+                            <span class="generation-count">${parents.length}</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
                             ${parents.map(member => {
                                 const age = getAge(member);
-                                const isDeceased = member.deceased;
-                                const cardStyle = isDeceased ? 
-                                    'background: #ffebee; border: 2px solid #e74c3c; color: #c62828;' :
-                                    'background: #e8f5e8; border: 2px solid #27ae60; color: #2d5a2d;';
-                                const icon = isDeceased ? '🕊️' : '💚';
+                                const deceasedStyle = member.deceased ? 'border: 3px solid #e74c3c; background: #ffebee;' : '';
+                                const deceasedIcon = member.deceased ? '🕊️ ' : '';
+                                
                                 return `
-                                    <div style="${cardStyle} border-radius: 8px; padding: 1rem; cursor: pointer;" onclick="openEditMemberModal('${member.id}')">
-                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">${icon} ${member.firstName} ${member.lastName}</div>
-                                        <div style="opacity: 0.8; font-size: 0.9rem;">${age ? `Age ${age}` : 'Age unknown'}</div>
-                                        <div style="opacity: 0.7; font-size: 0.85rem;">${isDeceased ? 'Deceased' : 'Living'}</div>
+                                    <div style="background: white; border: 2px solid #f0f0f0; border-radius: 15px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; ${deceasedStyle}" onclick="openEditMemberModal('${member.id}')">
+                                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${member.deceased ? '🕊️' : '👤'}</div>
+                                        <div style="font-weight: 700; font-size: 1.1rem; color: #333; margin-bottom: 0.5rem;">
+                                            ${deceasedIcon}${member.firstName} ${member.lastName}
+                                        </div>
+                                        <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                            ${age ? `Age ${age}` : 'Age unknown'}
+                                        </div>
+                                        <div style="color: #9c27b0; font-size: 0.8rem; margin-top: 0.5rem;">👑 Family Head</div>
                                     </div>
                                 `;
                             }).join('')}
                         </div>
                     </div>
-                ` : ''}
-                
-                ${children.length > 0 ? `
-                    <div style="background: #fff; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                        <h3 style="color: #9c27b0; margin-bottom: 1rem;">👶 Children/Family Members</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+                `;
+            }
+
+            // Children/Family Members section
+            if (children.length > 0) {
+                modalContent += `
+                    <div class="generation-section" style="margin-bottom: 2rem;">
+                        <div class="generation-header">
+                            <span class="generation-icon">👶</span>
+                            <h4 class="generation-title">Children/Family Members</h4>
+                            <span class="generation-count">${children.length}</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
                             ${children.map(member => {
                                 const age = getAge(member);
-                                const isDeceased = member.deceased;
-                                const cardStyle = isDeceased ? 
-                                    'background: #ffebee; border: 2px solid #e74c3c; color: #c62828;' :
-                                    'background: #e8f5e8; border: 2px solid #27ae60; color: #2d5a2d;';
-                                const icon = isDeceased ? '🕊️' : '💚';
+                                const deceasedStyle = member.deceased ? 'border: 3px solid #e74c3c; background: #ffebee;' : '';
+                                const deceasedIcon = member.deceased ? '🕊️ ' : '';
+                                
                                 return `
-                                    <div style="${cardStyle} border-radius: 8px; padding: 1rem; cursor: pointer;" onclick="openEditMemberModal('${member.id}')">
-                                        <div style="font-weight: 600; margin-bottom: 0.5rem;">${icon} ${member.firstName} ${member.lastName}</div>
-                                        <div style="opacity: 0.8; font-size: 0.9rem;">${age ? `Age ${age}` : 'Age unknown'}</div>
-                                        <div style="opacity: 0.7; font-size: 0.85rem;">${isDeceased ? 'Deceased' : 'Living'}</div>
+                                    <div style="background: white; border: 2px solid #f0f0f0; border-radius: 15px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; ${deceasedStyle}" onclick="openEditMemberModal('${member.id}')">
+                                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${member.deceased ? '🕊️' : '👤'}</div>
+                                        <div style="font-weight: 700; font-size: 1.1rem; color: #333; margin-bottom: 0.5rem;">
+                                            ${deceasedIcon}${member.firstName} ${member.lastName}
+                                        </div>
+                                        <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                            ${age ? `Age ${age}` : 'Age unknown'}
+                                        </div>
+                                        <div style="color: #9c27b0; font-size: 0.8rem; margin-top: 0.5rem;">👨‍👩‍👧‍👦 Family Member</div>
                                     </div>
                                 `;
                             }).join('')}
                         </div>
                     </div>
-                ` : ''}
-            `;
-            
+                `;
+            }
+
+            // Set modal content and show
             document.getElementById('familyDetailModal').querySelector('.modal-content').innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h2 style="color: #9c27b0;">Enhanced Family Group Details</h2>
@@ -8232,8 +8259,9 @@
                 </div>
                 ${modalContent}
             `;
+            
             document.getElementById('familyDetailModal').classList.add('active');
-            console.log('✅ Modal displayed successfully');
+            console.log('✅ Virtual family modal displayed successfully');
         }
 
         // Edit manual family
