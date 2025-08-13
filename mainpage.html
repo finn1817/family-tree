@@ -508,26 +508,32 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+        /* Desktop tab text - show full text */
+        .tab-text {
+            display: inline;
+        }
+        .tab-text-mobile {
+            display: none;
+        }
 
         /* Enhanced Mobile and iOS Optimization Styles */
         @media screen and (max-width: 768px) {
-            /* Navigation improvements for mobile */
-            .nav-tabs {
+            /* Navigation improvements for mobile - FIXED FOR IPHONE */
+            .tabs {
                 flex-wrap: wrap;
-                border-bottom: 1px solid #dee2e6;
+                border-radius: 15px;
                 margin-bottom: 15px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             }
             
-            .nav-tabs .nav-item {
+            .tab {
                 flex: 1;
-                min-width: 100px;
-            }
-            
-            .nav-tabs .nav-link {
-                padding: 10px 8px;
-                font-size: 13px;
+                min-width: 0; /* Allow shrinking */
+                padding: 8px 4px;
+                font-size: 11px;
                 text-align: center;
-                border-radius: 0;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -535,6 +541,36 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                border-bottom: 3px solid transparent;
+                transition: all 0.3s;
+                line-height: 1.2;
+            }
+            
+            .tab:hover {
+                background: #f8f9ff;
+            }
+            
+            .tab.active {
+                background: #667eea;
+                color: white;
+                border-bottom-color: #4a5fd8;
+            }
+            
+            /* Make tabs even smaller on very narrow screens */
+            @media screen and (max-width: 375px) {
+                .tab {
+                    padding: 6px 2px;
+                    font-size: 10px;
+                    min-height: 40px;
+                }
+            }
+            
+            /* Show mobile text, hide desktop text */
+            .tab-text {
+                display: none;
+            }
+            .tab-text-mobile {
+                display: inline;
             }
             
             /* Container and layout adjustments */
@@ -776,13 +812,38 @@
             
             /* Header improvements for mobile */
             .header {
-                padding: 15px 10px;
+                padding: 10px 15px;
+                flex-direction: column;
+                gap: 8px;
                 text-align: center;
             }
             
             .header h1 {
-                font-size: 24px;
-                margin-bottom: 10px;
+                font-size: 18px;
+                margin: 0;
+            }
+            
+            .user-info {
+                flex-direction: row;
+                justify-content: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            
+            .admin-badge {
+                font-size: 10px;
+                padding: 2px 6px;
+            }
+            
+            .requests-badge {
+                font-size: 10px;
+                min-width: 16px;
+                padding: 2px 4px;
+            }
+            
+            .logout-btn {
+                padding: 6px 12px;
+                font-size: 12px;
             }
             
             /* Improved spacing for mobile layout */
@@ -875,6 +936,34 @@
                 padding: 10px;
                 font-size: 13px;
             }
+            
+            /* Make tabs even more compact on iPhone SE */
+            .tabs {
+                overflow-x: auto;
+                overflow-y: hidden;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .tabs::-webkit-scrollbar {
+                display: none;
+            }
+            
+            .tab {
+                display: inline-flex;
+                flex: none;
+                min-width: 80px;
+                padding: 8px 6px;
+                font-size: 9px;
+                vertical-align: top;
+            }
+            
+            .main-container {
+                margin: 1rem auto;
+                padding: 0 0.5rem;
+            }
         }
         
         /* Extra large screens - optimize for desktop */
@@ -911,13 +1000,25 @@
         </div>
 
         <div class="tabs">
-            <div class="tab active" onclick="switchTab('family')">👨‍👩‍👧‍👦 Family Members</div>
-            <div class="tab" onclick="switchTab('branches')">🌿 Family Groups</div>
-            <div class="tab" onclick="switchTab('messages')">💬 Message Board</div>
-            <div class="tab admin-only" onclick="switchTab('users')" style="display: none;">👥 Manage Users</div>
+            <div class="tab active" onclick="switchTab('family')">
+                <span class="tab-text">👨‍👩‍👧‍👦 Family Members</span>
+                <span class="tab-text-mobile">👨‍👩‍👧‍👦 Family</span>
+            </div>
+            <div class="tab" onclick="switchTab('branches')">
+                <span class="tab-text">🌿 Family Groups</span>
+                <span class="tab-text-mobile">🌿 Groups</span>
+            </div>
+            <div class="tab" onclick="switchTab('messages')">
+                <span class="tab-text">💬 Message Board</span>
+                <span class="tab-text-mobile">💬 Messages</span>
+            </div>
+            <div class="tab admin-only" onclick="switchTab('users')" style="display: none;">
+                <span class="tab-text">👥 Manage Users</span>
+                <span class="tab-text-mobile">👥 Users</span>
+            </div>
             <div class="tab admin-only" onclick="switchTab('requests')" style="display: none;">
-                📋 Account Requests
-                <span id="requestsBadge" class="requests-badge" style="display: none;">0</span>
+                <span class="tab-text">📋 Account Requests <span id="requestsBadge" class="requests-badge" style="display: none;">0</span></span>
+                <span class="tab-text-mobile">📋 Requests <span id="requestsBadgeMobile" class="requests-badge" style="display: none;">0</span></span>
             </div>
         </div>
 
@@ -3520,13 +3621,21 @@
             if (!currentUser.isAdmin) return;
             
             const badge = document.getElementById('requestsBadge');
+            const mobileBadge = document.getElementById('requestsBadgeMobile');
             const pendingCount = accountRequests.filter(req => req.status === 'pending').length;
             
             if (pendingCount > 0) {
-                badge.textContent = pendingCount;
-                badge.style.display = 'inline-block';
+                if (badge) {
+                    badge.textContent = pendingCount;
+                    badge.style.display = 'inline-block';
+                }
+                if (mobileBadge) {
+                    mobileBadge.textContent = pendingCount;
+                    mobileBadge.style.display = 'inline-block';
+                }
             } else {
-                badge.style.display = 'none';
+                if (badge) badge.style.display = 'none';
+                if (mobileBadge) mobileBadge.style.display = 'none';
             }
         }
 
