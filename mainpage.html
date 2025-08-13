@@ -242,41 +242,367 @@
             color: #333;
         }
         
-        /* Small View Styles */
-        .small-view-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1rem;
-            padding: 1rem;
-        }
-        
-        .small-view-family-btn {
+        /* Modern Family Groups Redesign */
+        .family-groups-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 1rem;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
             text-align: center;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
         }
         
-        .small-view-family-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        .family-groups-header h2 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
         }
         
-        .small-view-family-btn .family-name {
+        .family-groups-header p {
             font-size: 1.1rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .family-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
             margin-bottom: 0.5rem;
         }
         
-        .small-view-family-btn .member-count {
+        .stat-label {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .view-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .view-btn {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .view-btn.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .view-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);
+        }
+        
+        .view-btn .icon {
+            font-size: 1.1rem;
+        }
+        
+        /* Enhanced Family Tree Cards */
+        .family-tree-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .modern-family-card {
+            background: white;
+            border-radius: 20px;
+            padding: 0;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .modern-family-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+        }
+        
+        .family-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .family-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .family-subtitle {
             font-size: 0.9rem;
             opacity: 0.9;
+            margin: 0.25rem 0 0 0;
+        }
+        
+        .family-icon {
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+        
+        .family-body {
+            padding: 1.5rem;
+        }
+        
+        .generation-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .generation-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .generation-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .generation-icon {
+            font-size: 1.2rem;
+        }
+        
+        .generation-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+        
+        .generation-count {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .members-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+        
+        .member-pill {
+            background: #f8f9ff;
+            border: 1px solid #e8ecff;
+            border-radius: 12px;
+            padding: 0.75rem;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .member-pill:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.02);
+        }
+        
+        .member-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .member-age {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+        
+        .family-actions {
+            padding: 1rem 1.5rem;
+            background: #f8f9ff;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex: 1;
+        }
+        
+        .action-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .action-btn.primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .action-btn.secondary {
+            background: white;
+            color: #667eea;
+            border: 1px solid #667eea;
+        }
+        
+        .action-btn.secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* Small View Enhanced */
+        .small-view-modern {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .small-family-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.08);
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .small-family-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .small-family-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+        }
+        
+        .small-family-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+        
+        .small-family-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .small-family-stats {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .small-stat {
+            text-align: center;
+        }
+        
+        .small-stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .small-stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        /* Mobile Responsiveness for New Design */
+        @media (max-width: 768px) {
+            .family-groups-header {
+                padding: 1.5rem;
+            }
+            
+            .family-groups-header h2 {
+                font-size: 1.8rem;
+            }
+            
+            .family-tree-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .view-controls {
+                gap: 0.5rem;
+            }
+            
+            .view-btn {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.9rem;
+            }
+            
+            .members-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .small-view-modern {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
         }
         
         .modal {
@@ -1062,16 +1388,7 @@
 
             <!-- Family Groups Section -->
             <div id="branches" class="section">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem;">
-                    <h2 style="margin-bottom: 0.5rem;">🌿 Family Groups by Generation</h2>
-                    <p style="margin: 0; opacity: 0.9;">Organize your family into generational groups - perfect for grandparents to see everyone!</p>
-                </div>
-
-                <div class="controls">
-                    <button class="btn btn-primary" onclick="openAddBranchModal()">+ Create Family Group</button>
-                </div>
-                
-                <div id="branchesGrid" class="family-grid"></div>
+                <div id="branchesGrid"></div>
             </div>
 
             <!-- Message Board Section -->
@@ -3011,63 +3328,196 @@
             return familyTree.generations.length > 1 ? familyTree : null;
         }
 
-        // Display branches with auto-generated family trees
+        // Display branches with auto-generated family trees - COMPLETELY REDESIGNED
         function displayBranches() {
             const branchesSection = document.getElementById('branchesGrid');
             if (!branchesSection) return;
 
-            // Auto-generate family trees from relationships
+            // Generate family trees from relationships
             const familyTrees = generateFamilyTrees();
+            
+            // Create modern header
+            const headerHtml = `
+                <div class="family-groups-header">
+                    <h2>🌳 Family Groups by Generation</h2>
+                    <p>Organize your family into generational groups - perfect for grandparents to see everyone!</p>
+                </div>
+                
+                <div class="family-stats">
+                    <div class="stat-card">
+                        <div class="stat-number">${familyTrees.length}</div>
+                        <div class="stat-label">Family Trees</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${familyMembers.length}</div>
+                        <div class="stat-label">Total Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${familyTrees.reduce((sum, tree) => sum + tree.generations.length, 0)}</div>
+                        <div class="stat-label">Generations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${Math.round(familyMembers.reduce((sum, m) => sum + getAge(m), 0) / familyMembers.length) || 0}</div>
+                        <div class="stat-label">Avg Age</div>
+                    </div>
+                </div>
+            `;
+
+            // Create view controls
+            const controlsHtml = `
+                <div class="view-controls">
+                    <button class="view-btn active" onclick="toggleModernDetailedView()">
+                        <span class="icon">📋</span>
+                        Detailed View
+                    </button>
+                    <button class="view-btn" onclick="toggleModernSmallView()">
+                        <span class="icon">🔍</span>
+                        Quick View
+                    </button>
+                </div>
+            `;
+
+            let contentHtml = '';
 
             if (familyTrees.length === 0) {
-                branchesSection.innerHTML = `
-                    <div style="text-align: center; padding: 3rem; color: #666;">
-                        <h3>🌳 No Family Trees Yet</h3>
-                        <p>Family trees will automatically appear here when you add parent-child relationships in the Family Members section.</p>
-                        <p>Start by editing family members and selecting their parents and children!</p>
+                contentHtml = `
+                    <div style="text-align: center; padding: 3rem; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">🌱</div>
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">No Family Trees Yet</h3>
+                        <p style="color: #666; margin-bottom: 2rem;">Start building your family tree by adding family members!</p>
+                        <button class="btn btn-primary" onclick="openAddMemberModal()">
+                            <span style="margin-right: 0.5rem;">👥</span>
+                            Add First Family Member
+                        </button>
                     </div>
                 `;
-                return;
+            } else {
+                contentHtml = `
+                    <div id="detailedViewContent" class="family-tree-grid">
+                        ${familyTrees.map(tree => renderModernFamilyCard(tree)).join('')}
+                    </div>
+                    <div id="smallViewContent" class="small-view-modern" style="display: none;">
+                        ${familyTrees.map(tree => renderModernSmallCard(tree)).join('')}
+                    </div>
+                `;
             }
 
-            branchesSection.innerHTML = `
-                <div style="margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h2 style="color: #667eea; margin: 0;">🌳 Family Trees (${familyTrees.length} families)</h2>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button onclick="toggleCompactView()" class="btn" style="background: #28a745; color: white; padding: 0.5rem 1rem;">
-                                📊 Compact View
-                            </button>
-                            <button onclick="toggleDetailedView()" class="btn" style="background: #007bff; color: white; padding: 0.5rem 1rem;">
-                                📋 Detailed View
-                            </button>
-                            <button onclick="toggleSmallView()" class="btn" style="background: #6f42c1; color: white; padding: 0.5rem 1rem;">
-                                📱 Small View
-                            </button>
+            branchesSection.innerHTML = headerHtml + controlsHtml + contentHtml;
+        }
+
+        // Render modern detailed family card
+        function renderModernFamilyCard(familyTree) {
+            const patriarch = familyMembers.find(m => m.id === familyTree.patriarch.id);
+            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + gen.members.length, 0);
+            
+            let generationsHtml = '';
+            
+            familyTree.generations.forEach((generation, index) => {
+                const genIcon = getModernGenerationIcon(generation.type, index);
+                const genTitle = getGenerationLabel(generation.type, index);
+                
+                const membersHtml = generation.members.map(member => {
+                    const age = getAge(member);
+                    return `
+                        <div class="member-pill" onclick="openEditMemberModal('${member.id}')">
+                            <div class="member-name">${member.firstName} ${member.lastName}</div>
+                            <div class="member-age">${age ? `Age ${age}` : 'Age unknown'}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                generationsHtml += `
+                    <div class="generation-section">
+                        <div class="generation-header">
+                            <span class="generation-icon">${genIcon}</span>
+                            <h4 class="generation-title">${genTitle}</h4>
+                            <span class="generation-count">${generation.members.length}</span>
+                        </div>
+                        <div class="members-grid">
+                            ${membersHtml}
                         </div>
                     </div>
-                </div>
-                
-                <!-- Compact Grid View -->
-                <div id="compactFamilyView" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-                    ${familyTrees.map(tree => renderCompactFamilyCard(tree)).join('')}
-                </div>
-                
-                <!-- Detailed Tree View (initially hidden) -->
-                <div id="detailedFamilyView" style="display: none;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
-                        ${familyTrees.map(tree => renderDetailedFamilyTree(tree)).join('')}
+                `;
+            });
+
+            return `
+                <div class="modern-family-card">
+                    <div class="family-header">
+                        <div>
+                            <h3 class="family-title">${patriarch.firstName} ${patriarch.lastName} Family</h3>
+                            <p class="family-subtitle">${totalMembers} members across ${familyTree.generations.length} generations</p>
+                        </div>
+                        <div class="family-icon">🌳</div>
                     </div>
-                </div>
-                
-                <!-- Small Button View (initially hidden) -->
-                <div id="smallFamilyView" style="display: none;">
-                    <div class="small-view-grid">
-                        <!-- Content will be populated by renderSmallView() -->
+                    <div class="family-body">
+                        ${generationsHtml}
+                    </div>
+                    <div class="family-actions">
+                        <button class="action-btn primary" onclick="showFamilyDetail('${familyTree.id}')">
+                            <span style="margin-right: 0.5rem;">👁️</span>
+                            View Details
+                        </button>
+                        <button class="action-btn secondary" onclick="openAddMemberModal()">
+                            <span style="margin-right: 0.5rem;">➕</span>
+                            Add Member
+                        </button>
                     </div>
                 </div>
             `;
         }
+
+        // Render modern small view card
+        function renderModernSmallCard(familyTree) {
+            const patriarch = familyMembers.find(m => m.id === familyTree.patriarch.id);
+            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + gen.members.length, 0);
+            const totalGenerations = familyTree.generations.length;
+            
+            return `
+                <div class="small-family-card" onclick="showFamilyDetail('${familyTree.id}')">
+                    <div class="small-family-icon">🌳</div>
+                    <div class="small-family-name">${patriarch.firstName} ${patriarch.lastName} Family</div>
+                    <div class="small-family-stats">
+                        <div class="small-stat">
+                            <div class="small-stat-number">${totalMembers}</div>
+                            <div class="small-stat-label">Members</div>
+                        </div>
+                        <div class="small-stat">
+                            <div class="small-stat-number">${totalGenerations}</div>
+                            <div class="small-stat-label">Generations</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Get modern generation icons
+        function getModernGenerationIcon(type, index) {
+            if (type === 'patriarch' || type === 'matriarch') return '👑';
+            if (type === 'spouse') return '💑';
+            if (type === 'children') return '👶';
+            if (type === 'grandchildren') return '🧒';
+            if (type === 'great-grandchildren') return '👦';
+            return '👥';
+        }
+
+        // Toggle functions for modern views
+        window.toggleModernDetailedView = function() {
+            document.getElementById('detailedViewContent').style.display = 'grid';
+            document.getElementById('smallViewContent').style.display = 'none';
+            
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.view-btn').classList.add('active');
+        };
+
+        window.toggleModernSmallView = function() {
+            document.getElementById('detailedViewContent').style.display = 'none';
+            document.getElementById('smallViewContent').style.display = 'grid';
+            
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.view-btn').classList.add('active');
+        };
 
         function renderCompactFamilyCard(familyTree) {
             // Get all generations and organize them
@@ -3338,39 +3788,94 @@
             }).join('');
         }
 
-        // Show detailed family information in modal
+        // Show detailed family information in modal - MODERN REDESIGN
         window.showFamilyDetail = function(familyId) {
-            console.log('showFamilyDetail called with ID:', familyId);
-            
-            // Ensure any existing modal is properly closed first
-            closeModal('familyDetailModal');
-            
             const familyTrees = generateFamilyTrees();
-            const family = familyTrees.find(tree => (tree.id || tree.patriarch?.id) === familyId);
+            const familyTree = familyTrees.find(tree => tree.id === familyId);
             
-            if (!family) {
-                console.log('Family not found for ID:', familyId);
-                return;
-            }
+            if (!familyTree) return;
             
-            console.log('Found family:', family.name);
+            const patriarch = familyMembers.find(m => m.id === familyTree.patriarch.id);
+            const totalMembers = familyTree.generations.reduce((sum, gen) => sum + gen.members.length, 0);
             
-            const familyName = family.name || `${family.patriarch?.firstName || 'Unknown'} Family`;
+            let modalContent = `
+                <div class="family-groups-header" style="margin-bottom: 2rem;">
+                    <h2>🌳 ${patriarch.firstName} ${patriarch.lastName} Family Tree</h2>
+                    <p>${totalMembers} members across ${familyTree.generations.length} generations</p>
+                </div>
+                
+                <div class="family-stats" style="margin-bottom: 2rem;">
+                    <div class="stat-card">
+                        <div class="stat-number">${totalMembers}</div>
+                        <div class="stat-label">Total Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${familyTree.generations.length}</div>
+                        <div class="stat-label">Generations</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${familyTree.generations.reduce((sum, gen) => sum + gen.members.filter(m => !m.deceased).length, 0)}</div>
+                        <div class="stat-label">Living Members</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${Math.round(familyTree.generations.reduce((sum, gen) => sum + gen.members.reduce((genSum, m) => genSum + getAge(m), 0), 0) / totalMembers) || 0}</div>
+                        <div class="stat-label">Average Age</div>
+                    </div>
+                </div>
+            `;
             
-            // Set modal title
-            document.getElementById('familyDetailTitle').textContent = `${familyName} Details`;
+            familyTree.generations.forEach((generation, index) => {
+                const genIcon = getModernGenerationIcon(generation.type, index);
+                const genTitle = getGenerationLabel(generation.type, index);
+                
+                modalContent += `
+                    <div class="generation-section" style="margin-bottom: 2rem;">
+                        <div class="generation-header">
+                            <span class="generation-icon">${genIcon}</span>
+                            <h4 class="generation-title">${genTitle}</h4>
+                            <span class="generation-count">${generation.members.length}</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                            ${generation.members.map(member => {
+                                const age = getAge(member);
+                                const spouseText = member.marriedTo ? ` (Married to ${getSpouseName(member.marriedTo)})` : '';
+                                const deceasedStyle = member.deceased ? 'border: 3px solid #e74c3c; background: #ffebee;' : '';
+                                const deceasedIcon = member.deceased ? '🕊️ ' : '';
+                                
+                                return `
+                                    <div style="background: white; border: 2px solid #f0f0f0; border-radius: 15px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; ${deceasedStyle}" onclick="openEditMemberModal('${member.id}')">
+                                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${member.deceased ? '🕊️' : '👤'}</div>
+                                        <div style="font-weight: 700; font-size: 1.1rem; color: #333; margin-bottom: 0.5rem;">
+                                            ${deceasedIcon}${member.firstName} ${member.lastName}
+                                        </div>
+                                        <div style="color: #666; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                            ${age ? `Age ${age}` : 'Age unknown'}
+                                        </div>
+                                        ${spouseText ? `<div style="color: #667eea; font-size: 0.85rem; font-style: italic;">${spouseText}</div>` : ''}
+                                        ${member.children && member.children.length > 0 ? `<div style="color: #28a745; font-size: 0.8rem; margin-top: 0.5rem;">👶 ${member.children.length} child${member.children.length !== 1 ? 'ren' : ''}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            });
             
-            // Generate detailed family content
-            const content = renderDetailedFamilyTree(family);
+            modalContent += `
+                <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #f0f0f0;">
+                    <button class="btn btn-primary" onclick="openAddMemberModal()" style="margin-right: 1rem;">
+                        <span style="margin-right: 0.5rem;">➕</span>
+                        Add Family Member
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal('familyDetailModal')">
+                        <span style="margin-right: 0.5rem;">✕</span>
+                        Close
+                    </button>
+                </div>
+            `;
             
-            // Display in modal
-            document.getElementById('familyDetailContent').innerHTML = content;
-            
-            // Small delay to ensure modal is properly reset before opening
-            setTimeout(() => {
-                document.getElementById('familyDetailModal').classList.add('active');
-                console.log('Modal opened for:', familyName);
-            }, 50);
+            document.getElementById('familyDetailModal').querySelector('.modal-content').innerHTML = modalContent;
+            document.getElementById('familyDetailModal').classList.add('active');
         };
 
         function renderFamilyMember(member, generationType) {
