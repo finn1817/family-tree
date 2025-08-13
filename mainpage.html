@@ -2889,6 +2889,7 @@
                 loadFamilyBranches(),
                 loadFamilyUnits(),  // New: Load family units
                 loadManualFamilyTrees(), // Load manual family trees
+                loadVirtualFamilyGroups(), // Load virtual family groups
                 loadUsers(),
                 loadMessages(),
                 loadAccountRequests(),
@@ -3871,6 +3872,7 @@
             // Calculate visible stats (hide hidden families from non-developers)
             let visibleAutoTrees = familyTrees;
             let visibleManualTrees = manualFamilyTrees;
+            let visibleVirtualFamilies = virtualFamilyGroups;
             
             // Debug logging
             console.log('Current user:', currentUser);
@@ -3878,12 +3880,14 @@
             console.log('Hidden family IDs:', [...hiddenFamilyIds]);
             console.log('Total auto trees:', familyTrees.length);
             console.log('Total manual trees:', manualFamilyTrees.length);
+            console.log('Total virtual families:', virtualFamilyGroups.length);
             
             // Filter families based on visibility
             if (currentUser?.username === 'dfinn12') {
                 // dfinn12 sees all families (both hidden and visible)
                 visibleAutoTrees = familyTrees;
                 visibleManualTrees = manualFamilyTrees;
+                visibleVirtualFamilies = virtualFamilyGroups;
                 console.log('dfinn12 - showing all families including hidden ones');
             } else {
                 // All other users only see non-hidden families
@@ -3897,13 +3901,16 @@
                     console.log(`Manual tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
                     return !isHidden;
                 });
+                // Virtual families are not subject to hiding (they're only created by developers)
+                visibleVirtualFamilies = virtualFamilyGroups;
                 console.log('Non-developer - hiding hidden families from view');
             }
             
             console.log('Visible auto trees:', visibleAutoTrees.length);
             console.log('Visible manual trees:', visibleManualTrees.length);
+            console.log('Visible virtual families:', visibleVirtualFamilies.length);
             
-            const totalVisibleTrees = visibleAutoTrees.length + visibleManualTrees.length;
+            const totalVisibleTrees = visibleAutoTrees.length + visibleManualTrees.length + visibleVirtualFamilies.length;
             
             // Create modern header
             const headerHtml = `
@@ -3915,7 +3922,7 @@
                 <div class="family-stats">
                     <div class="stat-card">
                         <div class="stat-number">${totalVisibleTrees}</div>
-                        <div class="stat-label">Family Trees</div>
+                        <div class="stat-label">Total Groups</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number">${familyMembers.length}</div>
@@ -3928,6 +3935,10 @@
                     <div class="stat-card">
                         <div class="stat-number">${visibleManualTrees.length}</div>
                         <div class="stat-label">Memorial Trees</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${visibleVirtualFamilies.length}</div>
+                        <div class="stat-label">Virtual Groups</div>
                     </div>
                 </div>
             `;
@@ -3981,14 +3992,20 @@
                 const manualTreesHtml = visibleManualTrees.map(manualTree => renderManualFamilyCard(manualTree)).join('');
                 const manualTreesSmallHtml = visibleManualTrees.map(manualTree => renderManualFamilySmallCard(manualTree)).join('');
                 
+                // Render visible virtual family groups
+                const virtualFamilyHtml = visibleVirtualFamilies.map(virtualFamily => renderManualFamilyCard(virtualFamily)).join('');
+                const virtualFamilySmallHtml = visibleVirtualFamilies.map(virtualFamily => renderManualFamilySmallCard(virtualFamily)).join('');
+                
                 contentHtml = `
                     <div id="detailedViewContent" class="family-tree-grid">
                         ${validTrees.map(tree => renderModernFamilyCard(tree)).join('')}
                         ${manualTreesHtml}
+                        ${virtualFamilyHtml}
                     </div>
                     <div id="smallViewContent" class="small-view-modern" style="display: none;">
                         ${validTrees.map(tree => renderModernSmallCard(tree)).join('')}
                         ${manualTreesSmallHtml}
+                        ${virtualFamilySmallHtml}
                     </div>
                 `;
             }
@@ -8286,6 +8303,20 @@
         let selectedVirtualChildren = new Set();
         let virtualFamilyGroups = []; // Store virtual family groups separately
 
+        // Load virtual family groups from Firebase - SEPARATE COLLECTION
+        async function loadVirtualFamilyGroups() {
+            try {
+                const querySnapshot = await getDocs(collection(db, 'virtual_family_groups'));
+                virtualFamilyGroups = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                console.log(`Loaded ${virtualFamilyGroups.length} virtual family groups`);
+            } catch (error) {
+                console.error('Error loading virtual family groups:', error);
+            }
+        }
+
         window.openCreateFamilyGroupModal = function() {
             if (!currentUser?.isDeveloper) return;
             
@@ -8297,6 +8328,10 @@
             document.getElementById('virtualGroupName').value = '';
             document.getElementById('virtualGroupDescription').value = '';
             document.getElementById('virtualGroupType').value = 'memorial';
+            
+            // Hide preview sections
+            document.getElementById('selectedParentsPreview').style.display = 'none';
+            document.getElementById('selectedChildrenPreview').style.display = 'none';
             
             // Populate the member lists
             populateVirtualFamilyMembers();
@@ -8385,14 +8420,14 @@
 
         function toggleVirtualPersonSelection(memberId, type, isSelected) {
             const targetSet = type === 'parent' ? selectedVirtualParents : selectedVirtualChildren;
-            const item = document.querySelector(`[data-member-id="${memberId}"]`);
+            const items = document.querySelectorAll(`[data-member-id="${memberId}"]`);
             
             if (isSelected) {
                 targetSet.add(memberId);
-                if (item) item.classList.add('selected');
+                items.forEach(item => item.classList.add('selected'));
             } else {
                 targetSet.delete(memberId);
-                if (item) item.classList.remove('selected');
+                items.forEach(item => item.classList.remove('selected'));
             }
             
             updateVirtualSelectionPreview(type);
@@ -8425,13 +8460,13 @@
 
         window.removeVirtualSelection = function(memberId, type) {
             const targetSet = type === 'parent' ? selectedVirtualParents : selectedVirtualChildren;
-            const checkbox = document.querySelector(`[data-member-id="${memberId}"] input[type="checkbox"]`);
+            const checkboxes = document.querySelectorAll(`[data-member-id="${memberId}"] input[type="checkbox"]`);
             
             targetSet.delete(memberId);
-            if (checkbox) {
+            checkboxes.forEach(checkbox => {
                 checkbox.checked = false;
                 checkbox.closest('.virtual-person-item').classList.remove('selected');
-            }
+            });
             
             updateVirtualSelectionPreview(type);
         };
@@ -8495,16 +8530,18 @@
                 document.getElementById('virtualParentsList').closest('div[style*="background: #fff3e0"]') : 
                 document.getElementById('virtualChildrenList').closest('div[style*="background: #f3e5f5"]');
             
-            const buttons = container.querySelectorAll('.status-filter-btn');
-            buttons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.status === activeStatus) {
-                    btn.classList.add('active');
-                }
-            });
+            if (container) {
+                const buttons = container.querySelectorAll('.status-filter-btn');
+                buttons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.status === activeStatus) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
         }
 
-        // Create virtual family group
+        // Create virtual family group - FIXED
         window.createCustomFamilyGroup = async function(event) {
             event.preventDefault();
             
@@ -8529,22 +8566,22 @@
                 }
                 
                 const virtualGroup = {
-                    id: 'virtual_' + Date.now(),
                     name: groupName,
                     type: groupType,
                     description: description,
-                    parentIds: [...selectedVirtualParents], // Keep consistent with manual family trees
+                    parentIds: [...selectedVirtualParents],
                     childrenIds: [...selectedVirtualChildren],
                     createdBy: currentUser.username,
                     createdAt: new Date().toISOString(),
-                    isVirtual: true // Flag to identify this as virtual
+                    isVirtual: true
                 };
                 
-                // Save to Firebase using manual_family_trees collection but with virtual flag
-                await addDoc(collection(db, 'manual_family_trees'), virtualGroup);
+                // Save to separate Firebase collection
+                const docRef = await addDoc(collection(db, 'virtual_family_groups'), virtualGroup);
+                virtualGroup.id = docRef.id;
                 
                 // Add to local array
-                manualFamilyTrees.push(virtualGroup);
+                virtualFamilyGroups.push(virtualGroup);
                 
                 showMessage(`Virtual family group "${groupName}" created successfully!`, 'success');
                 closeModal('createFamilyGroupModal');
