@@ -2995,50 +2995,171 @@
             }
         }
 
-        // Auto-generate family trees based on relationships - REWRITTEN FOR MULTI-GENERATIONAL SUPPORT
+        // Auto-generate family trees based on relationships - REWRITTEN FOR BETTER LOGIC
         function generateFamilyTrees() {
             const familyTrees = [];
-            const processedPatriarchs = new Set(); // Only track patriarchs to avoid duplicate trees
+            const processedMembers = new Set(); // Track all processed members to avoid duplicates
 
-            // Step 1: Find all patriarchs/matriarchs (oldest generation with no parents in system)
-            const patriarchs = findPatriarchs();
-            
-            // Step 2: Build complete multi-generational trees starting from patriarchs
-            patriarchs.forEach(patriarch => {
-                if (processedPatriarchs.has(patriarch.id)) return;
+            // Step 1: Find all potential family heads (anyone with children or who could start a family)
+            const potentialHeads = familyMembers.filter(member => {
+                // Include members who have children OR are married OR have no parents (potential patriarchs)
+                const hasChildren = member.children && member.children.length > 0;
+                const isMarried = member.marriedTo;
+                const hasParentsInSystem = member.parents && member.parents.length > 0 && 
+                    member.parents.some(parentId => familyMembers.find(m => m.id === parentId));
                 
-                const familyTree = buildMultiGenerationalTree(patriarch, processedPatriarchs);
+                return hasChildren || (isMarried && !hasParentsInSystem);
+            });
+
+            // Step 2: Sort by age (oldest first) and create families
+            potentialHeads.sort((a, b) => getAge(b) - getAge(a)).forEach(head => {
+                // Skip if this member is already part of another family tree
+                if (processedMembers.has(head.id)) return;
+                
+                // Check if spouse is also a potential head - if so, use the older one as primary
+                if (head.marriedTo) {
+                    const spouse = familyMembers.find(m => m.id === head.marriedTo);
+                    if (spouse && potentialHeads.includes(spouse)) {
+                        // If spouse is older, skip this one (spouse will create the family)
+                        if (getAge(spouse) > getAge(head)) return;
+                    }
+                }
+                
+                const familyTree = buildCompleteFamily(head, processedMembers);
                 if (familyTree && familyTree.generations.length > 0) {
                     familyTrees.push(familyTree);
                 }
             });
 
-            // Step 3: Handle any remaining isolated members (no family connections)
-            const isolatedMembers = familyMembers.filter(member => {
-                // Check if member is truly isolated (no parents, no children, no spouse)
-                const hasFamily = (member.parents && member.parents.length > 0) ||
-                                 (member.children && member.children.length > 0) ||
-                                 member.marriedTo;
-                return !hasFamily;
-            });
-            
-            isolatedMembers.forEach(member => {
-                if (processedPatriarchs.has(member.id)) return;
-                
-                const isolatedTree = createIsolatedMemberTree(member, processedPatriarchs);
+            // Step 3: Handle any remaining isolated members
+            const remainingMembers = familyMembers.filter(member => !processedMembers.has(member.id));
+            remainingMembers.forEach(member => {
+                const isolatedTree = createIsolatedMemberTree(member, processedMembers);
                 if (isolatedTree) {
                     familyTrees.push(isolatedTree);
                 }
             });
 
-            // Step 4: Sort trees by oldest member's age (oldest first)
-            familyTrees.sort((a, b) => {
-                const aOldest = Math.max(...a.generations.flatMap(gen => gen.members.map(member => getAge(member))));
-                const bOldest = Math.max(...b.generations.flatMap(gen => gen.members.map(member => getAge(member))));
-                return bOldest - aOldest; // Oldest first
+            return familyTrees;
+        }
+
+        // Build a complete family starting from a family head
+        function buildCompleteFamily(familyHead, processedMembers) {
+            const familyTree = {
+                id: `family_${familyHead.id}`,
+                name: `${familyHead.firstName} ${familyHead.lastName} Family`,
+                generations: []
+            };
+
+            // Determine if this person is a patriarch or parent generation
+            const hasParentsInSystem = familyHead.parents && familyHead.parents.length > 0 && 
+                familyHead.parents.some(parentId => familyMembers.find(m => m.id === parentId));
+            
+            const generationType = hasParentsInSystem ? 'parents' : 'patriarch';
+
+            // Start with the family head's generation
+            const headGeneration = buildFamilyGeneration(familyHead, processedMembers, generationType);
+            if (headGeneration.members.length > 0) {
+                familyTree.generations.push(headGeneration);
+            }
+
+            // Build subsequent generations (children, grandchildren, etc.)
+            let currentGeneration = headGeneration.members;
+            let generationLevel = 1;
+            let nextGenerationType = 'children';
+
+            while (currentGeneration.length > 0) {
+                const childrenGeneration = buildChildrenGeneration(currentGeneration, nextGenerationType, processedMembers);
+                
+                if (childrenGeneration.members.length === 0) break;
+                
+                familyTree.generations.push(childrenGeneration);
+                
+                // Add spouses of children as separate generation if they exist
+                const spousesGeneration = buildSpousesGeneration(childrenGeneration.members, processedMembers);
+                if (spousesGeneration.members.length > 0) {
+                    familyTree.generations.push(spousesGeneration);
+                }
+                
+                currentGeneration = childrenGeneration.members;
+                generationLevel++;
+                
+                // Update generation type
+                if (nextGenerationType === 'children') nextGenerationType = 'grandchildren';
+                else if (nextGenerationType === 'grandchildren') nextGenerationType = 'great-grandchildren';
+                else nextGenerationType = `generation-${generationLevel}`;
+            }
+
+            return familyTree;
+        }
+
+        // Build a family generation starting from a specific member
+        function buildFamilyGeneration(member, processedMembers, type) {
+            const generationMembers = [member];
+            processedMembers.add(member.id);
+
+            // Add spouse if married
+            if (member.marriedTo) {
+                const spouse = familyMembers.find(m => m.id === member.marriedTo);
+                if (spouse && !processedMembers.has(spouse.id)) {
+                    generationMembers.push(spouse);
+                    processedMembers.add(spouse.id);
+                }
+            }
+
+            return {
+                level: 0,
+                members: generationMembers.sort((a, b) => getAge(b) - getAge(a)),
+                type: type
+            };
+        }
+
+        // Build children generation
+        function buildChildrenGeneration(currentGeneration, type, processedMembers) {
+            const childrenMembers = [];
+            const seenChildren = new Set();
+
+            currentGeneration.forEach(parent => {
+                if (parent.children && parent.children.length > 0) {
+                    parent.children.forEach(childId => {
+                        const child = familyMembers.find(m => m.id === childId);
+                        if (child && !seenChildren.has(child.id) && !processedMembers.has(child.id)) {
+                            childrenMembers.push(child);
+                            seenChildren.add(child.id);
+                            processedMembers.add(child.id);
+                        }
+                    });
+                }
             });
 
-            return familyTrees;
+            return {
+                level: 1,
+                members: childrenMembers.sort((a, b) => getAge(b) - getAge(a)),
+                type: type
+            };
+        }
+
+        // Build spouses generation for children
+        function buildSpousesGeneration(childrenGeneration, processedMembers) {
+            const spousesMembers = [];
+            const seenSpouses = new Set();
+
+            childrenGeneration.forEach(child => {
+                if (child.marriedTo) {
+                    const spouse = familyMembers.find(m => m.id === child.marriedTo);
+                    if (spouse && !seenSpouses.has(spouse.id) && !processedMembers.has(spouse.id)) {
+                        spousesMembers.push(spouse);
+                        seenSpouses.add(spouse.id);
+                        processedMembers.add(spouse.id);
+                    }
+                }
+            });
+
+            return {
+                level: 1,
+                members: spousesMembers.sort((a, b) => getAge(b) - getAge(a)),
+                type: 'spouse'
+            };
         }
 
         // Find patriarchs/matriarchs (oldest generation members with no parents in the system)
@@ -3171,19 +3292,26 @@
         }
 
         // Create tree for isolated member (no family connections)
-        function createIsolatedMemberTree(member, processedPatriarchs) {
+        // Create tree for isolated member (no family connections)
+        function createIsolatedMemberTree(member, processedMembers) {
+            if (processedMembers.has(member.id)) return null;
+            
             const familyTree = {
                 id: `family_${member.id}`,
                 name: `${member.firstName} ${member.lastName}`,
                 generations: []
             };
 
-            const generation = buildGenerationFromMember(member, processedPatriarchs, 'individual');
-            if (generation.members.length > 0) {
-                familyTree.generations.push(generation);
-            }
+            const generation = {
+                level: 0,
+                members: [member],
+                type: 'individual'
+            };
+            
+            processedMembers.add(member.id);
+            familyTree.generations.push(generation);
 
-            return familyTree.generations.length > 0 ? familyTree : null;
+            return familyTree;
         }
 
         function findNuclearFamilies() {
