@@ -7854,8 +7854,9 @@
                 // Save to localStorage for persistence
                 localStorage.setItem('hiddenFamilyIds', JSON.stringify([...hiddenFamilyIds]));
                 
-                // Find the family name for the message
-                const family = familyTrees.find(f => f.id === familyId) || 
+                // Generate current family trees to find the family name
+                const currentFamilyTrees = generateFamilyTrees();
+                const family = currentFamilyTrees.find(f => f.id === familyId) || 
                               manualFamilyTrees.find(f => f.id === familyId);
                 const familyName = family ? family.name : 'Family';
                 
@@ -7881,8 +7882,9 @@
                 // Save to localStorage for persistence
                 localStorage.setItem('hiddenFamilyIds', JSON.stringify([...hiddenFamilyIds]));
                 
-                // Find the family name for the message
-                const family = familyTrees.find(f => f.id === familyId) || 
+                // Generate current family trees to find the family name
+                const currentFamilyTrees = generateFamilyTrees();
+                const family = currentFamilyTrees.find(f => f.id === familyId) || 
                               manualFamilyTrees.find(f => f.id === familyId);
                 const familyName = family ? family.name : 'Family';
                 
@@ -7904,8 +7906,9 @@
             const hiddenContainer = document.getElementById('hiddenFamiliesContainer');
             if (!hiddenContainer) return;
             
-            // Get all hidden families (both auto and manual)
-            const hiddenAuto = familyTrees.filter(f => hiddenFamilyIds.has(f.id));
+            // Generate current family trees and get hidden families
+            const currentFamilyTrees = generateFamilyTrees();
+            const hiddenAuto = currentFamilyTrees.filter(f => hiddenFamilyIds.has(f.id));
             const hiddenManual = manualFamilyTrees.filter(f => hiddenFamilyIds.has(f.id));
             const allHidden = [...hiddenAuto, ...hiddenManual];
             
