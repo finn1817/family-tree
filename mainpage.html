@@ -3938,7 +3938,7 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-number">${visibleVirtualFamilies.length}</div>
-                        <div class="stat-label">Virtual Groups</div>
+                        <div class="stat-label">Created Groups</div>
                     </div>
                 </div>
             `;
@@ -8331,56 +8331,91 @@
         }
 
         window.openCreateFamilyGroupModal = function() {
-            console.log('openCreateFamilyGroupModal called');
+            console.log('🌟 CREATE FAMILY GROUP BUTTON CLICKED!');
             console.log('Current user:', currentUser);
             console.log('Is developer?', currentUser?.isDeveloper);
+            console.log('Family members available:', familyMembers.length);
             
-            if (!currentUser?.isDeveloper) {
-                console.log('Access denied - not a developer');
-                showMessage('Access denied: Only developers can create virtual family groups', 'error');
+            if (!currentUser) {
+                console.error('❌ No current user found!');
+                alert('Error: No user logged in. Please refresh the page.');
+                return;
+            }
+            
+            if (!currentUser.isDeveloper) {
+                console.log('❌ Access denied - not a developer');
+                alert('Access denied: Only developers can create virtual family groups');
                 return;
             }
             
             try {
-                console.log('Resetting selections...');
+                console.log('✅ Access granted - proceeding with modal opening...');
+                
                 // Reset selections
                 selectedVirtualParents.clear();
                 selectedVirtualChildren.clear();
+                console.log('✅ Selections cleared');
                 
-                console.log('Clearing form fields...');
                 // Clear form
                 const nameField = document.getElementById('virtualGroupName');
                 const descField = document.getElementById('virtualGroupDescription');
                 const typeField = document.getElementById('virtualGroupType');
                 
-                if (nameField) nameField.value = '';
-                if (descField) descField.value = '';
-                if (typeField) typeField.value = 'memorial';
+                if (nameField) {
+                    nameField.value = '';
+                    console.log('✅ Name field cleared');
+                } else {
+                    console.error('❌ Name field not found!');
+                }
                 
-                console.log('Hiding preview sections...');
+                if (descField) {
+                    descField.value = '';
+                    console.log('✅ Description field cleared');
+                } else {
+                    console.error('❌ Description field not found!');
+                }
+                
+                if (typeField) {
+                    typeField.value = 'memorial';
+                    console.log('✅ Type field set to memorial');
+                } else {
+                    console.error('❌ Type field not found!');
+                }
+                
                 // Hide preview sections
                 const parentsPreview = document.getElementById('selectedParentsPreview');
                 const childrenPreview = document.getElementById('selectedChildrenPreview');
                 
-                if (parentsPreview) parentsPreview.style.display = 'none';
-                if (childrenPreview) childrenPreview.style.display = 'none';
+                if (parentsPreview) {
+                    parentsPreview.style.display = 'none';
+                    console.log('✅ Parents preview hidden');
+                } else {
+                    console.error('❌ Parents preview not found!');
+                }
                 
-                console.log('Populating member lists...');
+                if (childrenPreview) {
+                    childrenPreview.style.display = 'none';
+                    console.log('✅ Children preview hidden');
+                } else {
+                    console.error('❌ Children preview not found!');
+                }
+                
                 // Populate the member lists
+                console.log('📝 About to populate member lists...');
                 populateVirtualFamilyMembers();
                 
-                console.log('Opening modal...');
                 // Open the modal
                 const modal = document.getElementById('createFamilyGroupModal');
                 if (modal) {
                     modal.classList.add('active');
-                    console.log('Modal opened successfully');
+                    console.log('🎉 MODAL OPENED SUCCESSFULLY!');
                 } else {
-                    console.error('Modal element not found!');
+                    console.error('❌ MODAL ELEMENT NOT FOUND!');
+                    alert('Error: Modal element not found. Please check the HTML structure.');
                 }
             } catch (error) {
-                console.error('Error in openCreateFamilyGroupModal:', error);
-                showMessage('Error opening family group modal. Please try again.', 'error');
+                console.error('💥 ERROR in openCreateFamilyGroupModal:', error);
+                alert('Error opening family group modal: ' + error.message);
             }
         };
 
