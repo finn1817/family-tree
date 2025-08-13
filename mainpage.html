@@ -341,8 +341,8 @@
         /* Enhanced Family Tree Cards */
         .family-tree-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
             margin-top: 2rem;
         }
         
@@ -430,15 +430,15 @@
         
         .members-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 0.75rem;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.5rem;
         }
         
         .member-pill {
             background: #f8f9ff;
             border: 1px solid #e8ecff;
-            border-radius: 12px;
-            padding: 0.75rem;
+            border-radius: 8px;
+            padding: 0.5rem;
             text-align: center;
             transition: all 0.2s ease;
             cursor: pointer;
@@ -4248,48 +4248,44 @@
             }
 
             return `
-                <div class="modern-family-card" style="${virtualStyle}">
-                    <div class="family-header">
+                <div class="modern-family-card" style="${virtualStyle} min-height: unset;">
+                    <div class="family-header" style="padding: 1rem;">
                         <div>
-                            <h3 class="family-title" style="color: ${virtualColor};">${isVirtual ? '🌟' : '🕊️'} ${manualTree.name}</h3>
-                            <p class="family-subtitle">${totalMembers} members • ${deceasedCount} deceased, ${livingCount} living • ${familyTypeText}</p>
-                            ${manualTree.description ? `<p style="font-style: italic; color: #666; font-size: 0.9rem; margin-top: 0.5rem;">${manualTree.description}</p>` : ''}
-                            ${isVirtual ? `<div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 8px; padding: 0.75rem; margin-top: 1rem; font-size: 0.85rem; color: #2e7d32;"><strong>✨ Manual Creation:</strong> This family was made manually by a creator!</div>` : ''}
+                            <h3 class="family-title" style="color: ${virtualColor}; margin: 0 0 0.5rem 0; font-size: 1.1rem;">${isVirtual ? '🌟' : '🕊️'} ${manualTree.name}</h3>
+                            <p class="family-subtitle" style="margin: 0; font-size: 0.85rem;">${totalMembers} members • ${familyTypeText}</p>
                         </div>
-                        <div class="family-icon" style="color: ${virtualColor};">${virtualIcon}</div>
+                        <div class="family-icon" style="color: ${virtualColor}; font-size: 1.5rem;">${isVirtual ? '🌟' : '🌹'}</div>
                     </div>
-                    <div class="family-body">
-                        ${sectionsHtml}
+                    <div class="family-body" style="padding: 0.75rem 1rem;">
+                        <div style="margin-bottom: 0.75rem; font-size: 0.85rem;">
+                            ${sectionsHtml}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #666;">
+                            ${deceasedCount > 0 ? `🕊️ ${deceasedCount} deceased` : ''} ${livingCount > 0 && deceasedCount > 0 ? ' • ' : ''}${livingCount > 0 ? `💚 ${livingCount} living` : ''}
+                        </div>
                     </div>
-                    <div class="family-actions">
-                        <button class="action-btn" onclick="${isVirtual ? 'viewVirtualFamilyDetail' : 'viewManualFamilyDetail'}('${manualTree.id}')" style="background: ${virtualColor}; color: white;">
-                            <span style="margin-right: 0.5rem;">👁️</span>
-                            ${isVirtual ? 'View Enhanced Group' : 'View Memorial'}
+                    <div class="family-actions" style="padding: 0.75rem 1rem; gap: 0.5rem;">
+                        <button class="action-btn" onclick="${isVirtual ? 'viewVirtualFamilyDetail' : 'viewManualFamilyDetail'}('${manualTree.id}')" style="background: ${virtualColor}; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem; flex: 1;">
+                            👁️ View
                         </button>
                         ${currentUser?.username === 'dfinn12' ? `
-                            <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')">
-                                <span style="margin-right: 0.5rem;">✏️</span>
-                                Edit
+                            <button class="action-btn secondary" onclick="editManualFamily('${manualTree.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; flex: 1;">
+                                ✏️ Edit
                             </button>
-                            <button class="action-btn secondary" onclick="deleteManualFamily('${manualTree.id}')" style="background: #dc3545; color: white;">
-                                <span style="margin-right: 0.5rem;">🗑️</span>
-                                Delete
+                            <button class="action-btn secondary" onclick="deleteManualFamily('${manualTree.id}')" style="background: #dc3545; color: white; padding: 0.4rem 0.8rem; font-size: 0.8rem; flex: 1;">
+                                🗑️ Delete
                             </button>
                         ` : ''}
-                        ${currentUser?.username === 'dfinn12' ? `
-                            ${hiddenFamilyIds.has(manualTree.id) ? `
-                                <button class="action-btn" onclick="unhideFamilyGroup('${manualTree.id}')" 
-                                        style="background: #27ae60; color: white; border: 1px solid #27ae60;">
-                                    <span style="margin-right: 0.5rem;">👁️</span>
-                                    Show
-                                </button>
-                            ` : `
-                                <button class="action-btn" onclick="hideFamilyGroup('${manualTree.id}')" 
-                                        style="background: #e74c3c; color: white; border: 1px solid #e74c3c;">
-                                    <span style="margin-right: 0.5rem;">🙈</span>
-                                    Hide
-                                </button>
-                            `}
+                        ${currentUser?.username === 'dfinn12' && hiddenFamilyIds.has(manualTree.id) ? `
+                            <button class="action-btn" onclick="unhideFamilyGroup('${manualTree.id}')" 
+                                    style="background: #27ae60; color: white; border: 1px solid #27ae60; padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                👁️ Show
+                            </button>
+                        ` : ''}
+                        ${currentUser?.username === 'dfinn12' && !hiddenFamilyIds.has(manualTree.id) ? `
+                            <button class="action-btn secondary" onclick="hideFamilyGroup('${manualTree.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                🙈 Hide
+                            </button>
                         ` : ''}
                     </div>
                 </div>
