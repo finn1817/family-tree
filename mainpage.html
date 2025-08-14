@@ -3748,6 +3748,9 @@
             
             document.getElementById('username').textContent = currentUser.username;
             
+            // Add Security Questions button for all users
+            addSecurityQuestionsButton();
+            
             if (currentUser.isAdmin) {
                 document.getElementById('adminBadge').style.display = 'inline-block';
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
@@ -9981,6 +9984,58 @@
             populateVirtualFamilyMembers();
         }
 
+        // Security Questions Button for all users
+        function addSecurityQuestionsButton() {
+            const userInfo = document.querySelector('.user-info');
+            if (!userInfo) return;
+            
+            // Create Security Questions button
+            const securityButton = document.createElement('button');
+            securityButton.innerHTML = '🔒 Security Questions';
+            securityButton.className = 'btn';
+            securityButton.style.cssText = `
+                background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+                color: white;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(111, 66, 193, 0.3);
+            `;
+            
+            // Add hover effect
+            securityButton.addEventListener('mouseenter', () => {
+                securityButton.style.transform = 'translateY(-2px)';
+                securityButton.style.boxShadow = '0 4px 12px rgba(111, 66, 193, 0.4)';
+            });
+            
+            securityButton.addEventListener('mouseleave', () => {
+                securityButton.style.transform = 'translateY(0)';
+                securityButton.style.boxShadow = '0 2px 8px rgba(111, 66, 193, 0.3)';
+            });
+            
+            // Add click handler
+            securityButton.addEventListener('click', () => {
+                openSecurityQuestionsModal();
+            });
+            
+            // Insert button before the admin badge or logout button
+            const adminBadge = document.getElementById('adminBadge');
+            const logoutBtn = userInfo.querySelector('.logout-btn');
+            
+            if (adminBadge && adminBadge.style.display !== 'none') {
+                userInfo.insertBefore(securityButton, adminBadge);
+            } else if (logoutBtn) {
+                userInfo.insertBefore(securityButton, logoutBtn);
+            } else {
+                userInfo.appendChild(securityButton);
+            }
+        }
+
         // Admin Functions - Change Password Button for all admins
         function addChangePasswordButton() {
             const userInfo = document.querySelector('.user-info');
@@ -10020,7 +10075,7 @@
                 openChangePasswordRequestModal();
             });
             
-            // Insert before the admin badge
+            // Insert button before the admin badge
             const adminBadge = document.getElementById('adminBadge');
             if (adminBadge) {
                 userInfo.insertBefore(changePasswordButton, adminBadge);
@@ -10129,40 +10184,6 @@
                 openPasswordManagementModal();
             });
 
-            // Create Security Questions button
-            const securityButton = document.createElement('button');
-            securityButton.innerHTML = '🔒 Security Questions';
-            securityButton.className = 'btn';
-            securityButton.style.cssText = `
-                background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
-                color: white;
-                padding: 0.5rem 1rem;
-                border: none;
-                border-radius: 8px;
-                font-size: 0.9rem;
-                font-weight: 600;
-                cursor: pointer;
-                margin-right: 1rem;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 8px rgba(111, 66, 193, 0.3);
-            `;
-            
-            // Add hover effect
-            securityButton.addEventListener('mouseenter', () => {
-                securityButton.style.transform = 'translateY(-2px)';
-                securityButton.style.boxShadow = '0 4px 12px rgba(111, 66, 193, 0.4)';
-            });
-            
-            securityButton.addEventListener('mouseleave', () => {
-                securityButton.style.transform = 'translateY(0)';
-                securityButton.style.boxShadow = '0 2px 8px rgba(111, 66, 193, 0.3)';
-            });
-            
-            // Add click handler
-            securityButton.addEventListener('click', () => {
-                openSecurityQuestionsModal();
-            });
-            
             // Create developer test button
             const testButton = document.createElement('button');
             testButton.innerHTML = '🚀 Test Me';
@@ -10201,7 +10222,6 @@
             const logoutBtn = userInfo.querySelector('.logout-btn');
             userInfo.insertBefore(analyticsButton, logoutBtn);
             userInfo.insertBefore(passwordButton, logoutBtn);
-            userInfo.insertBefore(securityButton, logoutBtn);
             userInfo.insertBefore(testButton, logoutBtn);
         }
 
