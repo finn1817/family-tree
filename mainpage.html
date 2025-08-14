@@ -9481,10 +9481,22 @@
                 return;
             }
             
-            const manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
-            if (!manualFamily) return;
+            // Look for the family in both manual and virtual family arrays
+            let manualFamily = manualFamilyTrees.find(f => f.id === manualFamilyId);
+            let isVirtual = false;
             
-            if (!confirm(`Are you sure you want to delete the memorial family "${manualFamily.name}"? This action cannot be undone.`)) {
+            if (!manualFamily) {
+                manualFamily = virtualFamilyGroups.find(f => f.id === manualFamilyId);
+                isVirtual = true;
+            }
+            
+            if (!manualFamily) {
+                showMessage('Family not found.', 'error');
+                return;
+            }
+            
+            const familyType = isVirtual ? 'virtual family group' : 'memorial family';
+            if (!confirm(`Are you sure you want to delete the ${familyType} "${manualFamily.name}"? This action cannot be undone.`)) {
                 return;
             }
             
@@ -9492,17 +9504,21 @@
                 // Delete from Firebase
                 await deleteDoc(doc(db, 'manual_family_trees', manualFamilyId));
                 
-                // Remove from local array
-                manualFamilyTrees = manualFamilyTrees.filter(f => f.id !== manualFamilyId);
+                // Remove from appropriate local array
+                if (isVirtual) {
+                    virtualFamilyGroups = virtualFamilyGroups.filter(f => f.id !== manualFamilyId);
+                } else {
+                    manualFamilyTrees = manualFamilyTrees.filter(f => f.id !== manualFamilyId);
+                }
                 
-                showMessage(`Memorial family "${manualFamily.name}" deleted successfully!`, 'success');
+                showMessage(`${familyType.charAt(0).toUpperCase() + familyType.slice(1)} "${manualFamily.name}" deleted successfully!`, 'success');
                 
                 // Refresh the family groups display
                 displayBranches();
                 
             } catch (error) {
-                console.error('Error deleting manual family tree:', error);
-                showMessage('Error deleting memorial family. Please try again.', 'error');
+                console.error('Error deleting family tree:', error);
+                showMessage(`Error deleting ${familyType}. Please try again.`, 'error');
             }
         };
 
