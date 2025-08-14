@@ -1543,9 +1543,13 @@
 
         .log-action.login { background: #d4edda; color: #155724; }
         .log-action.login-failed { background: #f8d7da; color: #721c24; }
+        .log-action.logout { background: #e2e3e5; color: #495057; }
         .log-action.edit { background: #fff3cd; color: #856404; }
         .log-action.add { background: #d1ecf1; color: #0c5460; }
         .log-action.delete { background: #f5c6cb; color: #721c24; }
+        .log-action.password-reset-request { background: #fce4ec; color: #c2185b; }
+        .log-action.security-questions { background: #e8f5e8; color: #2e7d32; }
+        .log-action.clear-logs { background: #fff3e0; color: #f57c00; }
 
         .stats-grid {
             display: grid;
@@ -2936,11 +2940,15 @@
                         <select id="activityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             <option value="">All Actions</option>
                             <option value="login">Logins</option>
+                            <option value="logout">Logouts</option>
                             <option value="edit">Edits</option>
                             <option value="add">Additions</option>
                             <option value="delete">Deletions</option>
+                            <option value="password_reset_request">Password Reset</option>
+                            <option value="security_questions">Security Questions</option>
                         </select>
                         <button onclick="refreshActivityLogs()" class="btn btn-primary">Refresh</button>
+                        <button onclick="confirmClearAllLogs()" class="btn" style="background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 500;">🗑️ Clear All Logs</button>
                     </div>
                     <div style="overflow-x: auto;">
                         <table class="log-table">
@@ -2950,11 +2958,14 @@
                                     <th>User</th>
                                     <th>Action</th>
                                     <th>Target</th>
+                                    <th>Status</th>
+                                    <th>IP Address</th>
+                                    <th>User Agent</th>
                                     <th>Details</th>
                                 </tr>
                             </thead>
                             <tbody id="activityLogsBody">
-                                <tr><td colspan="5" style="text-align: center; color: #666;">Loading...</td></tr>
+                                <tr><td colspan="8" style="text-align: center; color: #666;">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2974,11 +2985,14 @@
                                     <th>Event Type</th>
                                     <th>IP Address</th>
                                     <th>Status</th>
+                                    <th>Browser</th>
+                                    <th>OS</th>
+                                    <th>Device</th>
                                     <th>Details</th>
                                 </tr>
                             </thead>
                             <tbody id="securityLogsBody">
-                                <tr><td colspan="6" style="text-align: center; color: #666;">Loading...</td></tr>
+                                <tr><td colspan="9" style="text-align: center; color: #666;">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -10109,6 +10123,9 @@
             document.getElementById('changeReason').value = '';
             document.getElementById('changePasswordRequestError').textContent = '';
             document.getElementById('changePasswordRequestSuccess').textContent = '';
+            
+            // Log password change request modal access
+            logUserAction('password_reset_request', 'modal_opened', 'User opened change password request modal', 'success');
         };
 
         // Developer Functions (dfinn12 only)
@@ -10353,15 +10370,33 @@
                 // Get IP address if not provided
                 const clientIP = await getClientIP();
                 
+                // Get more detailed browser/device information
+                const browserInfo = getBrowserInfo();
+                const deviceInfo = getDeviceInfo();
+                
                 const logEntry = {
                     timestamp: new Date().toISOString(),
                     user: currentUser.username,
+                    userId: currentUser.userId || 'unknown',
                     action: action,
                     target: target,
                     details: details,
                     status: status,
                     userAgent: navigator.userAgent,
-                    ipAddress: clientIP  // IP stored here
+                    ipAddress: clientIP,
+                    browser: browserInfo.name,
+                    browserVersion: browserInfo.version,
+                    os: browserInfo.os,
+                    device: deviceInfo.type,
+                    screenResolution: `${screen.width}x${screen.height}`,
+                    viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                    referrer: document.referrer || 'direct',
+                    url: window.location.href,
+                    sessionId: getSessionId(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    language: navigator.language,
+                    cookiesEnabled: navigator.cookieEnabled,
+                    onlineStatus: navigator.onLine ? 'online' : 'offline'
                 };
 
                 // Add to Firestore logs collection
@@ -10374,6 +10409,68 @@
             } catch (error) {
                 console.error('❌ Failed to log action:', error);
             }
+        }
+
+        // Get browser information
+        function getBrowserInfo() {
+            const ua = navigator.userAgent;
+            let browser = 'Unknown';
+            let version = 'Unknown';
+            let os = 'Unknown';
+            
+            // Detect browser
+            if (ua.includes('Chrome') && !ua.includes('Edg')) {
+                browser = 'Chrome';
+                version = ua.match(/Chrome\/([0-9.]+)/)?.[1] || 'Unknown';
+            } else if (ua.includes('Firefox')) {
+                browser = 'Firefox';
+                version = ua.match(/Firefox\/([0-9.]+)/)?.[1] || 'Unknown';
+            } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+                browser = 'Safari';
+                version = ua.match(/Safari\/([0-9.]+)/)?.[1] || 'Unknown';
+            } else if (ua.includes('Edg')) {
+                browser = 'Edge';
+                version = ua.match(/Edg\/([0-9.]+)/)?.[1] || 'Unknown';
+            }
+            
+            // Detect OS
+            if (ua.includes('Windows')) {
+                os = 'Windows';
+            } else if (ua.includes('Mac')) {
+                os = 'macOS';
+            } else if (ua.includes('Linux')) {
+                os = 'Linux';
+            } else if (ua.includes('Android')) {
+                os = 'Android';
+            } else if (ua.includes('iOS')) {
+                os = 'iOS';
+            }
+            
+            return { name: browser, version, os };
+        }
+
+        // Get device information
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let type = 'Desktop';
+            
+            if (/Mobi|Android/i.test(ua)) {
+                type = 'Mobile';
+            } else if (/Tablet|iPad/i.test(ua)) {
+                type = 'Tablet';
+            }
+            
+            return { type };
+        }
+
+        // Get or create session ID
+        function getSessionId() {
+            let sessionId = sessionStorage.getItem('familyTreeSessionId');
+            if (!sessionId) {
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('familyTreeSessionId', sessionId);
+            }
+            return sessionId;
         }
 
         // Update analytics data
@@ -10542,19 +10639,29 @@
             const tbody = document.getElementById('activityLogsBody');
             
             if (systemLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666;">No activity logs found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #666;">No activity logs found</td></tr>';
                 return;
             }
             
-            const html = systemLogs.map(log => `
-                <tr>
-                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                    <td><strong>${log.user}</strong></td>
-                    <td><span class="log-action ${log.action} ${log.status === 'failed' ? 'login-failed' : ''}">${log.action.toUpperCase()}</span></td>
-                    <td>${log.target}</td>
-                    <td>${log.details || '-'}</td>
-                </tr>
-            `).join('');
+            const html = systemLogs.map(log => {
+                // Only mark as login-failed if it's actually a failed login
+                const isFailedLogin = log.action === 'login' && log.status === 'failed';
+                const actionClass = isFailedLogin ? 'login-failed' : log.action;
+                const statusColor = log.status === 'success' ? '#28a745' : log.status === 'failed' ? '#dc3545' : '#6c757d';
+                
+                return `
+                    <tr>
+                        <td>${new Date(log.timestamp).toLocaleString()}</td>
+                        <td><strong>${log.user}</strong></td>
+                        <td><span class="log-action ${actionClass}">${log.action.toUpperCase().replace('_', ' ')}</span></td>
+                        <td>${log.target || '-'}</td>
+                        <td><span style="color: ${statusColor}; font-weight: bold;">${log.status.toUpperCase()}</span></td>
+                        <td style="font-family: monospace; font-size: 0.8em;">${log.ipAddress || 'Unknown'}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${log.userAgent || 'Unknown'}">${log.userAgent ? (log.userAgent.includes('Chrome') ? '🔵 Chrome' : log.userAgent.includes('Firefox') ? '🟠 Firefox' : log.userAgent.includes('Safari') ? '⚪ Safari' : log.userAgent.includes('Edge') ? '🔷 Edge' : '🖥️ Browser') : 'Unknown'}</td>
+                        <td>${log.details || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
             
             tbody.innerHTML = html;
         }
@@ -10562,26 +10669,37 @@
         // Display security logs
         function displaySecurityLogs() {
             const securityLogs = systemLogs.filter(log => 
-                log.action === 'login' || log.action === 'logout' || log.status === 'failed'
+                log.action === 'login' || log.action === 'logout' || log.status === 'failed' || 
+                log.action === 'password_reset_request' || log.action === 'security_questions'
             );
             
             const tbody = document.getElementById('securityLogsBody');
             
             if (securityLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No security events found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #666;">No security events found</td></tr>';
                 return;
             }
             
-            const html = securityLogs.map(log => `
-                <tr>
-                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                    <td><strong>${log.user}</strong></td>
-                    <td><span class="log-action ${log.action} ${log.status === 'failed' ? 'login-failed' : ''}">${log.action.toUpperCase()}</span></td>
-                    <td>${log.ipAddress || 'Unknown'}</td>
-                    <td><span style="color: ${log.status === 'success' ? 'green' : 'red'};">${log.status.toUpperCase()}</span></td>
-                    <td>${log.details || '-'}</td>
-                </tr>
-            `).join('');
+            const html = securityLogs.map(log => {
+                // Only mark as login-failed if it's actually a failed login
+                const isFailedLogin = log.action === 'login' && log.status === 'failed';
+                const actionClass = isFailedLogin ? 'login-failed' : log.action;
+                const statusColor = log.status === 'success' ? '#28a745' : log.status === 'failed' ? '#dc3545' : '#6c757d';
+                
+                return `
+                    <tr>
+                        <td>${new Date(log.timestamp).toLocaleString()}</td>
+                        <td><strong>${log.user}</strong></td>
+                        <td><span class="log-action ${actionClass}">${log.action.toUpperCase().replace('_', ' ')}</span></td>
+                        <td style="font-family: monospace; font-size: 0.8em;">${log.ipAddress || 'Unknown'}</td>
+                        <td><span style="color: ${statusColor}; font-weight: bold;">${log.status.toUpperCase()}</span></td>
+                        <td>${log.browser || 'Unknown'} ${log.browserVersion || ''}</td>
+                        <td>${log.os || 'Unknown'}</td>
+                        <td>${log.device || 'Unknown'}</td>
+                        <td>${log.details || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
             
             tbody.innerHTML = html;
         }
@@ -10647,6 +10765,118 @@
         window.refreshActivityLogs = async function() {
             await loadSystemLogs();
             displayActivityLogs();
+        };
+
+        // Confirm clear all logs
+        window.confirmClearAllLogs = function() {
+            const totalLogs = systemLogs.length;
+            const confirmation = confirm(
+                `⚠️ DANGER: Clear All System Logs?\n\n` +
+                `This will permanently delete ALL ${totalLogs} system logs including:\n` +
+                `• Login/logout records\n` +
+                `• User activity logs\n` +
+                `• Security events\n` +
+                `• Password reset requests\n` +
+                `• All other system activities\n\n` +
+                `This action CANNOT be undone!\n\n` +
+                `Are you absolutely sure you want to proceed?`
+            );
+            
+            if (confirmation) {
+                const secondConfirmation = confirm(
+                    `🚨 FINAL WARNING!\n\n` +
+                    `You are about to delete ${totalLogs} log entries.\n` +
+                    `This will remove all audit trails and security records.\n\n` +
+                    `Type "YES DELETE ALL LOGS" in the next prompt to confirm.`
+                );
+                
+                if (secondConfirmation) {
+                    const finalConfirm = prompt(
+                        'Type "YES DELETE ALL LOGS" to confirm deletion:'
+                    );
+                    
+                    if (finalConfirm === "YES DELETE ALL LOGS") {
+                        clearAllSystemLogs();
+                    } else {
+                        alert('❌ Deletion cancelled - exact phrase not entered.');
+                    }
+                } else {
+                    alert('❌ Deletion cancelled.');
+                }
+            }
+        };
+
+        // Clear all system logs
+        window.clearAllSystemLogs = async function() {
+            try {
+                const loadingMessage = document.createElement('div');
+                loadingMessage.innerHTML = `
+                    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 99999;">
+                        <div style="background: white; padding: 2rem; border-radius: 10px; text-align: center;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">🗑️</div>
+                            <h3>Deleting All System Logs...</h3>
+                            <p>Please wait, this may take a moment.</p>
+                            <div style="margin-top: 1rem; color: #666;">Do not close this window</div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(loadingMessage);
+
+                // Get all log documents
+                const logsRef = collection(db, 'system_logs');
+                const querySnapshot = await getDocs(logsRef);
+                
+                let deletedCount = 0;
+                const totalCount = querySnapshot.size;
+                
+                // Delete all log documents
+                const deletePromises = [];
+                querySnapshot.forEach((docSnapshot) => {
+                    deletePromises.push(deleteDoc(docSnapshot.ref));
+                });
+                
+                await Promise.all(deletePromises);
+                deletedCount = totalCount;
+                
+                // Clear local logs array
+                systemLogs.length = 0;
+                
+                // Refresh analytics data
+                analyticsData = {
+                    totalLogins: 0,
+                    failedLogins: 0,
+                    totalEdits: 0,
+                    totalAdditions: 0,
+                    totalDeletions: 0,
+                    activeDays: 0,
+                    uniqueUsers: []
+                };
+                
+                // Update displays
+                displayActivityLogs();
+                displaySecurityLogs();
+                displayRequestsLogs();
+                displayUserActivity();
+                updateAnalyticsOverview();
+                
+                // Remove loading message
+                document.body.removeChild(loadingMessage);
+                
+                // Log the clear action
+                await logUserAction('clear_logs', 'system_logs', `Cleared all system logs (${deletedCount} entries deleted)`, 'success');
+                
+                alert(`✅ Successfully deleted ${deletedCount} log entries.\n\nAll system logs have been cleared.`);
+                
+            } catch (error) {
+                console.error('❌ Error clearing logs:', error);
+                alert(`❌ Error clearing logs: ${error.message}`);
+                
+                // Remove loading message if it exists
+                const loadingMessage = document.querySelector('[style*="position: fixed"]');
+                if (loadingMessage) {
+                    document.body.removeChild(loadingMessage);
+                }
+            }
         };
 
         // Display requests logs (account requests and password resets)
@@ -11491,6 +11721,8 @@
         window.openSecurityQuestionsModal = function() {
             document.getElementById('securityQuestionsModal').style.display = 'block';
             loadSecurityQuestions();
+            // Log security questions access
+            logUserAction('security_questions', 'modal_opened', 'User opened security questions management modal', 'success');
         }
 
         window.closeSecurityQuestionsModal = function() {
