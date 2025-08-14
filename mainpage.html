@@ -1573,6 +1573,132 @@
             font-size: 0.9rem;
             margin-top: 0.5rem;
         }
+
+        /* Password Management Modal Styles */
+        .password-modal {
+            max-width: 95%;
+            width: 1000px;
+            max-height: 90vh;
+        }
+
+        .password-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+            margin: -2rem -2rem 2rem -2rem;
+        }
+
+        .password-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .password-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .password-tab.active {
+            border-bottom-color: #28a745;
+            color: #28a745;
+        }
+
+        .user-password-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info-section {
+            flex: 1;
+        }
+
+        .password-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .password-hidden {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 4px;
+            color: #666;
+        }
+
+        .password-revealed {
+            font-family: monospace;
+            background: #fff3cd;
+            padding: 0.5rem;
+            border-radius: 4px;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .reveal-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .change-password-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .reset-request-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .approve-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .deny-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -2396,6 +2522,9 @@
                 <button class="analytics-tab" onclick="switchAnalyticsTab('security')" data-tab="security">
                     🔒 Security Events
                 </button>
+                <button class="analytics-tab" onclick="switchAnalyticsTab('requests')" data-tab="requests">
+                    📝 Account Requests
+                </button>
                 <button class="analytics-tab" onclick="switchAnalyticsTab('users')" data-tab="users">
                     👥 User Activity
                 </button>
@@ -2489,6 +2618,36 @@
                     </div>
                 </div>
 
+                <!-- Account Requests Tab -->
+                <div id="analytics-requests" class="analytics-tab-content" style="display: none;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                        <input type="text" id="requestsSearch" placeholder="Search requests..." style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <select id="requestsFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="">All Requests</option>
+                            <option value="account_request">Account Requests</option>
+                            <option value="password_reset">Password Resets</option>
+                        </select>
+                        <button onclick="refreshRequestsLogs()" class="btn btn-primary">Refresh</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Username</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>IP Address</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestsLogsBody">
+                                <tr><td colspan="6" style="text-align: center; color: #666;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- User Activity Tab -->
                 <div id="analytics-users" class="analytics-tab-content" style="display: none;">
                     <div style="margin-bottom: 1rem;">
@@ -2515,6 +2674,53 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Password Management Modal -->
+    <div id="passwordManagementModal" class="modal">
+        <div class="modal-content password-modal">
+            <div class="password-header">
+                <h2>🔐 Password Management System</h2>
+                <p>Manage user passwords and reset requests</p>
+            </div>
+            
+            <div class="password-tabs">
+                <button class="password-tab active" onclick="switchPasswordTab('manage')">Manage Passwords</button>
+                <button class="password-tab" onclick="switchPasswordTab('requests')">Reset Requests</button>
+            </div>
+
+            <div id="managePasswordsTab" class="tab-content-password">
+                <div id="userPasswordsList"></div>
+            </div>
+
+            <div id="resetRequestsTab" class="tab-content-password" style="display: none;">
+                <div id="resetRequestsList"></div>
+            </div>
+
+            <button class="close" onclick="closePasswordManagementModal()">&times;</button>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <h3>Change Password for <span id="changePasswordUser"></span></h3>
+            <form id="changePasswordForm">
+                <input type="hidden" id="changePasswordUserId">
+                <div class="form-group">
+                    <label>New Password:</label>
+                    <input type="password" id="newPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password:</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit">Change Password</button>
+                    <button type="button" onclick="closeChangePasswordModal()">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -9341,6 +9547,40 @@
                 openAnalyticsModal();
             });
             
+            // Create Password Resets button
+            const passwordButton = document.createElement('button');
+            passwordButton.innerHTML = '🔑 Password Resets';
+            passwordButton.className = 'btn';
+            passwordButton.style.cssText = `
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                color: white;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+            `;
+            
+            // Add hover effect
+            passwordButton.addEventListener('mouseenter', () => {
+                passwordButton.style.transform = 'translateY(-2px)';
+                passwordButton.style.boxShadow = '0 4px 12px rgba(40, 167, 69, 0.4)';
+            });
+            
+            passwordButton.addEventListener('mouseleave', () => {
+                passwordButton.style.transform = 'translateY(0)';
+                passwordButton.style.boxShadow = '0 2px 8px rgba(40, 167, 69, 0.3)';
+            });
+            
+            // Add click handler
+            passwordButton.addEventListener('click', () => {
+                openPasswordManagementModal();
+            });
+            
             // Create developer test button
             const testButton = document.createElement('button');
             testButton.innerHTML = '🚀 Test Me';
@@ -9378,6 +9618,7 @@
             // Insert buttons before the logout button
             const logoutBtn = userInfo.querySelector('.logout-btn');
             userInfo.insertBefore(analyticsButton, logoutBtn);
+            userInfo.insertBefore(passwordButton, logoutBtn);
             userInfo.insertBefore(testButton, logoutBtn);
         }
 
@@ -9489,23 +9730,37 @@
             activeDays: new Set()
         };
 
+        // Get IP address (for security logging)
+        async function getClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                console.warn('Failed to get IP address:', error);
+                return 'Unknown';
+            }
+        }
+
         // Logging function - logs all user actions
         async function logUserAction(action, target, details = '', status = 'success') {
             if (!currentUser) return;
             
-            const logEntry = {
-                timestamp: new Date().toISOString(),
-                user: currentUser.username,
-                action: action,
-                target: target,
-                details: details,
-                status: status,
-                userAgent: navigator.userAgent,
-                // IP will be added later
-                ipAddress: 'IP_PENDING'
-            };
-
             try {
+                // Get IP address if not provided
+                const clientIP = await getClientIP();
+                
+                const logEntry = {
+                    timestamp: new Date().toISOString(),
+                    user: currentUser.username,
+                    action: action,
+                    target: target,
+                    details: details,
+                    status: status,
+                    userAgent: navigator.userAgent,
+                    ipAddress: clientIP  // IP stored here
+                };
+
                 // Add to Firestore logs collection
                 await addDoc(collection(db, 'system_logs'), logEntry);
                 
@@ -9602,6 +9857,9 @@
                     break;
                 case 'security':
                     displaySecurityLogs();
+                    break;
+                case 'requests':
+                    displayRequestsLogs();
                     break;
                 case 'users':
                     displayUserActivity();
@@ -9788,6 +10046,39 @@
             displayActivityLogs();
         };
 
+        // Display requests logs (account requests and password resets)
+        function displayRequestsLogs() {
+            const requestsLogs = systemLogs.filter(log => 
+                log.action === 'account_request' || log.action === 'password_reset' || log.action === 'approve' || log.action === 'deny'
+            );
+            
+            const tbody = document.getElementById('requestsLogsBody');
+            
+            if (requestsLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No account requests found</td></tr>';
+                return;
+            }
+            
+            const html = requestsLogs.map(log => `
+                <tr>
+                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                    <td><strong>${log.user}</strong></td>
+                    <td><span class="log-action ${log.action}">${log.action.toUpperCase().replace('_', ' ')}</span></td>
+                    <td><span style="color: ${log.status === 'success' ? 'green' : 'red'};">${log.status.toUpperCase()}</span></td>
+                    <td>${log.ipAddress || 'Unknown'}</td>
+                    <td>${log.details || '-'}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        // Refresh requests logs
+        window.refreshRequestsLogs = async function() {
+            await loadSystemLogs();
+            displayRequestsLogs();
+        };
+
         // Logout function
         window.logout = async function() {
             // Log the logout
@@ -9938,6 +10229,267 @@
                 }
             });
         }
+
+        // Password Management Functions
+        function openPasswordManagementModal() {
+            document.getElementById('passwordManagementModal').style.display = 'block';
+            loadUserPasswords();
+            loadResetRequests();
+        }
+
+        function closePasswordManagementModal() {
+            document.getElementById('passwordManagementModal').style.display = 'none';
+        }
+
+        function switchPasswordTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content-password').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.password-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            if (tabName === 'manage') {
+                document.getElementById('managePasswordsTab').style.display = 'block';
+                document.querySelector('[onclick="switchPasswordTab(\'manage\')"]').classList.add('active');
+                loadUserPasswords();
+            } else if (tabName === 'requests') {
+                document.getElementById('resetRequestsTab').style.display = 'block';
+                document.querySelector('[onclick="switchPasswordTab(\'requests\')"]').classList.add('active');
+                loadResetRequests();
+            }
+        }
+
+        async function loadUserPasswords() {
+            try {
+                const usersSnapshot = await getDocs(collection(db, 'users'));
+                const usersList = document.getElementById('userPasswordsList');
+                usersList.innerHTML = '';
+
+                if (usersSnapshot.empty) {
+                    usersList.innerHTML = '<p>No users found.</p>';
+                    return;
+                }
+
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const userCard = createUserPasswordCard(doc.id, userData);
+                    usersList.appendChild(userCard);
+                });
+            } catch (error) {
+                console.error('Error loading user passwords:', error);
+                document.getElementById('userPasswordsList').innerHTML = '<p>Error loading users.</p>';
+            }
+        }
+
+        function createUserPasswordCard(userId, userData) {
+            const card = document.createElement('div');
+            card.className = 'user-password-card';
+            
+            card.innerHTML = `
+                <div class="user-info-section">
+                    <strong>${userData.username || 'N/A'}</strong><br>
+                    <small>Name: ${userData.name || 'N/A'}</small><br>
+                    <small>Email: ${userData.email || 'N/A'}</small><br>
+                    <small>Phone: ${userData.phone || 'N/A'}</small>
+                </div>
+                <div class="password-section">
+                    <div class="password-hidden" id="password-${userId}">••••••••</div>
+                    <button class="reveal-btn" onclick="togglePasswordVisibility('${userId}', '${userData.password}')">
+                        Show
+                    </button>
+                    <button class="change-password-btn" onclick="openChangePasswordModal('${userId}', '${userData.username || userData.name}')">
+                        Change Password
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function togglePasswordVisibility(userId, password) {
+            const passwordElement = document.getElementById(`password-${userId}`);
+            const button = passwordElement.nextElementSibling;
+            
+            if (passwordElement.classList.contains('password-hidden')) {
+                passwordElement.textContent = password;
+                passwordElement.className = 'password-revealed';
+                button.textContent = 'Hide';
+            } else {
+                passwordElement.textContent = '••••••••';
+                passwordElement.className = 'password-hidden';
+                button.textContent = 'Show';
+            }
+        }
+
+        function openChangePasswordModal(userId, username) {
+            document.getElementById('changePasswordModal').style.display = 'block';
+            document.getElementById('changePasswordUserId').value = userId;
+            document.getElementById('changePasswordUser').textContent = username;
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').style.display = 'none';
+        }
+
+        async function loadResetRequests() {
+            try {
+                const requestsSnapshot = await getDocs(collection(db, 'password_reset_requests'));
+                const requestsList = document.getElementById('resetRequestsList');
+                requestsList.innerHTML = '';
+
+                if (requestsSnapshot.empty) {
+                    requestsList.innerHTML = '<p>No reset requests found.</p>';
+                    return;
+                }
+
+                const requests = [];
+                requestsSnapshot.forEach(doc => {
+                    requests.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Sort by timestamp (newest first)
+                requests.sort((a, b) => (b.timestamp?.toDate() || new Date(0)) - (a.timestamp?.toDate() || new Date(0)));
+
+                requests.forEach(request => {
+                    const requestCard = createResetRequestCard(request);
+                    requestsList.appendChild(requestCard);
+                });
+            } catch (error) {
+                console.error('Error loading reset requests:', error);
+                document.getElementById('resetRequestsList').innerHTML = '<p>Error loading reset requests.</p>';
+            }
+        }
+
+        function createResetRequestCard(request) {
+            const card = document.createElement('div');
+            card.className = 'reset-request-card';
+            
+            const date = request.timestamp ? request.timestamp.toDate().toLocaleString() : 'Unknown';
+            const status = request.status || 'pending';
+            
+            card.innerHTML = `
+                <div>
+                    <strong>Password Reset Request</strong>
+                    <span style="float: right; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; background: ${status === 'pending' ? '#fff3cd' : status === 'approved' ? '#d4edda' : '#f8d7da'}; color: ${status === 'pending' ? '#856404' : status === 'approved' ? '#155724' : '#721c24'};">
+                        ${status.toUpperCase()}
+                    </span>
+                </div>
+                <div style="margin: 0.5rem 0;">
+                    <strong>Name:</strong> ${request.fullName}<br>
+                    <strong>Username:</strong> ${request.username}<br>
+                    <strong>Phone:</strong> ${request.phoneNumber}<br>
+                    <strong>Email:</strong> ${request.email || 'Not provided'}<br>
+                    <strong>IP Address:</strong> ${request.ipAddress || 'Unknown'}<br>
+                    <strong>Date:</strong> ${date}
+                </div>
+                ${request.reason ? `<div><strong>Reason:</strong> ${request.reason}</div>` : ''}
+                ${status === 'pending' ? `
+                    <div class="request-actions">
+                        <button class="approve-btn" onclick="processResetRequest('${request.id}', 'approved')">
+                            Approve Reset
+                        </button>
+                        <button class="deny-btn" onclick="processResetRequest('${request.id}', 'denied')">
+                            Deny Request
+                        </button>
+                    </div>
+                ` : ''}
+            `;
+            
+            return card;
+        }
+
+        async function processResetRequest(requestId, action) {
+            try {
+                if (action === 'approved') {
+                    // Update request status
+                    await updateDoc(doc(db, 'password_reset_requests', requestId), {
+                        status: 'approved',
+                        processedAt: new Date(),
+                        processedBy: currentUser
+                    });
+
+                    // Log the action
+                    await logUserAction('password_reset_approved', 'system', {
+                        requestId: requestId,
+                        processedBy: currentUser
+                    });
+
+                    showMessage('Password reset request approved successfully!', 'success');
+                } else if (action === 'denied') {
+                    await updateDoc(doc(db, 'password_reset_requests', requestId), {
+                        status: 'denied',
+                        processedAt: new Date(),
+                        processedBy: currentUser
+                    });
+
+                    await logUserAction('password_reset_denied', 'system', {
+                        requestId: requestId,
+                        processedBy: currentUser
+                    });
+
+                    showMessage('Password reset request denied.', 'success');
+                }
+
+                // Refresh the requests list
+                loadResetRequests();
+            } catch (error) {
+                console.error('Error processing reset request:', error);
+                showMessage('Error processing request. Please try again.', 'error');
+            }
+        }
+
+        // Handle change password form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const userId = document.getElementById('changePasswordUserId').value;
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+                    
+                    if (newPassword !== confirmPassword) {
+                        showMessage('Passwords do not match!', 'error');
+                        return;
+                    }
+                    
+                    if (newPassword.length < 6) {
+                        showMessage('Password must be at least 6 characters long!', 'error');
+                        return;
+                    }
+                    
+                    try {
+                        // Update password in database
+                        await updateDoc(doc(db, 'users', userId), {
+                            password: newPassword,
+                            passwordChangedAt: new Date(),
+                            passwordChangedBy: currentUser
+                        });
+
+                        // Log the password change
+                        await logUserAction('password_changed', 'user', {
+                            targetUserId: userId,
+                            changedBy: currentUser
+                        });
+
+                        showMessage('Password changed successfully!', 'success');
+                        closeChangePasswordModal();
+                        loadUserPasswords(); // Refresh the list
+                    } catch (error) {
+                        console.error('Error changing password:', error);
+                        showMessage('Error changing password. Please try again.', 'error');
+                    }
+                });
+            }
+        });
 
         // Initialize the app
         init();
