@@ -10701,18 +10701,36 @@
                 usersList.innerHTML = '';
 
                 if (usersSnapshot.empty) {
-                    usersList.innerHTML = '<p>No users found.</p>';
+                    usersList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">👥</div>
+                            <h3>No users found</h3>
+                            <p>No user accounts are registered in the system.</p>
+                        </div>
+                    `;
                     return;
                 }
+
+                // Create a grid container
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'password-grid';
 
                 usersSnapshot.forEach(doc => {
                     const userData = doc.data();
                     const userCard = createUserPasswordCard(doc.id, userData);
-                    usersList.appendChild(userCard);
+                    gridContainer.appendChild(userCard);
                 });
+
+                usersList.appendChild(gridContainer);
             } catch (error) {
                 console.error('Error loading user passwords:', error);
-                document.getElementById('userPasswordsList').innerHTML = '<p>Error loading users.</p>';
+                document.getElementById('userPasswordsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <h3>Error loading users</h3>
+                        <p>There was a problem loading user data. Please try again.</p>
+                    </div>
+                `;
             }
         }
 
@@ -10722,10 +10740,11 @@
             
             card.innerHTML = `
                 <div class="user-info-section">
-                    <strong>${userData.username || 'N/A'}</strong><br>
-                    <small>Name: ${userData.name || 'N/A'}</small><br>
-                    <small>Email: ${userData.email || 'N/A'}</small><br>
-                    <small>Phone: ${userData.phone || 'N/A'}</small>
+                    <h3>${userData.username || 'N/A'}</h3>
+                    <p><strong>Name:</strong> ${userData.fullName || userData.firstName + ' ' + userData.lastName || 'N/A'}</p>
+                    <p><strong>Email:</strong> ${userData.email || 'N/A'}</p>
+                    <p><strong>Phone:</strong> ${userData.phone || 'N/A'}</p>
+                    <p><strong>Admin:</strong> ${userData.isAdmin ? 'Yes' : 'No'}</p>
                 </div>
                 <div class="password-section">
                     <div class="password-hidden" id="password-${userId}">••••••••</div>
@@ -10775,7 +10794,13 @@
                 requestsList.innerHTML = '';
 
                 if (requestsSnapshot.empty) {
-                    requestsList.innerHTML = '<p>No reset requests found.</p>';
+                    requestsList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">🔄</div>
+                            <h3>No reset requests</h3>
+                            <p>No password reset requests have been submitted.</p>
+                        </div>
+                    `;
                     return;
                 }
 
@@ -10787,13 +10812,25 @@
                 // Sort by timestamp (newest first)
                 requests.sort((a, b) => (b.timestamp?.toDate() || new Date(0)) - (a.timestamp?.toDate() || new Date(0)));
 
+                // Create a grid container for requests
+                const gridContainer = document.createElement('div');
+                gridContainer.className = 'password-grid';
+
                 requests.forEach(request => {
                     const requestCard = createResetRequestCard(request);
-                    requestsList.appendChild(requestCard);
+                    gridContainer.appendChild(requestCard);
                 });
+
+                requestsList.appendChild(gridContainer);
             } catch (error) {
                 console.error('Error loading reset requests:', error);
-                document.getElementById('resetRequestsList').innerHTML = '<p>Error loading reset requests.</p>';
+                document.getElementById('resetRequestsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <h3>Error loading requests</h3>
+                        <p>There was a problem loading reset requests. Please try again.</p>
+                    </div>
+                `;
             }
         }
 
