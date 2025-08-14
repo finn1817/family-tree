@@ -10677,18 +10677,18 @@
 
         async function loadSecurityQuestions() {
             try {
-                // Ensure currentUser is valid
-                if (!currentUser || typeof currentUser !== 'string') {
+                // Ensure currentUser is valid and has username property
+                if (!currentUser || !currentUser.username || typeof currentUser.username !== 'string') {
                     console.error('Current user is not valid:', currentUser);
                     throw new Error('Current user is not set properly');
                 }
 
                 // Get the current user's document ID from the users collection
                 const usersRef = collection(db, 'users');
-                const userQuery = query(usersRef, where('username', '==', String(currentUser).trim()));
+                const userQuery = query(usersRef, where('username', '==', String(currentUser.username).trim()));
                 const userSnapshot = await getDocs(userQuery);
                 
-                let userDocId = String(currentUser).trim(); // fallback to username
+                let userDocId = String(currentUser.username).trim(); // fallback to username
                 if (!userSnapshot.empty) {
                     userDocId = userSnapshot.docs[0].id;
                 }
@@ -10741,8 +10741,8 @@
 
         window.saveSecurityQuestions = async function() {
             try {
-                // Ensure currentUser is valid
-                if (!currentUser || typeof currentUser !== 'string') {
+                // Ensure currentUser is valid and has username property
+                if (!currentUser || !currentUser.username || typeof currentUser.username !== 'string') {
                     showMessage('User session is invalid. Please log in again.', 'error');
                     return;
                 }
@@ -10766,10 +10766,10 @@
 
                 // Get the current user's document ID from the users collection
                 const usersRef = collection(db, 'users');
-                const userQuery = query(usersRef, where('username', '==', String(currentUser).trim()));
+                const userQuery = query(usersRef, where('username', '==', String(currentUser.username).trim()));
                 const userSnapshot = await getDocs(userQuery);
                 
-                let userDocId = String(currentUser).trim(); // fallback to username
+                let userDocId = String(currentUser.username).trim(); // fallback to username
                 if (!userSnapshot.empty) {
                     userDocId = userSnapshot.docs[0].id;
                 }
@@ -10779,14 +10779,14 @@
                 await setDoc(questionsRef, {
                     questions: questions,
                     updatedAt: new Date(),
-                    userId: currentUser,
+                    userId: currentUser.username,
                     userDocId: userDocId
                 }, { merge: true });
 
                 // Log the action
                 await logUserAction('security_questions_updated', 'security', {
                     questionCount: questions.length,
-                    updatedBy: currentUser,
+                    updatedBy: currentUser.username,
                     userDocId: userDocId
                 });
 
