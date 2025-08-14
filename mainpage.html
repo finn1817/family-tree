@@ -10620,7 +10620,7 @@
             
             const html = recentLogs.map(log => `
                 <div style="padding: 0.75rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; background: white;">
-                    <div style="display: flex; justify-content: between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span class="log-action ${log.action} ${log.status === 'failed' ? 'login-failed' : ''}">${log.action.toUpperCase()}</span>
                         <span style="color: #666; font-size: 0.9rem;">${new Date(log.timestamp).toLocaleString()}</span>
                     </div>
@@ -10632,6 +10632,12 @@
             `).join('');
             
             container.innerHTML = html;
+        }
+
+        // Update analytics overview (wrapper function for clear logs)
+        function updateAnalyticsOverview() {
+            calculateAnalyticsStats();
+            displayOverviewData();
         }
 
         // Display activity logs
