@@ -1467,6 +1467,112 @@
             color: #f44336;
             font-weight: bold;
         }
+
+        /* Analytics Modal Styles */
+        .analytics-modal {
+            max-width: 95%;
+            width: 1200px;
+            max-height: 90vh;
+        }
+
+        .analytics-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+            margin: -2rem -2rem 2rem -2rem;
+        }
+
+        .analytics-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .analytics-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .analytics-tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .analytics-content {
+            min-height: 400px;
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .log-table th,
+        .log-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .log-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .log-table tbody {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-action {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .log-action.login { background: #d4edda; color: #155724; }
+        .log-action.login-failed { background: #f8d7da; color: #721c24; }
+        .log-action.edit { background: #fff3cd; color: #856404; }
+        .log-action.add { background: #d1ecf1; color: #0c5460; }
+        .log-action.delete { background: #f5c6cb; color: #721c24; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card-analytics {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number-analytics {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label-analytics {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -2267,6 +2373,151 @@
         </div>
     </div>
 
+    <!-- Analytics Modal (Developer Only) -->
+    <div id="analyticsModal" class="modal">
+        <div class="modal-content analytics-modal">
+            <div class="analytics-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.8rem;">📊 System Analytics</h2>
+                        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Comprehensive logging and analytics dashboard</p>
+                    </div>
+                    <button type="button" onclick="closeModal('analyticsModal')" style="background: none; border: none; font-size: 2rem; color: rgba(255,255,255,0.8); cursor: pointer; padding: 0.5rem;">×</button>
+                </div>
+            </div>
+
+            <div class="analytics-tabs">
+                <button class="analytics-tab active" onclick="switchAnalyticsTab('overview')" data-tab="overview">
+                    📈 Overview
+                </button>
+                <button class="analytics-tab" onclick="switchAnalyticsTab('activity')" data-tab="activity">
+                    🔄 Activity Logs
+                </button>
+                <button class="analytics-tab" onclick="switchAnalyticsTab('security')" data-tab="security">
+                    🔒 Security Events
+                </button>
+                <button class="analytics-tab" onclick="switchAnalyticsTab('users')" data-tab="users">
+                    👥 User Activity
+                </button>
+            </div>
+
+            <div class="analytics-content">
+                <!-- Overview Tab -->
+                <div id="analytics-overview" class="analytics-tab-content">
+                    <div class="stats-grid">
+                        <div class="stat-card-analytics">
+                            <div class="stat-number-analytics" id="totalLogins">-</div>
+                            <div class="stat-label-analytics">Total Logins</div>
+                        </div>
+                        <div class="stat-card-analytics">
+                            <div class="stat-number-analytics" id="failedLogins">-</div>
+                            <div class="stat-label-analytics">Failed Logins</div>
+                        </div>
+                        <div class="stat-card-analytics">
+                            <div class="stat-number-analytics" id="totalEdits">-</div>
+                            <div class="stat-label-analytics">Total Edits</div>
+                        </div>
+                        <div class="stat-card-analytics">
+                            <div class="stat-number-analytics" id="totalAdditions">-</div>
+                            <div class="stat-label-analytics">New Additions</div>
+                        </div>
+                        <div class="stat-card-analytics">
+                            <div class="stat-number-analytics" id="activeDays">-</div>
+                            <div class="stat-label-analytics">Active Days</div>
+                        </div>
+                        <div class="stat-card-analytics">
+                            <div class="stat-number-analytics" id="uniqueUsers">-</div>
+                            <div class="stat-label-analytics">Unique Users</div>
+                        </div>
+                    </div>
+                    <h3>Recent Activity</h3>
+                    <div id="recentActivityOverview"></div>
+                </div>
+
+                <!-- Activity Logs Tab -->
+                <div id="analytics-activity" class="analytics-tab-content" style="display: none;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                        <input type="text" id="activitySearch" placeholder="Search logs..." style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <select id="activityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="">All Actions</option>
+                            <option value="login">Logins</option>
+                            <option value="edit">Edits</option>
+                            <option value="add">Additions</option>
+                            <option value="delete">Deletions</option>
+                        </select>
+                        <button onclick="refreshActivityLogs()" class="btn btn-primary">Refresh</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Target</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityLogsBody">
+                                <tr><td colspan="5" style="text-align: center; color: #666;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Security Events Tab -->
+                <div id="analytics-security" class="analytics-tab-content" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <input type="text" id="securitySearch" placeholder="Search security events..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Event Type</th>
+                                    <th>IP Address</th>
+                                    <th>Status</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="securityLogsBody">
+                                <tr><td colspan="6" style="text-align: center; color: #666;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- User Activity Tab -->
+                <div id="analytics-users" class="analytics-tab-content" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <select id="userActivityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="">All Users</option>
+                        </select>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Last Login</th>
+                                    <th>Total Logins</th>
+                                    <th>Total Actions</th>
+                                    <th>Member Edits</th>
+                                    <th>Last Activity</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userActivityBody">
+                                <tr><td colspan="6" style="text-align: center; color: #666;">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Load the new relationship system -->
     <!-- Consolidated: relationship-system.js and relationship-ui.js code is now inline below -->
 
@@ -2842,6 +3093,9 @@
 
             await loadData();
             setupEventListeners();
+            
+            // Log successful dashboard access
+            await logUserAction('login', 'dashboard', 'Successfully accessed main dashboard', 'success');
         }
 
         // Real-time monitoring for new account requests
@@ -5570,6 +5824,9 @@
                 console.log('✅ New member successfully added with ID:', newMemberId);
                 console.log('📁 Document reference:', docRef);
                 
+                // Log the addition
+                await logUserAction('add', 'family_member', `Added ${memberData.firstName} ${memberData.lastName}`, 'success');
+                
                 // Add the new member to local array immediately for instant UI update
                 const newMember = { id: newMemberId, ...memberData };
                 familyMembers.push(newMember);
@@ -5951,6 +6208,9 @@
                 // Delete the request
                 await deleteDoc(doc(db, 'account_requests', requestId));
                 
+                // Log the approval
+                await logUserAction('approve', 'account_request', `Approved account for ${firstName} ${lastName} (${username})`, 'success');
+                
                 // Reload data
                 await loadAccountRequests();
                 await loadUsers();
@@ -5959,6 +6219,7 @@
                 
                 alert(`Account approved! ${firstName} ${lastName} has been added as an admin.`);
             } catch (error) {
+                await logUserAction('approve', 'account_request', `Failed to approve account for ${firstName} ${lastName}: ${error.message}`, 'failed');
                 alert('Error approving request: ' + error.message);
             }
         };
@@ -7749,6 +8010,9 @@
 
                 await updateDoc(memberRef, updateData);
                 
+                // Log the edit
+                await logUserAction('edit', 'family_member', `Updated ${updateData.firstName} ${updateData.lastName}`, 'success');
+                
                 // Update bidirectional marriage relationships
                 await updateBidirectionalMarriage(memberId, oldSpouseId, newSpouseId);
                 
@@ -7777,10 +8041,15 @@
 
             try {
                 await deleteDoc(doc(db, 'family_members', memberId));
+                
+                // Log the deletion
+                await logUserAction('delete', 'family_member', `Deleted ${member.firstName} ${member.lastName}`, 'success');
+                
                 loadFamilyMembers(); // Refresh the display
                 showMessage('Family member deleted successfully!', 'success');
             } catch (error) {
                 console.error('Error deleting family member:', error);
+                await logUserAction('delete', 'family_member', `Failed to delete ${member.firstName} ${member.lastName}: ${error.message}`, 'failed');
                 showMessage('Error deleting family member: ' + error.message, 'error');
             }
         };
@@ -9038,9 +9307,43 @@
             const userInfo = document.querySelector('.user-info');
             if (!userInfo) return;
             
+            // Create Analytics button
+            const analyticsButton = document.createElement('button');
+            analyticsButton.innerHTML = '📊 Analytics';
+            analyticsButton.className = 'btn';
+            analyticsButton.style.cssText = `
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            `;
+            
+            // Add hover effect
+            analyticsButton.addEventListener('mouseenter', () => {
+                analyticsButton.style.transform = 'translateY(-2px)';
+                analyticsButton.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+            });
+            
+            analyticsButton.addEventListener('mouseleave', () => {
+                analyticsButton.style.transform = 'translateY(0)';
+                analyticsButton.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+            });
+            
+            // Add click handler
+            analyticsButton.addEventListener('click', () => {
+                openAnalyticsModal();
+            });
+            
             // Create developer test button
             const testButton = document.createElement('button');
-            testButton.innerHTML = '🚀 Click to Test';
+            testButton.innerHTML = '🚀 Test Me';
             testButton.className = 'btn';
             testButton.style.cssText = `
                 background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
@@ -9072,8 +9375,9 @@
                 showDeveloperTestPopup();
             });
             
-            // Insert before the logout button
+            // Insert buttons before the logout button
             const logoutBtn = userInfo.querySelector('.logout-btn');
+            userInfo.insertBefore(analyticsButton, logoutBtn);
             userInfo.insertBefore(testButton, logoutBtn);
         }
 
@@ -9171,8 +9475,324 @@
             }
         };
 
+        // ===== ANALYTICS AND LOGGING SYSTEM =====
+        
+        // Global variables for analytics
+        let systemLogs = [];
+        let analyticsData = {
+            totalLogins: 0,
+            failedLogins: 0,
+            totalEdits: 0,
+            totalAdditions: 0,
+            totalDeletions: 0,
+            uniqueUsers: new Set(),
+            activeDays: new Set()
+        };
+
+        // Logging function - logs all user actions
+        async function logUserAction(action, target, details = '', status = 'success') {
+            if (!currentUser) return;
+            
+            const logEntry = {
+                timestamp: new Date().toISOString(),
+                user: currentUser.username,
+                action: action,
+                target: target,
+                details: details,
+                status: status,
+                userAgent: navigator.userAgent,
+                // IP will be added later
+                ipAddress: 'IP_PENDING'
+            };
+
+            try {
+                // Add to Firestore logs collection
+                await addDoc(collection(db, 'system_logs'), logEntry);
+                
+                // Update local analytics data
+                updateAnalyticsData(action, status);
+                
+                console.log('📝 Logged action:', action, target);
+            } catch (error) {
+                console.error('❌ Failed to log action:', error);
+            }
+        }
+
+        // Update analytics data
+        function updateAnalyticsData(action, status) {
+            if (status === 'success') {
+                switch (action) {
+                    case 'login':
+                        analyticsData.totalLogins++;
+                        break;
+                    case 'edit':
+                        analyticsData.totalEdits++;
+                        break;
+                    case 'add':
+                        analyticsData.totalAdditions++;
+                        break;
+                    case 'delete':
+                        analyticsData.totalDeletions++;
+                        break;
+                }
+            } else if (action === 'login' && status === 'failed') {
+                analyticsData.failedLogins++;
+            }
+            
+            if (currentUser) {
+                analyticsData.uniqueUsers.add(currentUser.username);
+                analyticsData.activeDays.add(new Date().toDateString());
+            }
+        }
+
+        // Load system logs from Firebase
+        async function loadSystemLogs() {
+            try {
+                const logsRef = collection(db, 'system_logs');
+                const q = query(logsRef, orderBy('timestamp', 'desc'), limit(1000));
+                const querySnapshot = await getDocs(q);
+                
+                systemLogs = [];
+                querySnapshot.forEach((doc) => {
+                    systemLogs.push({ id: doc.id, ...doc.data() });
+                });
+                
+                console.log(`📊 Loaded ${systemLogs.length} system logs`);
+                return systemLogs;
+            } catch (error) {
+                console.error('❌ Failed to load system logs:', error);
+                return [];
+            }
+        }
+
+        // Open Analytics Modal
+        window.openAnalyticsModal = async function() {
+            const modal = document.getElementById('analyticsModal');
+            modal.classList.add('active');
+            
+            // Load fresh data
+            await loadSystemLogs();
+            await calculateAnalyticsStats();
+            
+            // Show overview tab by default
+            switchAnalyticsTab('overview');
+        };
+
+        // Switch Analytics Tabs
+        window.switchAnalyticsTab = function(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.analytics-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // Show/hide content
+            document.querySelectorAll('.analytics-tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById(`analytics-${tabName}`).style.display = 'block';
+            
+            // Load specific tab data
+            switch (tabName) {
+                case 'overview':
+                    displayOverviewData();
+                    break;
+                case 'activity':
+                    displayActivityLogs();
+                    break;
+                case 'security':
+                    displaySecurityLogs();
+                    break;
+                case 'users':
+                    displayUserActivity();
+                    break;
+            }
+        };
+
+        // Calculate analytics statistics
+        async function calculateAnalyticsStats() {
+            const stats = {
+                totalLogins: 0,
+                failedLogins: 0,
+                totalEdits: 0,
+                totalAdditions: 0,
+                uniqueUsers: new Set(),
+                activeDays: new Set()
+            };
+            
+            systemLogs.forEach(log => {
+                switch (log.action) {
+                    case 'login':
+                        if (log.status === 'success') {
+                            stats.totalLogins++;
+                        } else {
+                            stats.failedLogins++;
+                        }
+                        break;
+                    case 'edit':
+                        stats.totalEdits++;
+                        break;
+                    case 'add':
+                        stats.totalAdditions++;
+                        break;
+                }
+                
+                stats.uniqueUsers.add(log.user);
+                stats.activeDays.add(new Date(log.timestamp).toDateString());
+            });
+            
+            // Update display
+            document.getElementById('totalLogins').textContent = stats.totalLogins;
+            document.getElementById('failedLogins').textContent = stats.failedLogins;
+            document.getElementById('totalEdits').textContent = stats.totalEdits;
+            document.getElementById('totalAdditions').textContent = stats.totalAdditions;
+            document.getElementById('uniqueUsers').textContent = stats.uniqueUsers.size;
+            document.getElementById('activeDays').textContent = stats.activeDays.size;
+        }
+
+        // Display overview data
+        function displayOverviewData() {
+            const recentLogs = systemLogs.slice(0, 10);
+            const container = document.getElementById('recentActivityOverview');
+            
+            if (recentLogs.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">No recent activity</p>';
+                return;
+            }
+            
+            const html = recentLogs.map(log => `
+                <div style="padding: 0.75rem; border: 1px solid #eee; border-radius: 8px; margin-bottom: 0.5rem; background: white;">
+                    <div style="display: flex; justify-content: between; align-items: center;">
+                        <span class="log-action ${log.action} ${log.status === 'failed' ? 'login-failed' : ''}">${log.action.toUpperCase()}</span>
+                        <span style="color: #666; font-size: 0.9rem;">${new Date(log.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div style="margin-top: 0.5rem;">
+                        <strong>${log.user}</strong> ${log.action}ed <em>${log.target}</em>
+                        ${log.details ? `<br><small style="color: #666;">${log.details}</small>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Display activity logs
+        function displayActivityLogs() {
+            const tbody = document.getElementById('activityLogsBody');
+            
+            if (systemLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666;">No activity logs found</td></tr>';
+                return;
+            }
+            
+            const html = systemLogs.map(log => `
+                <tr>
+                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                    <td><strong>${log.user}</strong></td>
+                    <td><span class="log-action ${log.action} ${log.status === 'failed' ? 'login-failed' : ''}">${log.action.toUpperCase()}</span></td>
+                    <td>${log.target}</td>
+                    <td>${log.details || '-'}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        // Display security logs
+        function displaySecurityLogs() {
+            const securityLogs = systemLogs.filter(log => 
+                log.action === 'login' || log.action === 'logout' || log.status === 'failed'
+            );
+            
+            const tbody = document.getElementById('securityLogsBody');
+            
+            if (securityLogs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No security events found</td></tr>';
+                return;
+            }
+            
+            const html = securityLogs.map(log => `
+                <tr>
+                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                    <td><strong>${log.user}</strong></td>
+                    <td><span class="log-action ${log.action} ${log.status === 'failed' ? 'login-failed' : ''}">${log.action.toUpperCase()}</span></td>
+                    <td>${log.ipAddress || 'Unknown'}</td>
+                    <td><span style="color: ${log.status === 'success' ? 'green' : 'red'};">${log.status.toUpperCase()}</span></td>
+                    <td>${log.details || '-'}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        // Display user activity
+        function displayUserActivity() {
+            const userStats = {};
+            
+            systemLogs.forEach(log => {
+                if (!userStats[log.user]) {
+                    userStats[log.user] = {
+                        totalLogins: 0,
+                        totalActions: 0,
+                        memberEdits: 0,
+                        lastLogin: null,
+                        lastActivity: null
+                    };
+                }
+                
+                const stats = userStats[log.user];
+                stats.totalActions++;
+                stats.lastActivity = log.timestamp;
+                
+                if (log.action === 'login' && log.status === 'success') {
+                    stats.totalLogins++;
+                    if (!stats.lastLogin || log.timestamp > stats.lastLogin) {
+                        stats.lastLogin = log.timestamp;
+                    }
+                }
+                
+                if (log.action === 'edit' && log.target.includes('member')) {
+                    stats.memberEdits++;
+                }
+            });
+            
+            const tbody = document.getElementById('userActivityBody');
+            
+            if (Object.keys(userStats).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No user activity found</td></tr>';
+                return;
+            }
+            
+            const html = Object.entries(userStats).map(([user, stats]) => `
+                <tr>
+                    <td><strong>${user}</strong></td>
+                    <td>${stats.lastLogin ? new Date(stats.lastLogin).toLocaleString() : 'Never'}</td>
+                    <td>${stats.totalLogins}</td>
+                    <td>${stats.totalActions}</td>
+                    <td>${stats.memberEdits}</td>
+                    <td>${stats.lastActivity ? new Date(stats.lastActivity).toLocaleString() : 'Never'}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+            
+            // Populate user filter dropdown
+            const userFilter = document.getElementById('userActivityFilter');
+            userFilter.innerHTML = '<option value="">All Users</option>' + 
+                Object.keys(userStats).map(user => `<option value="${user}">${user}</option>`).join('');
+        }
+
+        // Refresh activity logs
+        window.refreshActivityLogs = async function() {
+            await loadSystemLogs();
+            displayActivityLogs();
+        };
+
         // Logout function
-        window.logout = function() {
+        window.logout = async function() {
+            // Log the logout
+            await logUserAction('logout', 'dashboard', 'User logged out', 'success');
+            
             localStorage.removeItem('currentUser');
             window.location.href = 'index.html';
         };

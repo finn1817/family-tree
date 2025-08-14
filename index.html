@@ -263,6 +263,27 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // Logging function for login attempts
+        async function logLoginAttempt(username, status, details = '') {
+            try {
+                const logEntry = {
+                    timestamp: new Date().toISOString(),
+                    user: username,
+                    action: 'login',
+                    target: 'login_page',
+                    details: details,
+                    status: status,
+                    userAgent: navigator.userAgent,
+                    ipAddress: 'IP_PENDING' // IP tracking will be added later
+                };
+
+                await addDoc(collection(db, 'system_logs'), logEntry);
+                console.log('📝 Logged login attempt:', status, username);
+            } catch (error) {
+                console.error('❌ Failed to log login attempt:', error);
+            }
+        }
+
         function debugLog(message) {
             const debugDiv = document.getElementById('debug');
             const timestamp = new Date().toLocaleTimeString();
@@ -483,10 +504,14 @@
                     
                     // Check if user is admin - only admins can log in for now
                     if (!userData.isAdmin) {
+                        await logLoginAttempt(username, 'failed', 'User not verified as admin');
                         errorDiv.textContent = 'Waiting on an admin to verify you';
                         loadingDiv.style.display = 'none';
                         return;
                     }
+                    
+                    // Log successful login
+                    await logLoginAttempt(username, 'success', 'Admin login successful');
                     
                     localStorage.setItem('currentUser', JSON.stringify({
                         username: userData.username,
@@ -504,15 +529,18 @@
                     const requestSnapshot = await getDocs(requestQuery);
                     
                     if (!requestSnapshot.empty) {
+                        await logLoginAttempt(username, 'failed', 'Account pending approval');
                         localStorage.setItem('waitingForApproval', username);
                         showWaitingView(username);
                         startStatusMonitoring(username);
                     } else {
+                        await logLoginAttempt(username, 'failed', 'Invalid credentials');
                         debugLog('Login failed: Invalid credentials');
                         errorDiv.textContent = 'Invalid username or password';
                     }
                 }
             } catch (error) {
+                await logLoginAttempt(username, 'failed', `Login error: ${error.message}`);
                 debugLog(`Login error: ${error.message}`);
                 errorDiv.textContent = 'Login error: ' + error.message;
             } finally {
