@@ -480,18 +480,21 @@
             const questionsSection = document.getElementById('securityQuestionsSection');
             const questionsList = document.getElementById('securityQuestionsList');
             
-            if (!selectedUsername) {
+            if (!selectedUsername || selectedUsername.trim() === '') {
                 questionsSection.style.display = 'none';
                 return;
             }
 
             try {
+                // Ensure selectedUsername is a string and not undefined/null
+                const username = String(selectedUsername).trim();
+                
                 // Get the user's document ID first
                 const usersRef = collection(db, 'users');
-                const userQuery = query(usersRef, where('username', '==', selectedUsername));
+                const userQuery = query(usersRef, where('username', '==', username));
                 const userSnapshot = await getDocs(userQuery);
                 
-                let userDocId = selectedUsername; // fallback to username
+                let userDocId = username; // fallback to username
                 if (!userSnapshot.empty) {
                     userDocId = userSnapshot.docs[0].id;
                 }
@@ -694,13 +697,16 @@
             successDiv.textContent = '';
             loadingDiv.style.display = 'block';
 
-            if (!selectedUsername) {
+            if (!selectedUsername || selectedUsername.trim() === '') {
                 errorDiv.textContent = 'Please select your username';
                 loadingDiv.style.display = 'none';
                 return;
             }
 
             try {
+                // Ensure selectedUsername is a string
+                const username = String(selectedUsername).trim();
+                
                 // Validate security questions if they exist
                 const securityAnswers = [];
                 const answerInputs = document.querySelectorAll('.security-answer-input');
@@ -708,10 +714,10 @@
                 if (answerInputs.length > 0) {
                     // Get the user's document ID first
                     const usersRef = collection(db, 'users');
-                    const userQuery = query(usersRef, where('username', '==', selectedUsername));
+                    const userQuery = query(usersRef, where('username', '==', username));
                     const userSnapshot = await getDocs(userQuery);
                     
-                    let userDocId = selectedUsername; // fallback to username
+                    let userDocId = username; // fallback to username
                     if (!userSnapshot.empty) {
                         userDocId = userSnapshot.docs[0].id;
                     }
@@ -755,7 +761,7 @@
                 // Submit password reset request
                 const resetRequestsRef = collection(db, 'password_reset_requests');
                 await addDoc(resetRequestsRef, {
-                    username: selectedUsername,
+                    username: username,
                     fullName: fullName,
                     phoneNumber: phoneNumber,
                     email: email || '',
@@ -769,7 +775,7 @@
                 });
                 
                 // Log the password reset request
-                await logLoginAttempt(selectedUsername, 'password_reset_request', `Password reset requested by ${fullName} (${phoneNumber}) - Security Q&A: ${securityAnswers.filter(a => a.isCorrect).length}/${securityAnswers.length} correct`);
+                await logLoginAttempt(username, 'password_reset_request', `Password reset requested by ${fullName} (${phoneNumber}) - Security Q&A: ${securityAnswers.filter(a => a.isCorrect).length}/${securityAnswers.length} correct`);
                 
                 successDiv.textContent = '✅ Password reset request submitted successfully! An administrator will review your request.';
                 document.getElementById('forgotPasswordForm').reset();

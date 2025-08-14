@@ -10677,12 +10677,18 @@
 
         async function loadSecurityQuestions() {
             try {
+                // Ensure currentUser is valid
+                if (!currentUser || typeof currentUser !== 'string') {
+                    console.error('Current user is not valid:', currentUser);
+                    throw new Error('Current user is not set properly');
+                }
+
                 // Get the current user's document ID from the users collection
                 const usersRef = collection(db, 'users');
-                const userQuery = query(usersRef, where('username', '==', currentUser));
+                const userQuery = query(usersRef, where('username', '==', String(currentUser).trim()));
                 const userSnapshot = await getDocs(userQuery);
                 
-                let userDocId = currentUser; // fallback to username
+                let userDocId = String(currentUser).trim(); // fallback to username
                 if (!userSnapshot.empty) {
                     userDocId = userSnapshot.docs[0].id;
                 }
@@ -10735,6 +10741,12 @@
 
         window.saveSecurityQuestions = async function() {
             try {
+                // Ensure currentUser is valid
+                if (!currentUser || typeof currentUser !== 'string') {
+                    showMessage('User session is invalid. Please log in again.', 'error');
+                    return;
+                }
+
                 const questions = [];
                 const questionItems = document.querySelectorAll('.question-item');
                 
@@ -10754,10 +10766,10 @@
 
                 // Get the current user's document ID from the users collection
                 const usersRef = collection(db, 'users');
-                const userQuery = query(usersRef, where('username', '==', currentUser));
+                const userQuery = query(usersRef, where('username', '==', String(currentUser).trim()));
                 const userSnapshot = await getDocs(userQuery);
                 
-                let userDocId = currentUser; // fallback to username
+                let userDocId = String(currentUser).trim(); // fallback to username
                 if (!userSnapshot.empty) {
                     userDocId = userSnapshot.docs[0].id;
                 }
