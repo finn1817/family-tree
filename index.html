@@ -486,7 +486,18 @@
             }
 
             try {
-                const questionsRef = doc(db, 'security_questions', selectedUsername);
+                // Get the user's document ID first
+                const usersRef = collection(db, 'users');
+                const userQuery = query(usersRef, where('username', '==', selectedUsername));
+                const userSnapshot = await getDocs(userQuery);
+                
+                let userDocId = selectedUsername; // fallback to username
+                if (!userSnapshot.empty) {
+                    userDocId = userSnapshot.docs[0].id;
+                }
+
+                // Load security questions using the document ID
+                const questionsRef = doc(db, 'security_questions', userDocId);
                 const questionsSnap = await getDoc(questionsRef);
                 
                 questionsList.innerHTML = '';
@@ -695,8 +706,18 @@
                 const answerInputs = document.querySelectorAll('.security-answer-input');
                 
                 if (answerInputs.length > 0) {
-                    // Get the stored security questions for verification
-                    const questionsRef = doc(db, 'security_questions', selectedUsername);
+                    // Get the user's document ID first
+                    const usersRef = collection(db, 'users');
+                    const userQuery = query(usersRef, where('username', '==', selectedUsername));
+                    const userSnapshot = await getDocs(userQuery);
+                    
+                    let userDocId = selectedUsername; // fallback to username
+                    if (!userSnapshot.empty) {
+                        userDocId = userSnapshot.docs[0].id;
+                    }
+
+                    // Get the stored security questions for verification using document ID
+                    const questionsRef = doc(db, 'security_questions', userDocId);
                     const questionsSnap = await getDoc(questionsRef);
                     
                     if (questionsSnap.exists()) {

@@ -1705,6 +1705,11 @@
             max-width: 95%;
             width: 800px;
             max-height: 90vh;
+            position: relative;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
         }
 
         .security-header {
@@ -1713,6 +1718,21 @@
             padding: 1.5rem;
             border-radius: 15px 15px 0 0;
             margin: -2rem -2rem 2rem -2rem;
+            position: relative;
+        }
+
+        #securityQuestionsModal {
+            z-index: 10001 !important;
+        }
+
+        #securityQuestionsModal .modal-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .question-item {
@@ -10657,7 +10677,18 @@
 
         async function loadSecurityQuestions() {
             try {
-                const questionsRef = doc(db, 'security_questions', currentUser);
+                // Get the current user's document ID from the users collection
+                const usersRef = collection(db, 'users');
+                const userQuery = query(usersRef, where('username', '==', currentUser));
+                const userSnapshot = await getDocs(userQuery);
+                
+                let userDocId = currentUser; // fallback to username
+                if (!userSnapshot.empty) {
+                    userDocId = userSnapshot.docs[0].id;
+                }
+
+                // Check if security_questions collection exists
+                const questionsRef = doc(db, 'security_questions', userDocId);
                 const questionsSnap = await getDoc(questionsRef);
                 
                 const container = document.getElementById('questionsContainer');
@@ -10692,7 +10723,13 @@
                 }
             } catch (error) {
                 console.error('Error loading security questions:', error);
-                showMessage('Error loading security questions', 'error');
+                showMessage('Error loading security questions: ' + error.message, 'error');
+                
+                // Add empty question on error
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = '';
+                questionCount = 0;
+                addSecurityQuestion();
             }
         }
 
@@ -10715,25 +10752,37 @@
                     return;
                 }
 
-                // Save to Firestore
-                const questionsRef = doc(db, 'security_questions', currentUser);
+                // Get the current user's document ID from the users collection
+                const usersRef = collection(db, 'users');
+                const userQuery = query(usersRef, where('username', '==', currentUser));
+                const userSnapshot = await getDocs(userQuery);
+                
+                let userDocId = currentUser; // fallback to username
+                if (!userSnapshot.empty) {
+                    userDocId = userSnapshot.docs[0].id;
+                }
+
+                // Save to Firestore using the user's document ID
+                const questionsRef = doc(db, 'security_questions', userDocId);
                 await setDoc(questionsRef, {
                     questions: questions,
                     updatedAt: new Date(),
-                    userId: currentUser
-                });
+                    userId: currentUser,
+                    userDocId: userDocId
+                }, { merge: true });
 
                 // Log the action
                 await logUserAction('security_questions_updated', 'security', {
                     questionCount: questions.length,
-                    updatedBy: currentUser
+                    updatedBy: currentUser,
+                    userDocId: userDocId
                 });
 
                 showMessage(`Security questions saved successfully! (${questions.length} questions)`, 'success');
                 closeSecurityQuestionsModal();
             } catch (error) {
                 console.error('Error saving security questions:', error);
-                showMessage('Error saving security questions. Please try again.', 'error');
+                showMessage('Error saving security questions: ' + error.message, 'error');
             }
         }
 
