@@ -3119,6 +3119,22 @@
         </div>
     </div>
 
+    <!-- Password Reset Detail Modal -->
+    <div id="resetRequestDetailModal" class="modal">
+        <div class="modal-content security-modal">
+            <div class="security-header">
+                <div>
+                    <h2>🔄 Password Reset Request Details</h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Review and process password reset request</p>
+                </div>
+                <button class="close" onclick="closeModal('resetRequestDetailModal')" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; padding: 0.5rem; border-radius: 50%; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+            <div class="security-content" id="resetRequestDetails">
+                <!-- Content will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
     <!-- Load the new relationship system -->
     <!-- Consolidated: relationship-system.js and relationship-ui.js code is now inline below -->
 
@@ -10852,25 +10868,242 @@
                     <strong>Name:</strong> ${request.fullName}<br>
                     <strong>Username:</strong> ${request.username}<br>
                     <strong>Phone:</strong> ${request.phoneNumber}<br>
-                    <strong>Email:</strong> ${request.email || 'Not provided'}<br>
-                    <strong>IP Address:</strong> ${request.ipAddress || 'Unknown'}<br>
                     <strong>Date:</strong> ${date}
                 </div>
-                ${request.reason ? `<div><strong>Reason:</strong> ${request.reason}</div>` : ''}
-                ${status === 'pending' ? `
-                    <div class="request-actions">
-                        <button class="approve-btn" onclick="processResetRequest('${request.id}', 'approved')">
-                            Approve Reset
-                        </button>
-                        <button class="deny-btn" onclick="processResetRequest('${request.id}', 'denied')">
-                            Deny Request
-                        </button>
-                    </div>
-                ` : ''}
+                <div class="request-actions">
+                    <button class="approve-btn" onclick="openResetRequestDetail('${request.id}')" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); width: 100%;">
+                        👁️ View Details
+                    </button>
+                </div>
             `;
             
             return card;
         }
+
+        window.openResetRequestDetail = async function(requestId) {
+            try {
+                // Get the request details
+                const requestDoc = await getDoc(doc(db, 'password_reset_requests', requestId));
+                if (!requestDoc.exists()) {
+                    showMessage('Reset request not found', 'error');
+                    return;
+                }
+
+                const request = { id: requestDoc.id, ...requestDoc.data() };
+                const date = request.timestamp ? request.timestamp.toDate().toLocaleString() : 'Unknown';
+                const status = request.status || 'pending';
+
+                // Build the detailed view
+                let securityQuestionsHtml = '';
+                if (request.securityAnswers && request.securityAnswers.length > 0) {
+                    securityQuestionsHtml = `
+                        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin: 1rem 0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #6f42c1;">🛡️ Security Questions & Answers</h4>
+                            ${request.securityAnswers.map((qa, index) => `
+                                <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 8px; border-left: 4px solid ${qa.isCorrect ? '#28a745' : '#dc3545'};">
+                                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Q${index + 1}: ${qa.question}</div>
+                                    <div style="margin-bottom: 0.5rem;"><strong>User's Answer:</strong> ${qa.userAnswer}</div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; background: ${qa.isCorrect ? '#d4edda' : '#f8d7da'}; color: ${qa.isCorrect ? '#155724' : '#721c24'};">
+                                            ${qa.isCorrect ? '✅ CORRECT' : '❌ INCORRECT'}
+                                        </span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <div style="text-align: center; margin-top: 1rem; padding: 0.75rem; background: ${request.securityQuestionsCorrect >= Math.ceil(request.securityQuestionsTotalAsked / 2) ? '#d4edda' : '#f8d7da'}; border-radius: 8px;">
+                                <strong>Security Verification: ${request.securityQuestionsCorrect}/${request.securityQuestionsTotalAsked} Correct</strong>
+                                ${request.securityQuestionsCorrect >= Math.ceil(request.securityQuestionsTotalAsked / 2) ? ' ✅ PASSED' : ' ❌ FAILED'}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const detailsHtml = `
+                    <div style="max-height: 70vh; overflow-y: auto;">
+                        <!-- Basic Information -->
+                        <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                            <h3 style="margin: 0 0 1rem 0; color: #1976d2;">📋 Request Information</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div><strong>Username:</strong> ${request.username}</div>
+                                <div><strong>Full Name:</strong> ${request.fullName}</div>
+                                <div><strong>Phone:</strong> ${request.phoneNumber}</div>
+                                <div><strong>Email:</strong> ${request.email || 'Not provided'}</div>
+                                <div><strong>IP Address:</strong> ${request.ipAddress || 'Unknown'}</div>
+                                <div><strong>Date Submitted:</strong> ${date}</div>
+                            </div>
+                            <div style="margin-top: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem;">
+                                    <strong>Status:</strong>
+                                    <span style="padding: 0.5rem 1rem; border-radius: 16px; font-weight: 600; background: ${status === 'pending' ? '#fff3cd' : status === 'approved' ? '#d4edda' : '#f8d7da'}; color: ${status === 'pending' ? '#856404' : status === 'approved' ? '#155724' : '#721c24'};">
+                                        ${status.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+                            ${request.reason ? `
+                                <div style="margin-top: 1rem;">
+                                    <strong>Reason for Reset:</strong>
+                                    <div style="background: white; padding: 1rem; border-radius: 8px; margin-top: 0.5rem; border-left: 4px solid #2196f3;">
+                                        ${request.reason}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- New Password Information -->
+                        ${request.newPassword ? `
+                            <div style="background: #fff3e0; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem;">
+                                <h4 style="margin: 0 0 1rem 0; color: #f57c00;">🔑 New Password Request</h4>
+                                <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #ff9800;">
+                                    <strong>Requested New Password:</strong> 
+                                    <span style="font-family: monospace; background: #f5f5f5; padding: 0.25rem 0.5rem; border-radius: 4px;">${request.newPassword}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${securityQuestionsHtml}
+
+                        <!-- Action Buttons -->
+                        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef;">
+                            ${status === 'pending' ? `
+                                <button onclick="processResetRequestFromModal('${request.id}', 'approved')" 
+                                        class="btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1;">
+                                    ✅ Approve & Change Password
+                                </button>
+                                <button onclick="processResetRequestFromModal('${request.id}', 'denied')" 
+                                        class="btn" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                                    ❌ Deny
+                                </button>
+                            ` : `
+                                <div style="text-align: center; width: 100%; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                                    <span style="color: #6c757d;">This request has already been ${status}.</span>
+                                    ${request.processedAt ? `<br><small>Processed on: ${request.processedAt.toDate().toLocaleString()}</small>` : ''}
+                                    ${request.processedBy ? `<br><small>Processed by: ${request.processedBy}</small>` : ''}
+                                </div>
+                            `}
+                            <button onclick="removeResetRequest('${request.id}')" 
+                                    class="btn" style="background: #6c757d; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                                🗑️ Remove from Database
+                            </button>
+                            <button onclick="closeModal('resetRequestDetailModal')" 
+                                    class="btn" style="background: #17a2b8; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('resetRequestDetails').innerHTML = detailsHtml;
+                document.getElementById('resetRequestDetailModal').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading reset request details:', error);
+                showMessage('Error loading request details', 'error');
+            }
+        };
+
+        window.processResetRequestFromModal = async function(requestId, action) {
+            try {
+                // Get the request details first to get the new password and username
+                const requestDoc = await getDoc(doc(db, 'password_reset_requests', requestId));
+                if (!requestDoc.exists()) {
+                    showMessage('Reset request not found', 'error');
+                    return;
+                }
+
+                const request = requestDoc.data();
+
+                if (action === 'approved') {
+                    // Update the user's password
+                    if (request.newPassword && request.username) {
+                        // Find the user document by username
+                        const usersRef = collection(db, 'users');
+                        const userQuery = query(usersRef, where('username', '==', request.username));
+                        const userSnapshot = await getDocs(userQuery);
+                        
+                        if (!userSnapshot.empty) {
+                            const userDoc = userSnapshot.docs[0];
+                            await updateDoc(userDoc.ref, {
+                                password: request.newPassword,
+                                passwordChangedAt: new Date(),
+                                passwordChangedBy: currentUser.username,
+                                passwordResetApproved: true
+                            });
+
+                            showMessage(`Password successfully changed for ${request.username}!`, 'success');
+                        } else {
+                            showMessage('User not found in database', 'error');
+                            return;
+                        }
+                    }
+
+                    // Update request status
+                    await updateDoc(doc(db, 'password_reset_requests', requestId), {
+                        status: 'approved',
+                        processedAt: new Date(),
+                        processedBy: currentUser.username
+                    });
+
+                    // Log the action
+                    await logUserAction('password_reset_approved', 'system', {
+                        requestId: requestId,
+                        username: request.username,
+                        processedBy: currentUser.username
+                    });
+
+                    showMessage('Password reset request approved and password changed successfully!', 'success');
+                } else if (action === 'denied') {
+                    await updateDoc(doc(db, 'password_reset_requests', requestId), {
+                        status: 'denied',
+                        processedAt: new Date(),
+                        processedBy: currentUser.username
+                    });
+
+                    await logUserAction('password_reset_denied', 'system', {
+                        requestId: requestId,
+                        username: request.username,
+                        processedBy: currentUser.username
+                    });
+
+                    showMessage('Password reset request denied.', 'success');
+                }
+
+                // Close modal and refresh the requests list
+                closeModal('resetRequestDetailModal');
+                loadResetRequests();
+            } catch (error) {
+                console.error('Error processing reset request:', error);
+                showMessage('Error processing request. Please try again.', 'error');
+            }
+        };
+
+        window.removeResetRequest = async function(requestId) {
+            if (!confirm('Are you sure you want to permanently remove this reset request from the database? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                // Get request details for logging
+                const requestDoc = await getDoc(doc(db, 'password_reset_requests', requestId));
+                const request = requestDoc.exists() ? requestDoc.data() : null;
+
+                // Delete the request
+                await deleteDoc(doc(db, 'password_reset_requests', requestId));
+
+                // Log the removal
+                await logUserAction('password_reset_removed', 'system', {
+                    requestId: requestId,
+                    username: request?.username || 'unknown',
+                    removedBy: currentUser.username
+                });
+
+                showMessage('Reset request removed from database.', 'success');
+                closeModal('resetRequestDetailModal');
+                loadResetRequests();
+            } catch (error) {
+                console.error('Error removing reset request:', error);
+                showMessage('Error removing request. Please try again.', 'error');
+            }
+        };
 
         window.processResetRequest = async function(requestId, action) {
             try {

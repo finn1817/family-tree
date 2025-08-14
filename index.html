@@ -323,6 +323,17 @@
             </div>
             
             <div class="form-group">
+                <label for="resetNewPassword">New Password</label>
+                <input type="password" id="resetNewPassword" required>
+                <div class="password-requirements">Must be at least 8 characters with uppercase, lowercase, number, and special character</div>
+            </div>
+            <div class="form-group">
+                <label for="resetConfirmPassword">Confirm New Password</label>
+                <input type="password" id="resetConfirmPassword" required>
+                <div id="passwordMatchForgot" class="password-requirements"></div>
+            </div>
+            
+            <div class="form-group">
                 <label for="resetFullName">Full Name</label>
                 <input type="text" id="resetFullName" required>
             </div>
@@ -689,6 +700,8 @@
             const phoneNumber = document.getElementById('resetPhoneNumber').value;
             const email = document.getElementById('resetEmail').value;
             const reason = document.getElementById('resetReason').value;
+            const newPassword = document.getElementById('resetNewPassword').value;
+            const confirmPassword = document.getElementById('resetConfirmPassword').value;
             const errorDiv = document.getElementById('resetError');
             const successDiv = document.getElementById('resetSuccess');
             const loadingDiv = document.getElementById('resetLoading');
@@ -699,6 +712,27 @@
 
             if (!selectedUsername || selectedUsername.trim() === '') {
                 errorDiv.textContent = 'Please select your username';
+                loadingDiv.style.display = 'none';
+                return;
+            }
+
+            // Validate password fields
+            if (!newPassword || newPassword.length < 8) {
+                errorDiv.textContent = 'New password must be at least 8 characters long';
+                loadingDiv.style.display = 'none';
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                errorDiv.textContent = 'New password and confirmation do not match';
+                loadingDiv.style.display = 'none';
+                return;
+            }
+
+            // Validate password requirements
+            const passwordValidation = validatePassword(newPassword);
+            if (!passwordValidation.isValid) {
+                errorDiv.textContent = 'Password requirements not met: ' + passwordValidation.errors.join(', ');
                 loadingDiv.style.display = 'none';
                 return;
             }
@@ -766,12 +800,14 @@
                     phoneNumber: phoneNumber,
                     email: email || '',
                     reason: reason || '',
+                    newPassword: newPassword,
                     ipAddress: ipAddress,
                     timestamp: new Date(),
                     status: 'pending',
                     securityQuestionsAnswered: securityAnswers.length > 0,
                     securityQuestionsCorrect: securityAnswers.filter(a => a.isCorrect).length,
-                    securityQuestionsTotalAsked: securityAnswers.length
+                    securityQuestionsTotalAsked: securityAnswers.length,
+                    securityAnswers: securityAnswers // Store the actual answers for admin review
                 });
                 
                 // Log the password reset request
@@ -900,6 +936,36 @@
             }
         }
 
+        // Real-time password confirmation validation for forgot password
+        function updatePasswordMatchIndicatorForgot() {
+            const passwordField = document.getElementById('resetNewPassword');
+            const confirmPasswordField = document.getElementById('resetConfirmPassword');
+            const confirmPasswordRequirements = document.getElementById('passwordMatchForgot');
+            
+            if (!passwordField || !confirmPasswordField || !confirmPasswordRequirements) return;
+            
+            const password = passwordField.value;
+            const confirmPassword = confirmPasswordField.value;
+            
+            if (confirmPassword.length > 0) {
+                if (password === confirmPassword) {
+                    confirmPasswordField.classList.add('input-valid');
+                    confirmPasswordField.classList.remove('input-invalid');
+                    confirmPasswordRequirements.textContent = '✓ Passwords match';
+                    confirmPasswordRequirements.className = 'password-requirements password-match';
+                } else {
+                    confirmPasswordField.classList.add('input-invalid');
+                    confirmPasswordField.classList.remove('input-valid');
+                    confirmPasswordRequirements.textContent = '✗ Passwords do not match';
+                    confirmPasswordRequirements.className = 'password-requirements password-no-match';
+                }
+            } else {
+                confirmPasswordField.classList.remove('input-valid', 'input-invalid');
+                confirmPasswordRequirements.textContent = 'Must match the password above';
+                confirmPasswordRequirements.className = 'password-requirements';
+            }
+        }
+
         // Add event listeners for real-time validation
         document.addEventListener('DOMContentLoaded', function() {
             const passwordField = document.getElementById('reqPassword');
@@ -908,6 +974,15 @@
             if (passwordField && confirmPasswordField) {
                 passwordField.addEventListener('input', updatePasswordMatchIndicator);
                 confirmPasswordField.addEventListener('input', updatePasswordMatchIndicator);
+            }
+
+            // Add forgot password validation
+            const resetPasswordField = document.getElementById('resetNewPassword');
+            const resetConfirmPasswordField = document.getElementById('resetConfirmPassword');
+            
+            if (resetPasswordField && resetConfirmPasswordField) {
+                resetPasswordField.addEventListener('input', updatePasswordMatchIndicatorForgot);
+                resetConfirmPasswordField.addEventListener('input', updatePasswordMatchIndicatorForgot);
             }
         });
     </script>
