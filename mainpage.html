@@ -1576,148 +1576,412 @@
 
         /* Password Management Modal Styles */
         .password-modal {
-            max-width: 95%;
-            width: 1000px;
-            max-height: 90vh;
+            max-width: 98vw;
+            width: 1600px;
+            max-height: 95vh;
+            overflow: hidden;
+            padding: 0;
+            border-radius: 15px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
         }
 
         .password-header {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
-            padding: 1.5rem;
+            padding: 2rem;
             border-radius: 15px 15px 0 0;
-            margin: -2rem -2rem 2rem -2rem;
-        }
-
-        .password-tabs {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #eee;
-        }
-
-        .password-tab {
-            padding: 0.75rem 1.5rem;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .password-tab.active {
-            border-bottom-color: #28a745;
-            color: #28a745;
-        }
-
-        .user-password-card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            margin: 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
+        .password-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .password-tabs {
+            display: flex;
+            gap: 0;
+            margin: 0;
+            border-bottom: 2px solid #e9ecef;
+            background: #f8f9fa;
+            padding: 0 2rem;
+        }
+
+        .password-tab {
+            padding: 1.2rem 2.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            color: #6c757d;
+            border-radius: 10px 10px 0 0;
+            margin-top: 0.5rem;
+        }
+
+        .password-tab.active {
+            border-bottom-color: #28a745;
+            color: #28a745;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .password-tab:hover:not(.active) {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .user-password-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+
+        .user-password-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            border-color: #28a745;
+        }
+
         .user-info-section {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .user-info-section h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .user-info-section p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.9rem;
         }
 
         .password-section {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .password-hidden {
-            font-family: monospace;
-            background: #f8f9fa;
-            padding: 0.5rem;
-            border-radius: 4px;
-            color: #666;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            min-width: 120px;
+            text-align: center;
+            font-weight: 600;
         }
 
         .password-revealed {
-            font-family: monospace;
-            background: #fff3cd;
-            padding: 0.5rem;
-            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
             color: #856404;
             border: 1px solid #ffeaa7;
+            min-width: 120px;
+            text-align: center;
+            font-weight: 600;
+            word-break: break-all;
         }
 
         .reveal-btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .change-password-btn {
-            background: #28a745;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
             color: white;
             border: none;
             padding: 0.5rem 1rem;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .reveal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        }
+
+        .change-password-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .change-password-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(40,167,69,0.3);
         }
 
         .reset-request-card {
             background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #ffc107;
+            transition: all 0.3s;
+        }
+
+        .reset-request-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            transform: translateY(-1px);
+        }
+
+        .reset-request-card h4 {
+            margin: 0 0 1rem 0;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .reset-request-card p {
+            margin: 0.5rem 0;
+            color: #6c757d;
+            line-height: 1.5;
         }
 
         .request-actions {
             display: flex;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .approve-btn {
-            background: #28a745;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .approve-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(40,167,69,0.3);
         }
 
         .deny-btn {
-            background: #dc3545;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
             border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .deny-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(220,53,69,0.3);
+        }
+
+        /* Add proper content area styling */
+        .password-content {
+            padding: 2rem;
+            background: white;
+            max-height: calc(95vh - 180px);
+            overflow-y: auto;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .password-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .password-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .password-content::-webkit-scrollbar-thumb {
+            background: #28a745;
+            border-radius: 4px;
+        }
+
+        /* Add responsive grid for password management */
+        .password-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #6c757d;
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin: 0 0 0.5rem 0;
+            color: #495057;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Mobile responsiveness for password modal */
+        @media (max-width: 768px) {
+            .password-modal {
+                max-width: 95vw;
+                width: 95vw;
+                margin: 0;
+            }
+
+            .password-header {
+                padding: 1.5rem;
+            }
+
+            .password-header h2 {
+                font-size: 1.4rem;
+            }
+
+            .password-tabs {
+                padding: 0 1.5rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .password-tab {
+                padding: 1rem;
+                text-align: center;
+                border-radius: 8px;
+                margin-top: 0;
+            }
+
+            .password-content {
+                padding: 1.5rem;
+            }
+
+            .password-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .user-password-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .password-section {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        /* Large screen optimizations */
+        @media (min-width: 1400px) {
+            .password-modal {
+                max-width: 90vw;
+                width: 1800px;
+            }
+
+            .password-grid {
+                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+                gap: 2rem;
+            }
+
+            .password-content {
+                padding: 2.5rem;
+            }
         }
 
         /* Security Questions Modal Styles */
         .security-modal {
-            max-width: 95%;
-            width: 800px;
-            max-height: 90vh;
-            position: relative;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            margin: 0;
+            max-width: 95vw;
+            width: 1000px;
+            max-height: 95vh;
+            overflow: hidden;
+            padding: 0;
+            border-radius: 15px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
         }
 
         .security-header {
             background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
             color: white;
-            padding: 1.5rem;
+            padding: 2rem;
             border-radius: 15px 15px 0 0;
-            margin: -2rem -2rem 2rem -2rem;
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .security-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .security-content {
+            padding: 2rem;
+            background: white;
+            max-height: calc(95vh - 140px);
+            overflow-y: auto;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .security-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .security-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .security-content::-webkit-scrollbar-thumb {
+            background: #6f42c1;
+            border-radius: 4px;
+        }
+
+        .security-content::-webkit-scrollbar-thumb:hover {
+            background: #5a32a3;
             position: relative;
         }
 
@@ -1737,44 +2001,61 @@
 
         .question-item {
             background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #6f42c1;
+            transition: all 0.3s;
+        }
+
+        .question-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            border-left-color: #5a32a3;
         }
 
         .question-item h4 {
             margin: 0 0 1rem 0;
-            color: #6f42c1;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .question-input, .answer-input {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            transition: all 0.3s;
         }
 
-        .add-question-btn {
-            background: #6f42c1;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-bottom: 1rem;
+        .question-input:focus, .answer-input:focus {
+            outline: none;
+            border-color: #6f42c1;
+            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.1);
         }
 
         .remove-question-btn {
-            background: #dc3545;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
             border: none;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
-            float: right;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .remove-question-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(220,53,69,0.3);
         }
 
         .user-dropdown {
@@ -2766,24 +3047,31 @@
     <div id="passwordManagementModal" class="modal">
         <div class="modal-content password-modal">
             <div class="password-header">
-                <h2>🔐 Password Management System</h2>
-                <p>Manage user passwords and reset requests</p>
+                <div>
+                    <h2>🔐 Password Management System</h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Manage user passwords and reset requests</p>
+                </div>
+                <button class="close" onclick="closePasswordManagementModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; padding: 0.5rem; border-radius: 50%; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
             
             <div class="password-tabs">
-                <button class="password-tab active" onclick="switchPasswordTab('manage')">Manage Passwords</button>
-                <button class="password-tab" onclick="switchPasswordTab('requests')">Reset Requests</button>
+                <button class="password-tab active" onclick="switchPasswordTab('manage')">
+                    <span>👥</span> Manage Passwords
+                </button>
+                <button class="password-tab" onclick="switchPasswordTab('requests')">
+                    <span>🔄</span> Reset Requests
+                </button>
             </div>
 
-            <div id="managePasswordsTab" class="tab-content-password">
-                <div id="userPasswordsList"></div>
-            </div>
+            <div class="password-content">
+                <div id="managePasswordsTab" class="tab-content-password">
+                    <div id="userPasswordsList"></div>
+                </div>
 
-            <div id="resetRequestsTab" class="tab-content-password" style="display: none;">
-                <div id="resetRequestsList"></div>
+                <div id="resetRequestsTab" class="tab-content-password" style="display: none;">
+                    <div id="resetRequestsList"></div>
+                </div>
             </div>
-
-            <button class="close" onclick="closePasswordManagementModal()">&times;</button>
         </div>
     </div>
 
@@ -2813,20 +3101,21 @@
     <div id="securityQuestionsModal" class="modal">
         <div class="modal-content security-modal">
             <div class="security-header">
-                <h2>🔒 Security Questions & Answers</h2>
-                <p>Manage security questions for password recovery</p>
+                <div>
+                    <h2>🔒 Security Questions & Answers</h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">Manage security questions for password recovery</p>
+                </div>
+                <button class="close" onclick="closeSecurityQuestionsModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; padding: 0.5rem; border-radius: 50%; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
             
-            <div id="securityQuestionsContent">
+            <div class="security-content">
                 <div id="questionsContainer"></div>
-                <button class="add-question-btn" onclick="addSecurityQuestion()">+ Add Security Question</button>
-                <div class="form-actions">
-                    <button onclick="saveSecurityQuestions()" class="btn btn-primary">Save Questions</button>
-                    <button onclick="closeSecurityQuestionsModal()" class="btn">Cancel</button>
+                <button class="add-question-btn" onclick="addSecurityQuestion()" style="background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 500; margin: 1.5rem 0; transition: all 0.3s;">+ Add Security Question</button>
+                <div class="form-actions" style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef;">
+                    <button onclick="saveSecurityQuestions()" class="btn btn-primary" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s;">💾 Save Questions</button>
+                    <button onclick="closeSecurityQuestionsModal()" class="btn" style="background: #6c757d; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.3s;">Cancel</button>
                 </div>
             </div>
-
-            <button class="close" onclick="closeSecurityQuestionsModal()">&times;</button>
         </div>
     </div>
 
