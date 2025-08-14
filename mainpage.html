@@ -6726,6 +6726,9 @@
             const container = document.getElementById('messagesContainer');
             const placeholder = document.getElementById('noMessagesPlaceholder');
             
+            console.log('🔍 DEBUG: renderMessages called');
+            console.log('Current user:', currentUser);
+            
             if (filteredMessages.length === 0) {
                 container.innerHTML = '';
                 placeholder.style.display = 'block';
@@ -6733,7 +6736,12 @@
             }
             
             placeholder.style.display = 'none';
-            container.innerHTML = filteredMessages.map(message => `
+            container.innerHTML = filteredMessages.map(message => {
+                console.log(`🔍 DEBUG: Rendering message by ${message.author}, current user: ${currentUser ? currentUser.username : 'null'}, isAdmin: ${currentUser ? currentUser.isAdmin : 'null'}`);
+                const canDelete = currentUser.isAdmin || message.author === currentUser.username;
+                console.log(`🔍 DEBUG: Can delete message: ${canDelete}`);
+                
+                return `
                 <div class="message" id="message-${message.id}">
                     <div class="message-header">
                         <span class="message-author">👤 ${message.author}</span>
@@ -6757,7 +6765,7 @@
                         <button class="interaction-btn" onclick="showAddComment('${message.id}')">
                             ✏️ Add Comment
                         </button>
-                        ${currentUser.isAdmin || message.author === currentUser.username ? `
+                        ${canDelete ? `
                             <button class="interaction-btn delete-btn" onclick="deleteMessage('${message.id}')">
                                 🗑️ Delete
                             </button>
@@ -6782,7 +6790,8 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function updateTabCounts() {
