@@ -1699,6 +1699,71 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
+        /* Security Questions Modal Styles */
+        .security-modal {
+            max-width: 95%;
+            width: 800px;
+            max-height: 90vh;
+        }
+
+        .security-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+            margin: -2rem -2rem 2rem -2rem;
+        }
+
+        .question-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-item h4 {
+            margin: 0 0 1rem 0;
+            color: #6f42c1;
+        }
+
+        .question-input, .answer-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .add-question-btn {
+            background: #6f42c1;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .remove-question-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            float: right;
+        }
+
+        .user-dropdown {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -2724,6 +2789,27 @@
         </div>
     </div>
 
+    <!-- Security Questions Modal -->
+    <div id="securityQuestionsModal" class="modal">
+        <div class="modal-content security-modal">
+            <div class="security-header">
+                <h2>🔒 Security Questions & Answers</h2>
+                <p>Manage security questions for password recovery</p>
+            </div>
+            
+            <div id="securityQuestionsContent">
+                <div id="questionsContainer"></div>
+                <button class="add-question-btn" onclick="addSecurityQuestion()">+ Add Security Question</button>
+                <div class="form-actions">
+                    <button onclick="saveSecurityQuestions()" class="btn btn-primary">Save Questions</button>
+                    <button onclick="closeSecurityQuestionsModal()" class="btn">Cancel</button>
+                </div>
+            </div>
+
+            <button class="close" onclick="closeSecurityQuestionsModal()">&times;</button>
+        </div>
+    </div>
+
     <!-- Load the new relationship system -->
     <!-- Consolidated: relationship-system.js and relationship-ui.js code is now inline below -->
 
@@ -3206,7 +3292,7 @@
     <script type="module">
         // Import Firebase using the correct v9+ modular syntax
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc, getDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
@@ -9580,6 +9666,40 @@
             passwordButton.addEventListener('click', () => {
                 openPasswordManagementModal();
             });
+
+            // Create Security Questions button
+            const securityButton = document.createElement('button');
+            securityButton.innerHTML = '🔒 Security Questions';
+            securityButton.className = 'btn';
+            securityButton.style.cssText = `
+                background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+                color: white;
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 1rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(111, 66, 193, 0.3);
+            `;
+            
+            // Add hover effect
+            securityButton.addEventListener('mouseenter', () => {
+                securityButton.style.transform = 'translateY(-2px)';
+                securityButton.style.boxShadow = '0 4px 12px rgba(111, 66, 193, 0.4)';
+            });
+            
+            securityButton.addEventListener('mouseleave', () => {
+                securityButton.style.transform = 'translateY(0)';
+                securityButton.style.boxShadow = '0 2px 8px rgba(111, 66, 193, 0.3)';
+            });
+            
+            // Add click handler
+            securityButton.addEventListener('click', () => {
+                openSecurityQuestionsModal();
+            });
             
             // Create developer test button
             const testButton = document.createElement('button');
@@ -9619,6 +9739,7 @@
             const logoutBtn = userInfo.querySelector('.logout-btn');
             userInfo.insertBefore(analyticsButton, logoutBtn);
             userInfo.insertBefore(passwordButton, logoutBtn);
+            userInfo.insertBefore(securityButton, logoutBtn);
             userInfo.insertBefore(testButton, logoutBtn);
         }
 
@@ -10231,17 +10352,17 @@
         }
 
         // Password Management Functions
-        function openPasswordManagementModal() {
+        window.openPasswordManagementModal = function() {
             document.getElementById('passwordManagementModal').style.display = 'block';
             loadUserPasswords();
             loadResetRequests();
         }
 
-        function closePasswordManagementModal() {
+        window.closePasswordManagementModal = function() {
             document.getElementById('passwordManagementModal').style.display = 'none';
         }
 
-        function switchPasswordTab(tabName) {
+        window.switchPasswordTab = function(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content-password').forEach(tab => {
                 tab.style.display = 'none';
@@ -10311,7 +10432,7 @@
             return card;
         }
 
-        function togglePasswordVisibility(userId, password) {
+        window.togglePasswordVisibility = function(userId, password) {
             const passwordElement = document.getElementById(`password-${userId}`);
             const button = passwordElement.nextElementSibling;
             
@@ -10326,7 +10447,7 @@
             }
         }
 
-        function openChangePasswordModal(userId, username) {
+        window.openChangePasswordModal = function(userId, username) {
             document.getElementById('changePasswordModal').style.display = 'block';
             document.getElementById('changePasswordUserId').value = userId;
             document.getElementById('changePasswordUser').textContent = username;
@@ -10334,7 +10455,7 @@
             document.getElementById('confirmPassword').value = '';
         }
 
-        function closeChangePasswordModal() {
+        window.closeChangePasswordModal = function() {
             document.getElementById('changePasswordModal').style.display = 'none';
         }
 
@@ -10405,7 +10526,7 @@
             return card;
         }
 
-        async function processResetRequest(requestId, action) {
+        window.processResetRequest = async function(requestId, action) {
             try {
                 if (action === 'approved') {
                     // Update request status
@@ -10490,6 +10611,131 @@
                 });
             }
         });
+
+        // Security Questions Functions
+        window.openSecurityQuestionsModal = function() {
+            document.getElementById('securityQuestionsModal').style.display = 'block';
+            loadSecurityQuestions();
+        }
+
+        window.closeSecurityQuestionsModal = function() {
+            document.getElementById('securityQuestionsModal').style.display = 'none';
+        }
+
+        let questionCount = 0;
+
+        window.addSecurityQuestion = function() {
+            if (questionCount >= 3) {
+                showMessage('Maximum 3 security questions allowed', 'error');
+                return;
+            }
+
+            questionCount++;
+            const container = document.getElementById('questionsContainer');
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-item';
+            questionDiv.id = `question-${questionCount}`;
+            
+            questionDiv.innerHTML = `
+                <h4>Security Question ${questionCount} 
+                    <button class="remove-question-btn" onclick="removeSecurityQuestion(${questionCount})">Remove</button>
+                </h4>
+                <input type="text" class="question-input" placeholder="Enter your security question..." maxlength="200">
+                <input type="text" class="answer-input" placeholder="Enter the answer..." maxlength="100">
+            `;
+            
+            container.appendChild(questionDiv);
+        }
+
+        window.removeSecurityQuestion = function(questionId) {
+            const questionDiv = document.getElementById(`question-${questionId}`);
+            if (questionDiv) {
+                questionDiv.remove();
+                questionCount--;
+            }
+        }
+
+        async function loadSecurityQuestions() {
+            try {
+                const questionsRef = doc(db, 'security_questions', currentUser);
+                const questionsSnap = await getDoc(questionsRef);
+                
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = '';
+                questionCount = 0;
+
+                if (questionsSnap.exists()) {
+                    const data = questionsSnap.data();
+                    const questions = data.questions || [];
+                    
+                    questions.forEach((item, index) => {
+                        questionCount++;
+                        const questionDiv = document.createElement('div');
+                        questionDiv.className = 'question-item';
+                        questionDiv.id = `question-${questionCount}`;
+                        
+                        questionDiv.innerHTML = `
+                            <h4>Security Question ${questionCount} 
+                                <button class="remove-question-btn" onclick="removeSecurityQuestion(${questionCount})">Remove</button>
+                            </h4>
+                            <input type="text" class="question-input" placeholder="Enter your security question..." maxlength="200" value="${item.question || ''}">
+                            <input type="text" class="answer-input" placeholder="Enter the answer..." maxlength="100" value="${item.answer || ''}">
+                        `;
+                        
+                        container.appendChild(questionDiv);
+                    });
+                }
+
+                // Add one empty question if none exist
+                if (questionCount === 0) {
+                    addSecurityQuestion();
+                }
+            } catch (error) {
+                console.error('Error loading security questions:', error);
+                showMessage('Error loading security questions', 'error');
+            }
+        }
+
+        window.saveSecurityQuestions = async function() {
+            try {
+                const questions = [];
+                const questionItems = document.querySelectorAll('.question-item');
+                
+                questionItems.forEach(item => {
+                    const question = item.querySelector('.question-input').value.trim();
+                    const answer = item.querySelector('.answer-input').value.trim();
+                    
+                    if (question && answer) {
+                        questions.push({ question, answer });
+                    }
+                });
+
+                if (questions.length === 0) {
+                    showMessage('Please add at least one security question', 'error');
+                    return;
+                }
+
+                // Save to Firestore
+                const questionsRef = doc(db, 'security_questions', currentUser);
+                await setDoc(questionsRef, {
+                    questions: questions,
+                    updatedAt: new Date(),
+                    userId: currentUser
+                });
+
+                // Log the action
+                await logUserAction('security_questions_updated', 'security', {
+                    questionCount: questions.length,
+                    updatedBy: currentUser
+                });
+
+                showMessage(`Security questions saved successfully! (${questions.length} questions)`, 'success');
+                closeSecurityQuestionsModal();
+            } catch (error) {
+                console.error('Error saving security questions:', error);
+                showMessage('Error saving security questions. Please try again.', 'error');
+            }
+        }
 
         // Initialize the app
         init();

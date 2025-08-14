@@ -194,6 +194,49 @@
             max-height: 200px;
             overflow-y: auto;
         }
+
+        /* Security Questions Styles */
+        .user-dropdown {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .user-dropdown:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .security-question-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .security-question-item h4 {
+            margin: 0 0 0.5rem 0;
+            color: #6f42c1;
+            font-size: 0.9rem;
+        }
+
+        .security-answer-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .security-answer-input:focus {
+            outline: none;
+            border-color: #6f42c1;
+        }
     </style>
 </head>
 <body>
@@ -266,10 +309,19 @@
         <!-- Forgot Password Form -->
         <form id="forgotPasswordForm" class="request-form" style="display: none;">
             <h2 style="color: #dc3545; margin-bottom: 1.5rem;">🔑 Password Reset Request</h2>
+            
             <div class="form-group">
-                <label for="resetUsername">Username</label>
-                <input type="text" id="resetUsername" required>
+                <label for="resetUserSelect">Select User</label>
+                <select id="resetUserSelect" class="user-dropdown" required onchange="loadUserSecurityQuestions()">
+                    <option value="">Choose your username...</option>
+                </select>
             </div>
+            
+            <div id="securityQuestionsSection" style="display: none;">
+                <h3 style="color: #6f42c1; margin: 1rem 0;">Security Questions</h3>
+                <div id="securityQuestionsList"></div>
+            </div>
+            
             <div class="form-group">
                 <label for="resetFullName">Full Name</label>
                 <input type="text" id="resetFullName" required>
@@ -299,7 +351,7 @@
     <script type="module">
         // Import Firebase using the correct v9+ modular syntax
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
@@ -397,7 +449,75 @@
             document.getElementById('requestForm').style.display = 'none';
             document.getElementById('waitingView').style.display = 'none';
             document.getElementById('forgotPasswordForm').style.display = 'block';
+            loadUsersForPasswordReset();
         };
+
+        // Load users for password reset dropdown
+        async function loadUsersForPasswordReset() {
+            try {
+                const usersRef = collection(db, 'users');
+                const usersSnapshot = await getDocs(usersRef);
+                const userSelect = document.getElementById('resetUserSelect');
+                
+                // Clear existing options except the first
+                userSelect.innerHTML = '<option value="">Choose your username...</option>';
+                
+                usersSnapshot.forEach(doc => {
+                    const userData = doc.data();
+                    const option = document.createElement('option');
+                    option.value = userData.username;
+                    option.textContent = userData.username;
+                    userSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load security questions for selected user
+        window.loadUserSecurityQuestions = async function() {
+            const selectedUsername = document.getElementById('resetUserSelect').value;
+            const questionsSection = document.getElementById('securityQuestionsSection');
+            const questionsList = document.getElementById('securityQuestionsList');
+            
+            if (!selectedUsername) {
+                questionsSection.style.display = 'none';
+                return;
+            }
+
+            try {
+                const questionsRef = doc(db, 'security_questions', selectedUsername);
+                const questionsSnap = await getDoc(questionsRef);
+                
+                questionsList.innerHTML = '';
+                
+                if (questionsSnap.exists()) {
+                    const data = questionsSnap.data();
+                    const questions = data.questions || [];
+                    
+                    if (questions.length > 0) {
+                        questions.forEach((item, index) => {
+                            const questionDiv = document.createElement('div');
+                            questionDiv.className = 'security-question-item';
+                            questionDiv.innerHTML = `
+                                <h4>Question ${index + 1}:</h4>
+                                <p style="margin: 0.5rem 0; color: #495057;">${item.question}</p>
+                                <input type="text" class="security-answer-input" placeholder="Your answer..." data-question-index="${index}" required>
+                            `;
+                            questionsList.appendChild(questionDiv);
+                        });
+                        questionsSection.style.display = 'block';
+                    } else {
+                        questionsSection.style.display = 'none';
+                    }
+                } else {
+                    questionsSection.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading security questions:', error);
+                questionsSection.style.display = 'none';
+            }
+        }
 
         // Password validation
         function validatePassword(password) {
@@ -550,7 +670,7 @@
         document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const username = document.getElementById('resetUsername').value;
+            const selectedUsername = document.getElementById('resetUserSelect').value;
             const fullName = document.getElementById('resetFullName').value;
             const phoneNumber = document.getElementById('resetPhoneNumber').value;
             const email = document.getElementById('resetEmail').value;
@@ -562,29 +682,77 @@
             errorDiv.textContent = '';
             successDiv.textContent = '';
             loadingDiv.style.display = 'block';
-            
+
+            if (!selectedUsername) {
+                errorDiv.textContent = 'Please select your username';
+                loadingDiv.style.display = 'none';
+                return;
+            }
+
             try {
+                // Validate security questions if they exist
+                const securityAnswers = [];
+                const answerInputs = document.querySelectorAll('.security-answer-input');
+                
+                if (answerInputs.length > 0) {
+                    // Get the stored security questions for verification
+                    const questionsRef = doc(db, 'security_questions', selectedUsername);
+                    const questionsSnap = await getDoc(questionsRef);
+                    
+                    if (questionsSnap.exists()) {
+                        const storedQuestions = questionsSnap.data().questions || [];
+                        let correctAnswers = 0;
+                        
+                        answerInputs.forEach((input, index) => {
+                            const userAnswer = input.value.trim().toLowerCase();
+                            const correctAnswer = storedQuestions[index]?.answer?.toLowerCase() || '';
+                            
+                            if (userAnswer === correctAnswer) {
+                                correctAnswers++;
+                            }
+                            
+                            securityAnswers.push({
+                                question: storedQuestions[index]?.question || '',
+                                userAnswer: input.value.trim(),
+                                isCorrect: userAnswer === correctAnswer
+                            });
+                        });
+                        
+                        // Require at least 50% correct answers
+                        const requiredCorrect = Math.ceil(answerInputs.length / 2);
+                        if (correctAnswers < requiredCorrect) {
+                            errorDiv.textContent = `Security verification failed. You need at least ${requiredCorrect} correct answers out of ${answerInputs.length}.`;
+                            loadingDiv.style.display = 'none';
+                            return;
+                        }
+                    }
+                }
+                
                 // Get client IP address
                 const ipAddress = await getClientIP();
                 
                 // Submit password reset request
                 const resetRequestsRef = collection(db, 'password_reset_requests');
                 await addDoc(resetRequestsRef, {
-                    username: username,
+                    username: selectedUsername,
                     fullName: fullName,
                     phoneNumber: phoneNumber,
                     email: email || '',
                     reason: reason || '',
                     ipAddress: ipAddress,
                     timestamp: new Date(),
-                    status: 'pending'
+                    status: 'pending',
+                    securityQuestionsAnswered: securityAnswers.length > 0,
+                    securityQuestionsCorrect: securityAnswers.filter(a => a.isCorrect).length,
+                    securityQuestionsTotalAsked: securityAnswers.length
                 });
                 
                 // Log the password reset request
-                await logLoginAttempt(username, 'password_reset_request', `Password reset requested by ${fullName} (${phoneNumber})`);
+                await logLoginAttempt(selectedUsername, 'password_reset_request', `Password reset requested by ${fullName} (${phoneNumber}) - Security Q&A: ${securityAnswers.filter(a => a.isCorrect).length}/${securityAnswers.length} correct`);
                 
                 successDiv.textContent = '✅ Password reset request submitted successfully! An administrator will review your request.';
                 document.getElementById('forgotPasswordForm').reset();
+                document.getElementById('securityQuestionsSection').style.display = 'none';
                 
                 // Optionally go back to login after a delay
                 setTimeout(() => {
