@@ -546,10 +546,35 @@
 
         // Password validation
         function validatePassword(password) {
-            const minLength = password.length >= 6;
-            const hasCapital = /[A-Z]/.test(password);
-            const hasNumber = /\d/.test(password);
-            return minLength && hasCapital && hasNumber;
+            const errors = [];
+            let isValid = true;
+            
+            if (password.length < 8) {
+                errors.push('at least 8 characters');
+                isValid = false;
+            }
+            
+            if (!/[A-Z]/.test(password)) {
+                errors.push('uppercase letter');
+                isValid = false;
+            }
+            
+            if (!/[a-z]/.test(password)) {
+                errors.push('lowercase letter');
+                isValid = false;
+            }
+            
+            if (!/\d/.test(password)) {
+                errors.push('number');
+                isValid = false;
+            }
+            
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+                errors.push('special character');
+                isValid = false;
+            }
+            
+            return { isValid, errors };
         }
 
         // Check if username is denied
@@ -621,8 +646,9 @@
             loadingDiv.style.display = 'block';
             
             // Validate password
-            if (!validatePassword(password)) {
-                errorDiv.textContent = 'Password must be 6+ characters with 1 capital letter and 1 number';
+            const passwordValidation = validatePassword(password);
+            if (!passwordValidation.isValid) {
+                errorDiv.textContent = 'Password requirements not met: ' + passwordValidation.errors.join(', ');
                 loadingDiv.style.display = 'none';
                 return;
             }
