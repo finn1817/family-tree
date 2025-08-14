@@ -4343,6 +4343,12 @@
         let hiddenFamilyIds = new Set(); // Track hidden family trees
         let customFamilyGroups = []; // Custom created family groups
 
+        // Helper function to check restricted admin access (dfinn12 and jblakefinn only)
+        function hasRestrictedAdminAccess() {
+            return currentUser && currentUser.isAdmin && 
+                   (currentUser.username === 'dfinn12' || currentUser.username === 'jblakefinn');
+        }
+
         // Load hidden families from Firebase (shared across all users)
         async function loadHiddenFamilies() {
             try {
@@ -4385,13 +4391,31 @@
             
             if (currentUser.isAdmin) {
                 document.getElementById('adminBadge').style.display = 'inline-block';
-                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                
+                // Check if user has restricted admin access (dfinn12 and jblakefinn only)
+                if (hasRestrictedAdminAccess()) {
+                    // Show admin-only tabs for restricted admin users (dfinn12 and jblakefinn)
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                    
+                    // Add special indicator for jblakefinn
+                    if (currentUser.username === 'jblakefinn') {
+                        document.getElementById('adminBadge').textContent = 'User Manager';
+                        document.getElementById('adminBadge').style.background = '#17a2b8';
+                        console.log('�‍💼 User Manager access granted for:', currentUser.username);
+                    } else {
+                        console.log('🔑 Super Admin access granted for:', currentUser.username);
+                    }
+                    
+                    // Start real-time monitoring for account requests (only for restricted admins)
+                    startRequestMonitoring();
+                } else {
+                    // For other admins, hide admin-only features
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                    console.log('👤 Standard admin access for:', currentUser.username);
+                }
                 
                 // Add Change Password button for all admins
                 addChangePasswordButton();
-                
-                // Start real-time monitoring for account requests
-                startRequestMonitoring();
             }
             
             // Add developer features for dfinn12 only
@@ -7995,9 +8019,13 @@
             }
         }
 
-        // Add user (admin only)
+        // Add user (restricted admin only - dfinn12 and jblakefinn)
         async function addUser() {
-            if (!currentUser.isAdmin) return;
+            if (!hasRestrictedAdminAccess()) {
+                console.log('Access denied: User management restricted to dfinn12 and jblakefinn');
+                alert('Access denied: You do not have permission to manage users.');
+                return;
+            }
 
             try {
                 const userData = {
@@ -8224,7 +8252,11 @@
         };
 
         window.deleteUser = async function(id) {
-            if (!currentUser.isAdmin) return;
+            if (!hasRestrictedAdminAccess()) {
+                console.log('Access denied: User deletion restricted to dfinn12 and jblakefinn');
+                alert('Access denied: You do not have permission to delete users.');
+                return;
+            }
             
             if (confirm('Are you sure you want to delete this user?')) {
                 try {
@@ -8240,7 +8272,11 @@
 
         // Approve account request
         window.approveRequest = async function(requestId, username, password, firstName, lastName) {
-            if (!currentUser.isAdmin) return;
+            if (!hasRestrictedAdminAccess()) {
+                console.log('Access denied: Account request management restricted to dfinn12 and jblakefinn');
+                alert('Access denied: You do not have permission to manage account requests.');
+                return;
+            }
             
             try {
                 // Add user to users collection as admin
@@ -8275,7 +8311,11 @@
 
         // Deny account request
         window.denyRequest = async function(requestId, username) {
-            if (!currentUser.isAdmin) return;
+            if (!hasRestrictedAdminAccess()) {
+                console.log('Access denied: Account request management restricted to dfinn12 and jblakefinn');
+                alert('Access denied: You do not have permission to manage account requests.');
+                return;
+            }
             
             if (confirm('Are you sure you want to deny this account request? This username will be permanently blocked.')) {
                 try {
@@ -8803,7 +8843,11 @@
         }
 
         window.openAddUserModal = function() {
-            if (!currentUser.isAdmin) return;
+            if (!hasRestrictedAdminAccess()) {
+                console.log('Access denied: User management restricted to dfinn12 and jblakefinn');
+                alert('Access denied: You do not have permission to manage users.');
+                return;
+            }
             document.getElementById('addUserModal').classList.add('active');
         };
 
