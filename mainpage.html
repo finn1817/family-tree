@@ -735,6 +735,46 @@
             min-height: 100px;
         }
         
+        /* Image Upload Styling */
+        .form-group input[type="file"] {
+            border: 2px dashed #667eea !important;
+            background: #f8f9ff !important;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input[type="file"]:hover {
+            border-color: #5a6fd8 !important;
+            background: #eef1ff !important;
+        }
+        
+        .form-group input[type="file"]:focus {
+            outline: none;
+            border-color: #4a5fd8 !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* Image Modal Styling */
+        #imageModal .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        #imageModal {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        /* Message Images */
+        .message img {
+            transition: transform 0.3s ease;
+        }
+        
+        .message img:hover {
+            transform: scale(1.02);
+        }
+        
         .form-actions {
             display: flex;
             gap: 1rem;
@@ -2555,7 +2595,7 @@
     <!-- Add Message Modal -->
     <div id="addMessageModal" class="modal">
         <div class="modal-content">
-            <h2>Post Message</h2>
+            <h2>📝 Post Message</h2>
             <form id="addMessageForm">
                 <div class="form-group">
                     <label for="messageTitle">Title</label>
@@ -2565,9 +2605,23 @@
                     <label for="messageContent">Message *</label>
                     <textarea id="messageContent" required placeholder="Write your message here..."></textarea>
                 </div>
+                <div class="form-group">
+                    <label for="messageImage">📷 Add Photo (Optional)</label>
+                    <input type="file" id="messageImage" accept="image/*" style="
+                        padding: 0.5rem;
+                        border: 2px dashed #667eea;
+                        border-radius: 8px;
+                        background: #f8f9ff;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    ">
+                    <small style="color: #666; font-size: 0.8rem; display: block; margin-top: 0.5rem;">
+                        📏 Supports JPEG, PNG, GIF • Max 5MB • Images will be compressed automatically
+                    </small>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn" onclick="closeModal('addMessageModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Post Message</button>
+                    <button type="submit" class="btn btn-primary">📤 Post Message</button>
                 </div>
             </form>
         </div>
@@ -3208,6 +3262,19 @@
         </div>
     </div>
 
+    <!-- Image Modal for Full-Size View -->
+    <div id="imageModal" class="modal" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 95%; max-height: 95%; padding: 1rem; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 id="imageModalTitle" style="margin: 0; color: #333;">📷 Family Photo</h3>
+                <button onclick="closeImageModal()" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem;">&times;</button>
+            </div>
+            <div style="text-align: center;">
+                <img id="imageModalImg" src="" alt="Full size image" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            </div>
+        </div>
+    </div>
+
     <!-- Load the new relationship system -->
     <!-- Consolidated: relationship-system.js and relationship-ui.js code is now inline below -->
 
@@ -3691,6 +3758,7 @@
         // Import Firebase using the correct v9+ modular syntax
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
         import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCWtVYdOiggwqw5CNMJbM13BdeLtwqBhbs",
@@ -3703,6 +3771,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
         // Initialize the new relationship system
         let relationshipSystem = null;
@@ -6051,6 +6120,20 @@
                     </div>
                     ${message.title ? `<h4>${message.title}</h4>` : ''}
                     <p>${message.content}</p>
+                    ${message.imageUrl ? `
+                        <div style="margin: 1rem 0; text-align: center;">
+                            <img src="${message.imageUrl}" 
+                                 alt="Message photo" 
+                                 style="
+                                     max-width: 100%; 
+                                     max-height: 400px; 
+                                     border-radius: 8px; 
+                                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                                     cursor: pointer;
+                                 "
+                                 onclick="openImageModal('${message.imageUrl}', '${message.title || 'Message Photo'}')">
+                        </div>
+                    ` : ''}
                     ${currentUser.isAdmin ? `<button class="btn btn-danger" onclick="deleteMessage('${message.id}')">Delete</button>` : ''}
                 </div>
             `).join('');
@@ -6781,14 +6864,121 @@
             }
         }
 
-        // Add message
+        // ===== IMAGE UPLOAD FUNCTIONS =====
+        
+        // Upload image to Firebase Storage
+        async function uploadImageToStorage(imageFile, folder = 'message-images') {
+            try {
+                // Create unique filename
+                const timestamp = Date.now();
+                const fileName = `${timestamp}_${imageFile.name}`;
+                const imageRef = ref(storage, `${folder}/${fileName}`);
+                
+                // Upload the file
+                const snapshot = await uploadBytes(imageRef, imageFile);
+                
+                // Get the download URL
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                
+                return downloadURL;
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                throw error;
+            }
+        }
+
+        // Compress image before upload (optional - reduces storage costs)
+        function compressImage(file, maxWidth = 800, quality = 0.8) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = function() {
+                    // Calculate new dimensions
+                    const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                    canvas.width = img.width * ratio;
+                    canvas.height = img.height * ratio;
+                    
+                    // Draw and compress
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(resolve, 'image/jpeg', quality);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Delete image from Firebase Storage
+        async function deleteImageFromStorage(imageUrl) {
+            try {
+                const imageRef = ref(storage, imageUrl);
+                await deleteObject(imageRef);
+            } catch (error) {
+                console.error('Error deleting image:', error);
+            }
+        }
+
+        // Add message with optional image support
         async function addMessage() {
             try {
+                const title = document.getElementById('messageTitle').value;
+                const content = document.getElementById('messageContent').value;
+                const imageInput = document.getElementById('messageImage');
+                
+                if (!title || !content) {
+                    alert('Please fill in both title and content');
+                    return;
+                }
+
+                let imageUrl = null;
+                
+                // Check if an image was selected
+                if (imageInput && imageInput.files && imageInput.files[0]) {
+                    const imageFile = imageInput.files[0];
+                    
+                    // Validate file type
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                    if (!validTypes.includes(imageFile.type)) {
+                        alert('Please select a valid image file (JPEG, PNG, or GIF)');
+                        return;
+                    }
+                    
+                    // Validate file size (5MB limit)
+                    if (imageFile.size > 5 * 1024 * 1024) {
+                        alert('Image file must be less than 5MB');
+                        return;
+                    }
+                    
+                    // Show upload progress
+                    const uploadingMessage = document.createElement('div');
+                    uploadingMessage.textContent = 'Uploading image...';
+                    uploadingMessage.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10000;';
+                    document.body.appendChild(uploadingMessage);
+                    
+                    try {
+                        // Compress image if it's large
+                        const processedImage = imageFile.size > 1024 * 1024 ? 
+                            await compressImage(imageFile) : imageFile;
+                        
+                        // Upload to Firebase Storage
+                        imageUrl = await uploadImageToStorage(processedImage, 'message-images');
+                        
+                    } catch (uploadError) {
+                        document.body.removeChild(uploadingMessage);
+                        alert('Error uploading image: ' + uploadError.message);
+                        return;
+                    }
+                    
+                    document.body.removeChild(uploadingMessage);
+                }
+
                 const messageData = {
-                    title: document.getElementById('messageTitle').value,
-                    content: document.getElementById('messageContent').value,
+                    title: title,
+                    content: content,
                     author: currentUser.username,
-                    createdAt: new Date()
+                    createdAt: new Date(),
+                    imageUrl: imageUrl // Add image URL if present
                 };
 
                 await addDoc(collection(db, 'messages'), messageData);
@@ -6796,8 +6986,13 @@
                 document.getElementById('addMessageForm').reset();
                 await loadMessages();
                 displayMessages();
-                alert('Message posted successfully!');
+                
+                // Log the action
+                await logUserAction('add', 'message', `Posted message: "${title}"${imageUrl ? ' with image' : ''}`, 'success');
+                
+                alert('Message posted successfully!' + (imageUrl ? ' Image uploaded!' : ''));
             } catch (error) {
+                console.error('Error posting message:', error);
                 alert('Error posting message: ' + error.message);
             }
         }
@@ -7542,6 +7737,40 @@
                     modal.style.display = '';
                 });
             }
+        };
+
+        // Image Modal Functions
+        window.openImageModal = function(imageUrl, title = 'Family Photo') {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('imageModalImg');
+            const titleElement = document.getElementById('imageModalTitle');
+            
+            titleElement.textContent = title;
+            img.src = imageUrl;
+            modal.classList.add('active');
+            
+            // Add click outside to close
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    closeImageModal();
+                }
+            };
+            
+            // Add escape key to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeImageModal();
+                }
+            });
+        };
+
+        window.closeImageModal = function() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+            
+            // Remove event listeners
+            modal.onclick = null;
+            document.removeEventListener('keydown', arguments.callee);
         };
 
         // General showModal function
