@@ -3534,8 +3534,8 @@
 
                 <!-- Activity Logs Tab -->
                 <div id="analytics-activity" class="analytics-tab-content" style="display: none;">
-                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
-                        <input type="text" id="activitySearch" placeholder="Search logs..." style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="activitySearch" placeholder="Search logs..." style="flex: 1; min-width: 200px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                         <select id="activityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             <option value="">All Actions</option>
                             <option value="login">Logins</option>
@@ -3546,6 +3546,7 @@
                             <option value="password_reset_request">Password Reset</option>
                             <option value="security_questions">Security Questions</option>
                         </select>
+                        <button onclick="clearActivityFilters()" class="btn" style="background: #6c757d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🗑️ Clear</button>
                         <button onclick="refreshActivityLogs()" class="btn btn-primary">Refresh</button>
                         <button onclick="confirmClearAllLogs()" class="btn" style="background: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 500;">🗑️ Clear All Logs</button>
                     </div>
@@ -3572,8 +3573,9 @@
 
                 <!-- Security Events Tab -->
                 <div id="analytics-security" class="analytics-tab-content" style="display: none;">
-                    <div style="margin-bottom: 1rem;">
-                        <input type="text" id="securitySearch" placeholder="Search security events..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                        <input type="text" id="securitySearch" placeholder="Search security events..." style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <button onclick="clearSecurityFilters()" class="btn" style="background: #6c757d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🗑️ Clear</button>
                     </div>
                     <div style="overflow-x: auto;">
                         <table class="log-table">
@@ -3599,13 +3601,14 @@
 
                 <!-- Account Requests Tab -->
                 <div id="analytics-requests" class="analytics-tab-content" style="display: none;">
-                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
-                        <input type="text" id="requestsSearch" placeholder="Search requests..." style="flex: 1; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="requestsSearch" placeholder="Search requests..." style="flex: 1; min-width: 200px; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                         <select id="requestsFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             <option value="">All Requests</option>
                             <option value="account_request">Account Requests</option>
                             <option value="password_reset">Password Resets</option>
                         </select>
+                        <button onclick="clearRequestsFilters()" class="btn" style="background: #6c757d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🗑️ Clear</button>
                         <button onclick="refreshRequestsLogs()" class="btn btn-primary">Refresh</button>
                     </div>
                     <div style="overflow-x: auto;">
@@ -3629,10 +3632,11 @@
 
                 <!-- User Activity Tab -->
                 <div id="analytics-users" class="analytics-tab-content" style="display: none;">
-                    <div style="margin-bottom: 1rem;">
+                    <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
                         <select id="userActivityFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
                             <option value="">All Users</option>
                         </select>
+                        <button onclick="clearUserFilters()" class="btn" style="background: #6c757d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">🗑️ Clear</button>
                     </div>
                     <div style="overflow-x: auto;">
                         <table class="log-table">
@@ -12027,8 +12031,105 @@
             await loadSystemLogs();
             await calculateAnalyticsStats();
             
+            // Setup event listeners for search and filter inputs
+            setupAnalyticsEventListeners();
+            
             // Show overview tab by default
             switchAnalyticsTab('overview');
+        };
+
+        // Setup event listeners for analytics search and filters
+        function setupAnalyticsEventListeners() {
+            // Activity search and filter
+            const activitySearch = document.getElementById('activitySearch');
+            const activityFilter = document.getElementById('activityFilter');
+            
+            if (activitySearch) {
+                // Remove existing listeners to prevent duplicates
+                activitySearch.removeEventListener('input', handleActivitySearch);
+                activitySearch.addEventListener('input', handleActivitySearch);
+            }
+            
+            if (activityFilter) {
+                activityFilter.removeEventListener('change', handleActivityFilter);
+                activityFilter.addEventListener('change', handleActivityFilter);
+            }
+            
+            // Security search
+            const securitySearch = document.getElementById('securitySearch');
+            if (securitySearch) {
+                securitySearch.removeEventListener('input', handleSecuritySearch);
+                securitySearch.addEventListener('input', handleSecuritySearch);
+            }
+            
+            // Requests search and filter
+            const requestsSearch = document.getElementById('requestsSearch');
+            const requestsFilter = document.getElementById('requestsFilter');
+            
+            if (requestsSearch) {
+                requestsSearch.removeEventListener('input', handleRequestsSearch);
+                requestsSearch.addEventListener('input', handleRequestsSearch);
+            }
+            
+            if (requestsFilter) {
+                requestsFilter.removeEventListener('change', handleRequestsFilter);
+                requestsFilter.addEventListener('change', handleRequestsFilter);
+            }
+            
+            // User activity filter
+            const userActivityFilter = document.getElementById('userActivityFilter');
+            if (userActivityFilter) {
+                userActivityFilter.removeEventListener('change', handleUserActivityFilter);
+                userActivityFilter.addEventListener('change', handleUserActivityFilter);
+            }
+        }
+
+        // Event handlers for real-time filtering
+        function handleActivitySearch() {
+            displayActivityLogs();
+        }
+
+        function handleActivityFilter() {
+            displayActivityLogs();
+        }
+
+        function handleSecuritySearch() {
+            displaySecurityLogs();
+        }
+
+        function handleRequestsSearch() {
+            displayRequestsLogs();
+        }
+
+        function handleRequestsFilter() {
+            displayRequestsLogs();
+        }
+
+        function handleUserActivityFilter() {
+            displayUserActivity();
+        }
+
+        // Clear filter functions
+        window.clearActivityFilters = function() {
+            document.getElementById('activitySearch').value = '';
+            document.getElementById('activityFilter').value = '';
+            displayActivityLogs();
+        };
+
+        window.clearSecurityFilters = function() {
+            document.getElementById('securitySearch').value = '';
+            displaySecurityLogs();
+        };
+
+        window.clearRequestsFilters = function() {
+            document.getElementById('requestsSearch').value = '';
+            document.getElementById('requestsFilter').value = '';
+            displayRequestsLogs();
+        };
+
+        window.clearUserFilters = function() {
+            document.getElementById('userActivityFilter').value = '';
+            displayUserActivity();
         };
 
         // Switch Analytics Tabs
@@ -12141,13 +12242,39 @@
         // Display activity logs
         function displayActivityLogs() {
             const tbody = document.getElementById('activityLogsBody');
+            const searchTerm = document.getElementById('activitySearch')?.value.toLowerCase() || '';
+            const filterAction = document.getElementById('activityFilter')?.value || '';
             
-            if (systemLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #666;">No activity logs found</td></tr>';
+            // Filter logs based on search and filter criteria
+            let filteredLogs = systemLogs;
+            
+            // Apply action filter
+            if (filterAction) {
+                filteredLogs = filteredLogs.filter(log => log.action === filterAction);
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredLogs = filteredLogs.filter(log => 
+                    log.user.toLowerCase().includes(searchTerm) ||
+                    log.action.toLowerCase().includes(searchTerm) ||
+                    (log.target && log.target.toLowerCase().includes(searchTerm)) ||
+                    log.status.toLowerCase().includes(searchTerm) ||
+                    (log.ipAddress && log.ipAddress.toLowerCase().includes(searchTerm)) ||
+                    (log.details && log.details.toLowerCase().includes(searchTerm)) ||
+                    new Date(log.timestamp).toLocaleString().toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (filteredLogs.length === 0) {
+                const message = searchTerm || filterAction ? 
+                    'No activity logs match your search/filter criteria' : 
+                    'No activity logs found';
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #666;">${message}</td></tr>`;
                 return;
             }
             
-            const html = systemLogs.map(log => {
+            const html = filteredLogs.map(log => {
                 // Only mark as login-failed if it's actually a failed login
                 const isFailedLogin = log.action === 'login' && log.status === 'failed';
                 const actionClass = isFailedLogin ? 'login-failed' : log.action;
@@ -12168,6 +12295,9 @@
             }).join('');
             
             tbody.innerHTML = html;
+            
+            // Update result count
+            updateActivityResultCount(filteredLogs.length, systemLogs.length);
         }
 
         // Display security logs
@@ -12177,14 +12307,35 @@
                 log.action === 'password_reset_request' || log.action === 'security_questions'
             );
             
+            const searchTerm = document.getElementById('securitySearch')?.value.toLowerCase() || '';
+            
+            // Apply search filter
+            let filteredLogs = securityLogs;
+            if (searchTerm) {
+                filteredLogs = securityLogs.filter(log => 
+                    log.user.toLowerCase().includes(searchTerm) ||
+                    log.action.toLowerCase().includes(searchTerm) ||
+                    log.status.toLowerCase().includes(searchTerm) ||
+                    (log.ipAddress && log.ipAddress.toLowerCase().includes(searchTerm)) ||
+                    (log.browser && log.browser.toLowerCase().includes(searchTerm)) ||
+                    (log.os && log.os.toLowerCase().includes(searchTerm)) ||
+                    (log.device && log.device.toLowerCase().includes(searchTerm)) ||
+                    (log.details && log.details.toLowerCase().includes(searchTerm)) ||
+                    new Date(log.timestamp).toLocaleString().toLowerCase().includes(searchTerm)
+                );
+            }
+            
             const tbody = document.getElementById('securityLogsBody');
             
-            if (securityLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #666;">No security events found</td></tr>';
+            if (filteredLogs.length === 0) {
+                const message = searchTerm ? 
+                    'No security events match your search criteria' : 
+                    'No security events found';
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #666;">${message}</td></tr>`;
                 return;
             }
             
-            const html = securityLogs.map(log => {
+            const html = filteredLogs.map(log => {
                 // Only mark as login-failed if it's actually a failed login
                 const isFailedLogin = log.action === 'login' && log.status === 'failed';
                 const actionClass = isFailedLogin ? 'login-failed' : log.action;
@@ -12206,6 +12357,9 @@
             }).join('');
             
             tbody.innerHTML = html;
+            
+            // Update result count
+            updateSecurityResultCount(filteredLogs.length, securityLogs.length);
         }
 
         // Display user activity
@@ -12234,19 +12388,30 @@
                     }
                 }
                 
-                if (log.action === 'edit' && log.target.includes('member')) {
+                if (log.action === 'edit' && log.target && log.target.includes('member')) {
                     stats.memberEdits++;
                 }
             });
             
+            // Apply user filter
+            const selectedUser = document.getElementById('userActivityFilter')?.value || '';
+            let filteredStats = userStats;
+            
+            if (selectedUser) {
+                filteredStats = { [selectedUser]: userStats[selectedUser] };
+            }
+            
             const tbody = document.getElementById('userActivityBody');
             
-            if (Object.keys(userStats).length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No user activity found</td></tr>';
+            if (Object.keys(filteredStats).length === 0) {
+                const message = selectedUser ? 
+                    'No activity found for selected user' : 
+                    'No user activity found';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #666;">${message}</td></tr>`;
                 return;
             }
             
-            const html = Object.entries(userStats).map(([user, stats]) => `
+            const html = Object.entries(filteredStats).map(([user, stats]) => `
                 <tr>
                     <td><strong>${user}</strong></td>
                     <td>${stats.lastLogin ? new Date(stats.lastLogin).toLocaleString() : 'Never'}</td>
@@ -12259,10 +12424,15 @@
             
             tbody.innerHTML = html;
             
-            // Populate user filter dropdown
+            // Populate user filter dropdown (only on initial load)
             const userFilter = document.getElementById('userActivityFilter');
-            userFilter.innerHTML = '<option value="">All Users</option>' + 
-                Object.keys(userStats).map(user => `<option value="${user}">${user}</option>`).join('');
+            if (userFilter && !selectedUser) {
+                userFilter.innerHTML = '<option value="">All Users</option>' + 
+                    Object.keys(userStats).map(user => `<option value="${user}">${user}</option>`).join('');
+            }
+            
+            // Update result count
+            updateUserActivityResultCount(Object.keys(filteredStats).length, Object.keys(userStats).length);
         }
 
         // Refresh activity logs
@@ -12391,14 +12561,44 @@
                 log.action === 'account_request' || log.action === 'password_reset' || log.action === 'approve' || log.action === 'deny'
             );
             
+            const searchTerm = document.getElementById('requestsSearch')?.value.toLowerCase() || '';
+            const filterType = document.getElementById('requestsFilter')?.value || '';
+            
+            // Apply filters
+            let filteredLogs = requestsLogs;
+            
+            // Apply type filter
+            if (filterType) {
+                if (filterType === 'account_request') {
+                    filteredLogs = filteredLogs.filter(log => log.action === 'account_request' || log.action === 'approve' || log.action === 'deny');
+                } else if (filterType === 'password_reset') {
+                    filteredLogs = filteredLogs.filter(log => log.action === 'password_reset');
+                }
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                filteredLogs = filteredLogs.filter(log => 
+                    log.user.toLowerCase().includes(searchTerm) ||
+                    log.action.toLowerCase().includes(searchTerm) ||
+                    log.status.toLowerCase().includes(searchTerm) ||
+                    (log.ipAddress && log.ipAddress.toLowerCase().includes(searchTerm)) ||
+                    (log.details && log.details.toLowerCase().includes(searchTerm)) ||
+                    new Date(log.timestamp).toLocaleString().toLowerCase().includes(searchTerm)
+                );
+            }
+            
             const tbody = document.getElementById('requestsLogsBody');
             
-            if (requestsLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #666;">No account requests found</td></tr>';
+            if (filteredLogs.length === 0) {
+                const message = searchTerm || filterType ? 
+                    'No requests match your search/filter criteria' : 
+                    'No account requests found';
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #666;">${message}</td></tr>`;
                 return;
             }
             
-            const html = requestsLogs.map(log => `
+            const html = filteredLogs.map(log => `
                 <tr>
                     <td>${new Date(log.timestamp).toLocaleString()}</td>
                     <td><strong>${log.user}</strong></td>
@@ -12410,6 +12610,86 @@
             `).join('');
             
             tbody.innerHTML = html;
+            
+            // Update result count
+            updateRequestsResultCount(filteredLogs.length, requestsLogs.length);
+        }
+
+        // Result count update functions
+        function updateActivityResultCount(filtered, total) {
+            const searchElement = document.getElementById('activitySearch');
+            if (searchElement) {
+                const resultText = filtered === total ? 
+                    `Showing all ${total} entries` : 
+                    `Showing ${filtered} of ${total} entries`;
+                
+                // Update or create result count display
+                let resultCountElement = document.getElementById('activityResultCount');
+                if (!resultCountElement) {
+                    resultCountElement = document.createElement('small');
+                    resultCountElement.id = 'activityResultCount';
+                    resultCountElement.style.cssText = 'color: #666; font-size: 0.8rem; margin-left: 0.5rem;';
+                    searchElement.parentNode.appendChild(resultCountElement);
+                }
+                resultCountElement.textContent = resultText;
+            }
+        }
+
+        function updateSecurityResultCount(filtered, total) {
+            const searchElement = document.getElementById('securitySearch');
+            if (searchElement) {
+                const resultText = filtered === total ? 
+                    `Showing all ${total} entries` : 
+                    `Showing ${filtered} of ${total} entries`;
+                
+                // Update or create result count display
+                let resultCountElement = document.getElementById('securityResultCount');
+                if (!resultCountElement) {
+                    resultCountElement = document.createElement('small');
+                    resultCountElement.id = 'securityResultCount';
+                    resultCountElement.style.cssText = 'color: #666; font-size: 0.8rem; margin-left: 0.5rem;';
+                    searchElement.parentNode.appendChild(resultCountElement);
+                }
+                resultCountElement.textContent = resultText;
+            }
+        }
+
+        function updateRequestsResultCount(filtered, total) {
+            const searchElement = document.getElementById('requestsSearch');
+            if (searchElement) {
+                const resultText = filtered === total ? 
+                    `Showing all ${total} entries` : 
+                    `Showing ${filtered} of ${total} entries`;
+                
+                // Update or create result count display
+                let resultCountElement = document.getElementById('requestsResultCount');
+                if (!resultCountElement) {
+                    resultCountElement = document.createElement('small');
+                    resultCountElement.id = 'requestsResultCount';
+                    resultCountElement.style.cssText = 'color: #666; font-size: 0.8rem; margin-left: 0.5rem;';
+                    searchElement.parentNode.appendChild(resultCountElement);
+                }
+                resultCountElement.textContent = resultText;
+            }
+        }
+
+        function updateUserActivityResultCount(filtered, total) {
+            const filterElement = document.getElementById('userActivityFilter');
+            if (filterElement) {
+                const resultText = filtered === total ? 
+                    `Showing all ${total} users` : 
+                    `Showing ${filtered} of ${total} users`;
+                
+                // Update or create result count display
+                let resultCountElement = document.getElementById('userActivityResultCount');
+                if (!resultCountElement) {
+                    resultCountElement = document.createElement('small');
+                    resultCountElement.id = 'userActivityResultCount';
+                    resultCountElement.style.cssText = 'color: #666; font-size: 0.8rem; margin-left: 0.5rem;';
+                    filterElement.parentNode.appendChild(resultCountElement);
+                }
+                resultCountElement.textContent = resultText;
+            }
         }
 
         // Refresh requests logs
