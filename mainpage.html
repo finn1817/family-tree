@@ -1235,6 +1235,41 @@
             justify-content: flex-end;
         }
 
+        /* Hidden Comment Styles */
+        .comment-hidden {
+            opacity: 0.6;
+            background: #f8f9fa !important;
+            border: 1px dashed #dee2e6 !important;
+        }
+
+        .reply-hidden {
+            opacity: 0.6;
+            background: #f1f3f4 !important;
+            border: 1px dashed #dee2e6 !important;
+        }
+
+        .hidden-indicator {
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            border: 1px solid #ffeaa7;
+        }
+
+        .moderate-btn {
+            background: #fff3cd !important;
+            border-color: #ffeaa7 !important;
+            color: #856404 !important;
+        }
+
+        .moderate-btn:hover {
+            background: #ffeaa7 !important;
+            color: #6c5300 !important;
+        }
+
         /* Responsive design for comments */
         @media (max-width: 768px) {
             .message-interactions {
@@ -6626,6 +6661,11 @@
         let allAuthors = new Set();
 
         function displayMessages() {
+            console.log('=== DEBUG: Current User Info ===');
+            console.log('currentUser:', currentUser);
+            console.log('currentUser.username:', currentUser?.username);
+            console.log('currentUser.isAdmin:', currentUser?.isAdmin);
+            console.log('messages:', messages.map(m => ({ id: m.id, author: m.author })));
             filterMessages(); // This will handle the actual display
         }
 
@@ -6813,8 +6853,23 @@
                 return '<div class="no-comments">No comments yet. Be the first to comment!</div>';
             }
             
-            return comments.map(comment => `
-                <div class="comment" id="comment-${comment.id}">
+            // Find the post author to enable post-level moderation
+            const post = messages.find(m => m.id === messageId);
+            const isPostAuthor = post && post.author === currentUser.username;
+            
+            return comments.map(comment => {
+                // Check if comment is hidden (only show to post author and comment author)
+                const isHidden = comment.hidden === true;
+                const canSeeHiddenComment = isPostAuthor || comment.author === currentUser.username || currentUser.isAdmin;
+                
+                // Skip hidden comments for users who can't see them
+                if (isHidden && !canSeeHiddenComment) {
+                    return '';
+                }
+                
+                return `
+                <div class="comment ${isHidden ? 'comment-hidden' : ''}" id="comment-${comment.id}">
+                    ${isHidden ? '<div class="hidden-indicator">🔒 This comment is hidden</div>' : ''}
                     <div class="comment-header">
                         <span class="comment-author">👤 ${comment.author}</span>
                         <span class="comment-date">${formatRelativeTime(comment.createdAt.seconds * 1000)}</span>
@@ -6824,9 +6879,25 @@
                         <button class="comment-action-btn" onclick="showReplyForm('${comment.id}', '${messageId}')">
                             💬 Reply
                         </button>
-                        ${currentUser.isAdmin || comment.author === currentUser.username ? `
+                        
+                        <!-- Comment Author Controls -->
+                        ${comment.author === currentUser.username ? `
                             <button class="comment-action-btn delete-btn" onclick="deleteComment('${messageId}', '${comment.id}')">
                                 🗑️ Delete
+                            </button>
+                        ` : ''}
+                        
+                        <!-- Post Author Moderation Controls -->
+                        ${isPostAuthor && comment.author !== currentUser.username ? `
+                            <button class="comment-action-btn moderate-btn" onclick="toggleCommentVisibility('${messageId}', '${comment.id}', ${!isHidden})">
+                                ${isHidden ? '👁️ Show' : '🙈 Hide'}
+                            </button>
+                        ` : ''}
+                        
+                        <!-- Admin Controls -->
+                        ${currentUser.isAdmin && comment.author !== currentUser.username ? `
+                            <button class="comment-action-btn delete-btn" onclick="deleteComment('${messageId}', '${comment.id}')">
+                                🗑️ Admin Delete
                             </button>
                         ` : ''}
                     </div>
@@ -6845,26 +6916,54 @@
                     <!-- Replies Section -->
                     ${comment.replies && comment.replies.length > 0 ? `
                         <div class="replies-section">
-                            ${comment.replies.map(reply => `
-                                <div class="reply">
+                            ${comment.replies.map(reply => {
+                                // Check if reply is hidden
+                                const isReplyHidden = reply.hidden === true;
+                                const canSeeHiddenReply = isPostAuthor || reply.author === currentUser.username || currentUser.isAdmin;
+                                
+                                // Skip hidden replies for users who can't see them
+                                if (isReplyHidden && !canSeeHiddenReply) {
+                                    return '';
+                                }
+                                
+                                return `
+                                <div class="reply ${isReplyHidden ? 'reply-hidden' : ''}">
+                                    ${isReplyHidden ? '<div class="hidden-indicator">🔒 This reply is hidden</div>' : ''}
                                     <div class="reply-header">
                                         <span class="reply-author">👤 ${reply.author}</span>
                                         <span class="reply-date">${formatRelativeTime(reply.createdAt.seconds * 1000)}</span>
                                     </div>
                                     <div class="reply-content">${reply.content}</div>
-                                    ${currentUser.isAdmin || reply.author === currentUser.username ? `
-                                        <div class="reply-actions">
+                                    <div class="reply-actions">
+                                        <!-- Reply Author Controls -->
+                                        ${reply.author === currentUser.username ? `
                                             <button class="comment-action-btn delete-btn" onclick="deleteReply('${messageId}', '${comment.id}', '${reply.id}')">
                                                 🗑️ Delete
                                             </button>
-                                        </div>
-                                    ` : ''}
+                                        ` : ''}
+                                        
+                                        <!-- Post Author Moderation Controls -->
+                                        ${isPostAuthor && reply.author !== currentUser.username ? `
+                                            <button class="comment-action-btn moderate-btn" onclick="toggleReplyVisibility('${messageId}', '${comment.id}', '${reply.id}', ${!isReplyHidden})">
+                                                ${isReplyHidden ? '👁️ Show' : '🙈 Hide'}
+                                            </button>
+                                        ` : ''}
+                                        
+                                        <!-- Admin Controls -->
+                                        ${currentUser.isAdmin && reply.author !== currentUser.username ? `
+                                            <button class="comment-action-btn delete-btn" onclick="deleteReply('${messageId}', '${comment.id}', '${reply.id}')">
+                                                🗑️ Admin Delete
+                                            </button>
+                                        ` : ''}
+                                    </div>
                                 </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
                     ` : ''}
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Comment interaction functions
@@ -7082,6 +7181,105 @@
             } catch (error) {
                 console.error('Error deleting reply:', error);
                 alert('Error deleting reply: ' + error.message);
+            }
+        }
+
+        // Toggle comment visibility (hide/show for post authors)
+        window.toggleCommentVisibility = async function(messageId, commentId, hide) {
+            try {
+                // Find the message
+                const messageIndex = messages.findIndex(m => m.id === messageId);
+                if (messageIndex === -1) {
+                    alert('Message not found');
+                    return;
+                }
+                
+                // Find the comment
+                const commentIndex = messages[messageIndex].comments.findIndex(c => c.id === commentId);
+                if (commentIndex === -1) {
+                    alert('Comment not found');
+                    return;
+                }
+                
+                // Verify user is post author or admin
+                const post = messages[messageIndex];
+                if (post.author !== currentUser.username && !currentUser.isAdmin) {
+                    alert('You can only moderate comments on your own posts');
+                    return;
+                }
+                
+                // Update comment visibility
+                messages[messageIndex].comments[commentIndex].hidden = hide;
+                
+                // Update Firebase
+                const messageRef = doc(db, 'messages', messageId);
+                await updateDoc(messageRef, {
+                    comments: messages[messageIndex].comments
+                });
+                
+                // Refresh display
+                renderMessages();
+                
+                // Keep comments section open
+                document.getElementById(`comments-${messageId}`).style.display = 'block';
+                
+                console.log(`Comment ${hide ? 'hidden' : 'shown'} by post author`);
+                
+            } catch (error) {
+                console.error('Error toggling comment visibility:', error);
+                alert('Error updating comment visibility: ' + error.message);
+            }
+        }
+
+        // Toggle reply visibility (hide/show for post authors)
+        window.toggleReplyVisibility = async function(messageId, commentId, replyId, hide) {
+            try {
+                // Find the message and comment
+                const messageIndex = messages.findIndex(m => m.id === messageId);
+                if (messageIndex === -1) {
+                    alert('Message not found');
+                    return;
+                }
+                
+                const commentIndex = messages[messageIndex].comments.findIndex(c => c.id === commentId);
+                if (commentIndex === -1) {
+                    alert('Comment not found');
+                    return;
+                }
+                
+                const replyIndex = messages[messageIndex].comments[commentIndex].replies.findIndex(r => r.id === replyId);
+                if (replyIndex === -1) {
+                    alert('Reply not found');
+                    return;
+                }
+                
+                // Verify user is post author or admin
+                const post = messages[messageIndex];
+                if (post.author !== currentUser.username && !currentUser.isAdmin) {
+                    alert('You can only moderate replies on your own posts');
+                    return;
+                }
+                
+                // Update reply visibility
+                messages[messageIndex].comments[commentIndex].replies[replyIndex].hidden = hide;
+                
+                // Update Firebase
+                const messageRef = doc(db, 'messages', messageId);
+                await updateDoc(messageRef, {
+                    comments: messages[messageIndex].comments
+                });
+                
+                // Refresh display
+                renderMessages();
+                
+                // Keep comments section open
+                document.getElementById(`comments-${messageId}`).style.display = 'block';
+                
+                console.log(`Reply ${hide ? 'hidden' : 'shown'} by post author`);
+                
+            } catch (error) {
+                console.error('Error toggling reply visibility:', error);
+                alert('Error updating reply visibility: ' + error.message);
             }
         }
 
