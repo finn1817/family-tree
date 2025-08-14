@@ -6728,6 +6728,8 @@
             
             console.log('🔍 DEBUG: renderMessages called');
             console.log('Current user:', currentUser);
+            console.log('Current user username:', currentUser?.username);
+            console.log('Filtered messages count:', filteredMessages.length);
             
             if (filteredMessages.length === 0) {
                 container.innerHTML = '';
@@ -6737,9 +6739,16 @@
             
             placeholder.style.display = 'none';
             container.innerHTML = filteredMessages.map(message => {
-                console.log(`🔍 DEBUG: Rendering message by ${message.author}, current user: ${currentUser ? currentUser.username : 'null'}, isAdmin: ${currentUser ? currentUser.isAdmin : 'null'}`);
-                const canDelete = currentUser.isAdmin || message.author === currentUser.username;
-                console.log(`🔍 DEBUG: Can delete message: ${canDelete}`);
+                console.log(`🔍 DEBUG: Processing message by ${message.author}`);
+                console.log(`Current user: ${currentUser?.username}, Message author: ${message.author}`);
+                console.log(`Is admin: ${currentUser?.isAdmin}, Authors match: ${message.author === currentUser?.username}`);
+                
+                // Fixed canDelete logic with better validation
+                const isMessageAuthor = currentUser && currentUser.username && message.author === currentUser.username;
+                const isAdmin = currentUser && currentUser.isAdmin === true;
+                const canDelete = isMessageAuthor || isAdmin;
+                
+                console.log(`🔍 DEBUG: isMessageAuthor: ${isMessageAuthor}, isAdmin: ${isAdmin}, canDelete: ${canDelete}`);
                 
                 return `
                 <div class="message" id="message-${message.id}">
@@ -6766,8 +6775,9 @@
                             ✏️ Add Comment
                         </button>
                         ${canDelete ? `
-                            <button class="interaction-btn delete-btn" onclick="deleteMessage('${message.id}')">
-                                🗑️ Delete
+                            <button class="interaction-btn delete-btn" onclick="deleteMessage('${message.id}')" 
+                                    style="background: #f8d7da; border-color: #f5c6cb; color: #721c24;">
+                                🗑️ Delete Post
                             </button>
                         ` : ''}
                     </div>
@@ -8300,18 +8310,66 @@
             }
         };
 
-        window.deleteMessage = async function(id) {
-            if (!currentUser.isAdmin) return;
+        window.deleteMessage = async function(messageId) {
+            console.log('🗑️ Delete message called for:', messageId);
+            console.log('Current user:', currentUser);
             
-            if (confirm('Are you sure you want to delete this message?')) {
-                try {
-                    await deleteDoc(doc(db, 'messages', id));
-                    await loadMessages();
-                    displayMessages();
-                    alert('Message deleted successfully!');
-                } catch (error) {
-                    alert('Error deleting message: ' + error.message);
+            // Find the message
+            const message = messages.find(m => m.id === messageId);
+            if (!message) {
+                console.error('Message not found:', messageId);
+                showMessage('Message not found', 'error');
+                return;
+            }
+            
+            console.log('Message author:', message.author);
+            console.log('Current user username:', currentUser?.username);
+            console.log('Is admin:', currentUser?.isAdmin);
+            
+            // Check permissions
+            const isMessageAuthor = currentUser && currentUser.username === message.author;
+            const isAdmin = currentUser && currentUser.isAdmin === true;
+            const canDelete = isMessageAuthor || isAdmin;
+            
+            console.log('Can delete:', canDelete);
+            
+            if (!canDelete) {
+                showMessage('You can only delete your own posts', 'error');
+                return;
+            }
+            
+            const deleteReason = isAdmin && !isMessageAuthor ? ' (Admin)' : '';
+            if (!confirm(`Are you sure you want to delete this message${deleteReason}?`)) {
+                return;
+            }
+            
+            try {
+                // Delete the image from storage if it exists
+                if (message.imageUrl) {
+                    try {
+                        await deleteImageFromStorage(message.imageUrl);
+                        console.log('✅ Deleted message image from storage');
+                    } catch (imageError) {
+                        console.warn('⚠️ Could not delete image from storage:', imageError);
+                        // Continue with message deletion even if image deletion fails
+                    }
                 }
+                
+                // Delete the message document
+                await deleteDoc(doc(db, 'messages', messageId));
+                
+                // Log the deletion
+                await logUserAction('delete', 'message', `Deleted message: "${message.title || 'Untitled'}"${deleteReason}`, 'success');
+                
+                // Refresh the messages
+                await loadMessages();
+                displayMessages();
+                
+                showMessage('Message deleted successfully!', 'success');
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                await logUserAction('delete', 'message', `Failed to delete message: ${error.message}`, 'failed');
+                showMessage('Error deleting message: ' + error.message, 'error');
             }
         };
 
