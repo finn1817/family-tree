@@ -10854,8 +10854,8 @@
                     totalEdits: 0,
                     totalAdditions: 0,
                     totalDeletions: 0,
-                    activeDays: 0,
-                    uniqueUsers: []
+                    activeDays: new Set(),
+                    uniqueUsers: new Set()
                 };
                 
                 // Update displays
@@ -10868,10 +10868,12 @@
                 // Remove loading message
                 document.body.removeChild(loadingMessage);
                 
-                // Log the clear action
-                await logUserAction('clear_logs', 'system_logs', `Cleared all system logs (${deletedCount} entries deleted)`, 'success');
-                
                 alert(`✅ Successfully deleted ${deletedCount} log entries.\n\nAll system logs have been cleared.`);
+                
+                // Log the clear action after a delay to prevent immediate reappearance
+                setTimeout(async () => {
+                    await logUserAction('clear_logs', 'system_logs', `Cleared all system logs (${deletedCount} entries deleted)`, 'success');
+                }, 2000);
                 
             } catch (error) {
                 console.error('❌ Error clearing logs:', error);
