@@ -5485,28 +5485,19 @@
             console.log('Total virtual families:', virtualFamilyGroups.length);
             
             // Filter families based on visibility
-            if (currentUser?.username === 'dfinn12') {
-                // dfinn12 sees all families (both hidden and visible)
-                visibleAutoTrees = familyTrees;
-                visibleManualTrees = manualFamilyTrees;
-                visibleVirtualFamilies = virtualFamilyGroups;
-                console.log('dfinn12 - showing all families including hidden ones');
-            } else {
-                // All other users only see non-hidden families
-                visibleAutoTrees = familyTrees.filter(tree => {
-                    const isHidden = hiddenFamilyIds.has(tree.id);
-                    console.log(`Auto tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
-                    return !isHidden;
-                });
-                visibleManualTrees = manualFamilyTrees.filter(tree => {
-                    const isHidden = hiddenFamilyIds.has(tree.id);
-                    console.log(`Manual tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
-                    return !isHidden;
-                });
-                // Virtual families are not subject to hiding (they're only created by developers)
-                visibleVirtualFamilies = virtualFamilyGroups;
-                console.log('Non-developer - hiding hidden families from view');
-            }
+            // All users (including dfinn12) only see non-hidden families in main view
+            visibleAutoTrees = familyTrees.filter(tree => {
+                const isHidden = hiddenFamilyIds.has(tree.id);
+                console.log(`Auto tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
+                return !isHidden;
+            });
+            visibleManualTrees = manualFamilyTrees.filter(tree => {
+                const isHidden = hiddenFamilyIds.has(tree.id);
+                console.log(`Manual tree ${tree.id} (${tree.name}) - Hidden: ${isHidden}`);
+                return !isHidden;
+            });
+            // Virtual families are not subject to hiding (they're only created by developers)
+            visibleVirtualFamilies = virtualFamilyGroups;
             
             console.log('Visible auto trees:', visibleAutoTrees.length);
             console.log('Visible manual trees:', visibleManualTrees.length);
@@ -11038,7 +11029,8 @@
         function displayHiddenFamilies() {
             if (currentUser?.username !== 'dfinn12') return;
             
-            const hiddenContainer = document.getElementById('hiddenFamiliesContainer');
+            const hiddenContainer = document.getElementById('hiddenFamiliesGrid');
+            const noHiddenElement = document.getElementById('noHiddenFamilies');
             if (!hiddenContainer) return;
             
             // Generate current family trees and get hidden families
@@ -11047,30 +11039,80 @@
             const hiddenManual = manualFamilyTrees.filter(f => hiddenFamilyIds.has(f.id));
             const allHidden = [...hiddenAuto, ...hiddenManual];
             
+            console.log('🙈 Displaying hidden families:', allHidden.length);
+            
+            // Update badge count
+            const hiddenBadge = document.getElementById('hiddenBadge');
+            const hiddenBadgeMobile = document.getElementById('hiddenBadgeMobile');
+            if (hiddenBadge) {
+                hiddenBadge.textContent = allHidden.length;
+                hiddenBadge.style.display = allHidden.length > 0 ? 'inline-block' : 'none';
+            }
+            if (hiddenBadgeMobile) {
+                hiddenBadgeMobile.textContent = allHidden.length;
+                hiddenBadgeMobile.style.display = allHidden.length > 0 ? 'inline-block' : 'none';
+            }
+            
             if (allHidden.length === 0) {
-                hiddenContainer.innerHTML = '<div class="no-families">No families are currently hidden</div>';
+                hiddenContainer.style.display = 'none';
+                noHiddenElement.style.display = 'block';
                 return;
             }
             
+            hiddenContainer.style.display = 'grid';
+            noHiddenElement.style.display = 'none';
+            
             hiddenContainer.innerHTML = allHidden.map(family => `
-                <div class="family-card small" style="border: 2px solid #e74c3c; background: #fdf2f2;">
-                    <div class="family-header">
-                        <h3>${family.name}</h3>
-                        <span class="hidden-badge" style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">HIDDEN</span>
+                <div class="modern-family-card" style="border-left: 4px solid #e74c3c; background: linear-gradient(135deg, #fdf2f2 0%, #fff 100%);">
+                    <div class="family-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                        <div class="family-title-section">
+                            <h3 class="family-title" style="color: white;">${family.name}</h3>
+                            <p class="family-subtitle" style="color: rgba(255,255,255,0.9);">
+                                ${family.isManual ? '🕊️ Memorial Family' : '🌳 Auto-Generated'} • ${family.members?.length || 0} members
+                            </p>
+                        </div>
+                        <div class="family-icon" style="color: rgba(255,255,255,0.8);">🙈</div>
                     </div>
-                    <div class="family-meta">
-                        <span>Type: ${family.isManual ? 'Memorial' : 'Auto-Generated'}</span>
-                        <span>Members: ${family.isManual ? family.members?.length || 0 : family.members?.length || 0}</span>
+                    
+                    <div class="family-body">
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 0.8rem; margin-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #856404;">
+                                <span style="font-size: 1.2rem;">🔒</span>
+                                <span style="font-weight: 600; font-size: 0.9rem;">HIDDEN FROM PUBLIC VIEW</span>
+                            </div>
+                        </div>
+                        
+                        ${family.members && family.members.length > 0 ? `
+                            <div class="generation-section">
+                                <div class="generation-header">
+                                    <span class="generation-icon">👥</span>
+                                    <h4 class="generation-title">Family Members</h4>
+                                    <span class="generation-count">${family.members.length}</span>
+                                </div>
+                                <div class="members-grid">
+                                    ${family.members.slice(0, 6).map(member => `
+                                        <div class="member-pill" style="background: #fef5e7; border-color: #f39c12;">
+                                            <div class="member-name">${member.firstName} ${member.lastName}</div>
+                                            <div class="member-age">${calculateAge(member)}</div>
+                                        </div>
+                                    `).join('')}
+                                    ${family.members.length > 6 ? `
+                                        <div class="member-pill" style="background: #e9ecef; color: #6c757d;">
+                                            +${family.members.length - 6} more
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
-                    <div class="family-actions">
-                        <button class="action-btn" onclick="unhideFamilyGroup('${family.id}')" 
-                                style="background: #27ae60; color: white; border: 1px solid #27ae60;">
-                            <span style="margin-right: 0.5rem;">👁️</span>
-                            Show
+                    
+                    <div class="family-actions" style="background: #f8f9fa;">
+                        <button class="action-btn primary" onclick="unhideFamilyGroup('${family.id}')" 
+                                style="background: #27ae60; border-color: #27ae60;">
+                            👁️ Show Family
                         </button>
                         <button class="action-btn secondary" onclick="viewFamilyDetail('${family.id}')">
-                            <span style="margin-right: 0.5rem;">📋</span>
-                            Details
+                            📋 View Details
                         </button>
                     </div>
                 </div>
